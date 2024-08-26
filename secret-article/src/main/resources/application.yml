@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.91.133:3306/secretblog_ams?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+    username: root
+    password: root
+  application:
+    name: secret-article
+  cloud:
+    nacos:
+      server-addr: 192.168.91.133:8848
+      discovery:
+        server-addr: 192.168.91.133:8848
+  config:
+    import: nacos:application.yml
+logging:
+  level:
+    root: info
+server:
+  port: 21000
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: assign_id
+  configuration:
+    map-underscore-to-camel-case: true

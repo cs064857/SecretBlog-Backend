@@ -1,0 +1,32 @@
+logging:
+  level:
+    root: info
+server:
+  port: 88
+spring:
+#  main:
+#    web-application-type: reactive
+  config:
+    import: nacos:application.yml
+  application:
+    name: secret-gateway
+  cloud:
+    nacos:
+      server-addr: 192.168.91.133:8848
+      discovery:
+        server-addr: 192.168.91.133:8848
+      config:
+        server-addr: 192.168.91.133:8848
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: article_route
+          uri: lb://secret-article
+          predicates:
+            - Path=/api/article/**
+          filters:
+            - RewritePath=/api/?(?<segment>.*), /$\{segment}
+
+
