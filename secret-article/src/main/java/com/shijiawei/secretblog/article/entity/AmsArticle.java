@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 /**
@@ -18,6 +20,7 @@ public class AmsArticle implements Serializable {
      * 主鍵(雪花算法,不可為空)
      */
     @TableId
+    @JsonFormat(shape= JsonFormat.Shape.STRING)
     @TableField(value = "id")
     private Long id;
 

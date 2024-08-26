@@ -30,10 +30,15 @@ public class AmsArticleController {
     }
     @GetMapping("/list")
     public List<AmsArticle> listArticle() {
-        Long l1 = 1828018170493947905L;
-        List<Long> longList = Arrays.asList(l1);
-        List<AmsArticle> amsArticles = amsArticleService.listByIds(longList);
+        List<AmsArticle> amsArticles = amsArticleService.list();
         log.info("amsArticles:{}",amsArticles);
         return amsArticles;
+    }
+    @GetMapping("/get/{articleId}")
+    public AmsArticle getArticle(@PathVariable Long articleId) {
+        log.info("articleId:{}",articleId);
+        AmsArticle article = amsArticleService.getById(articleId);
+        log.info("article:{}",article);
+        return article;
     }
 }
