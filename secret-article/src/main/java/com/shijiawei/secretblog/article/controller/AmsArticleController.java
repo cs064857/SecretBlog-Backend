@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.article.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,7 @@ public class AmsArticleController {
     }
     @GetMapping("/list")
     public List<AmsArticle> listArticle() {
-        List<AmsArticle> amsArticles = amsArticleService.list();
+        List<AmsArticle> amsArticles = amsArticleService.list(new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getIs_show,1));
         log.info("amsArticles:{}",amsArticles);
         return amsArticles;
     }
