@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.article.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -57,6 +58,7 @@ public class AmsArticle implements Serializable {
     /**
      * 文章是否可顯示(0不顯示,1顯示)
      */
+    @TableLogic
     @TableField(value = "is_show")
     private Integer is_show;
 
