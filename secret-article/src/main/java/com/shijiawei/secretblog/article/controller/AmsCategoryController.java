@@ -34,7 +34,7 @@ public class AmsCategoryController {
 
     @PostMapping("/save")
     public R saveCategory(@RequestBody AmsCategory amsCategory) {
-//        log.info("amsCategory: {}", amsCategory);
+        log.info("amsCategory: {}", amsCategory);
         amsCategoryService.saveCategory(amsCategory);
         return R.ok();
     }
