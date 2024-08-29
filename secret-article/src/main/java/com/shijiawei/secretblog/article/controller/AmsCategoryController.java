@@ -34,7 +34,7 @@ public class AmsCategoryController {
 
     @PostMapping("/save")
     public R saveCategory(@RequestBody AmsCategory amsCategory) {
-        log.info("amsCategory: {}", amsCategory);
+//        log.info("amsCategory: {}", amsCategory);
         amsCategoryService.saveCategory(amsCategory);
         return R.ok();
     }
@@ -43,6 +43,15 @@ public class AmsCategoryController {
     public R deleteCategory(@PathVariable Long id) {
         //邏輯刪除
         amsCategoryService.deleteById(id);
+        return R.ok();
+    }
+    //before(原數據),afterParentId(原數據應變更ParentId),afterLevel(原數據應變更Level)
+    @PostMapping("/update/{beforeId}/{afterParentId}/{afterLevel}")
+    public R updateCategory(@PathVariable Long beforeId,@PathVariable Long afterParentId,@PathVariable Integer afterLevel) {
+//        log.info("id: {}", beforeId);
+//        log.info("NewParentId: {}", afterParentId);
+//        log.info("afterLevel: {}", afterLevel);
+        amsCategoryService.updateCategory(beforeId,afterParentId,afterLevel);
         return R.ok();
     }
 }

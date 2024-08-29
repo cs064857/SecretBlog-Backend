@@ -59,8 +59,8 @@ public class AmsArticle implements Serializable {
      * 文章是否可顯示(0不顯示,1顯示)
      */
     @TableLogic
-    @TableField(value = "is_show")
-    private Integer is_show;
+    @TableField(value = "deleted")
+    private Integer deleted;
 
     /**
      * 創建時間
@@ -95,7 +95,7 @@ public class AmsArticle implements Serializable {
             && (this.getUser_id() == null ? other.getUser_id() == null : this.getUser_id().equals(other.getUser_id()))
             && (this.getCategory_id() == null ? other.getCategory_id() == null : this.getCategory_id().equals(other.getCategory_id()))
             && (this.getTag_id() == null ? other.getTag_id() == null : this.getTag_id().equals(other.getTag_id()))
-            && (this.getIs_show() == null ? other.getIs_show() == null : this.getIs_show().equals(other.getIs_show()))
+            && (this.getDeleted() == null ? other.getDeleted() == null : this.getDeleted().equals(other.getDeleted()))
             && (this.getCreate_time() == null ? other.getCreate_time() == null : this.getCreate_time().equals(other.getCreate_time()))
             && (this.getUpdate_time() == null ? other.getUpdate_time() == null : this.getUpdate_time().equals(other.getUpdate_time()));
     }
@@ -110,7 +110,7 @@ public class AmsArticle implements Serializable {
         result = prime * result + ((getUser_id() == null) ? 0 : getUser_id().hashCode());
         result = prime * result + ((getCategory_id() == null) ? 0 : getCategory_id().hashCode());
         result = prime * result + ((getTag_id() == null) ? 0 : getTag_id().hashCode());
-        result = prime * result + ((getIs_show() == null) ? 0 : getIs_show().hashCode());
+        result = prime * result + ((getDeleted() == null) ? 0 : getDeleted().hashCode());
         result = prime * result + ((getCreate_time() == null) ? 0 : getCreate_time().hashCode());
         result = prime * result + ((getUpdate_time() == null) ? 0 : getUpdate_time().hashCode());
         return result;
@@ -128,7 +128,7 @@ public class AmsArticle implements Serializable {
         sb.append(", user_id=").append(user_id);
         sb.append(", category_id=").append(category_id);
         sb.append(", tag_id=").append(tag_id);
-        sb.append(", is_show=").append(is_show);
+        sb.append(", deleted=").append(deleted);
         sb.append(", create_time=").append(create_time);
         sb.append(", update_time=").append(update_time);
         sb.append(", serialVersionUID=").append(serialVersionUID);

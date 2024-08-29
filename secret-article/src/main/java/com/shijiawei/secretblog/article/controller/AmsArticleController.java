@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -35,14 +34,14 @@ public class AmsArticleController {
     }
     @GetMapping("/list")
     public R<List<AmsArticle>> listArticle() {
-        List<AmsArticle> amsArticles = amsArticleService.list(new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getIs_show,1));
+        List<AmsArticle> amsArticles = amsArticleService.list(new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getDeleted,0));
 //        log.info("amsArticles:{}",amsArticles);
         return R.ok(amsArticles);
     }
 
 //    @GetMapping("/list")
 //    public List<AmsArticle> listArticle() {
-//        List<AmsArticle> amsArticles = amsArticleService.list(new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getIs_show,1));
+//        List<AmsArticle> amsArticles = amsArticleService.list(new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getDeleted,1));
 ////        log.info("amsArticles:{}",amsArticles);
 //        return amsArticles;
 //    }
