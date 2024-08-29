@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.article.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
+import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +26,9 @@ public class AmsArticleController {
     AmsArticleService amsArticleService;
 
     @PostMapping("/save")
-    public R postArticle(@RequestBody AmsArticle article) {
-        amsArticleService.saveArticle(article);
+    public R postArticle(@RequestBody AmsSaveArticleVo amsSaveArticleVo) {
+        log.info("amsSaveArticleVo:{}",amsSaveArticleVo);
+        amsArticleService.saveArticle(amsSaveArticleVo);
         //log.info("完成");
         R ok = R.ok();
         log.info("ok:{}",ok);

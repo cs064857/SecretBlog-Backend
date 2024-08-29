@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
+import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import org.springframework.stereotype.Service;
 
 /**
@@ -15,8 +16,14 @@ import org.springframework.stereotype.Service;
 public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArticle> implements AmsArticleService {
 
     @Override
-    public void saveArticle(AmsArticle article) {
-        this.baseMapper.insert(article);
+    public void saveArticle(AmsSaveArticleVo amsSaveArticleVo) {
+        AmsArticle amsArticle = new AmsArticle();
+        amsArticle.setTitle(amsSaveArticleVo.getTitle());
+        amsArticle.setCategory_id(amsSaveArticleVo.getCategoryId());
+        amsArticle.setContent(amsSaveArticleVo.getContent());
+        this.baseMapper.insert(amsArticle);
+        //TODO 新增文章添加用戶ID與TAGID
+
     }
 }
 
