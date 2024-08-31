@@ -25,9 +25,9 @@ public class AmsCategoryController {
     AmsCategoryService amsCategoryService;
 
     @Operation(summary = "分類樹形組件數據請求")
-    @GetMapping("/list")
-    public R<List<AmsCategoryTreeVo>> getCategoryTreeVos() {
-        List<AmsCategoryTreeVo> amsCategoryTreeVos = amsCategoryService.getCategoryTreeVo();
+    @GetMapping("/tree/list")
+    public R<List<AmsCategoryTreeVo>> getTreeCategoryVos() {
+        List<AmsCategoryTreeVo> amsCategoryTreeVos = amsCategoryService.getTreeCategoryVo();
 //        log.info("amsCategoriesList = " + amsCategoryList);
         return R.ok(amsCategoryTreeVos);
     }

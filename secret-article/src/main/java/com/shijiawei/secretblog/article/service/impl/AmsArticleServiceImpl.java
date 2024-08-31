@@ -19,7 +19,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public void saveArticle(AmsSaveArticleVo amsSaveArticleVo) {
         AmsArticle amsArticle = new AmsArticle();
         amsArticle.setTitle(amsSaveArticleVo.getTitle());
-        amsArticle.setCategory_id(amsSaveArticleVo.getCategoryId());
+        amsArticle.setCategoryId(amsSaveArticleVo.getCategoryId());
         amsArticle.setContent(amsSaveArticleVo.getContent());
         this.baseMapper.insert(amsArticle);
         //TODO 新增文章添加用戶ID與TAGID
