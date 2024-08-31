@@ -1,5 +1,10 @@
 package com.shijiawei.secretblog.article.controller;
 
+import com.alibaba.nacos.common.utils.JacksonUtils;
+import com.alibaba.nacos.shaded.com.google.protobuf.Descriptors;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.shijiawei.secretblog.article.entity.AmsCategory;
 import com.shijiawei.secretblog.article.service.AmsCategoryService;
 import com.shijiawei.secretblog.article.vo.AmsCategoryTreeVo;
@@ -52,6 +57,25 @@ public class AmsCategoryController {
 //        log.info("NewParentId: {}", afterParentId);
 //        log.info("afterLevel: {}", afterLevel);
         amsCategoryService.updateCategory(beforeId,afterParentId,afterLevel);
+        return R.ok();
+    }
+
+    /**
+     * 修改樹形分類數據
+     * @param id
+     * @param categoryName
+     * @return
+     */
+
+    @PutMapping("/{id}")
+
+    public R updateTreeCategory(@PathVariable Long id,@RequestBody String categoryName) {
+        log.info("id:{}",id);
+        log.info("categoryName {}", categoryName);
+        String str = JacksonUtils.toObj(categoryName).asText();
+        log.info("str: {}", str);
+
+        amsCategoryService.updateTreeCategoryName(id,str);
         return R.ok();
     }
 }
