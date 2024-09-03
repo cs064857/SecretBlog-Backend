@@ -7,7 +7,11 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+import com.baomidou.mybatisplus.core.conditions.update.Update;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.shijiawei.secretblog.common.vaildation.Insert;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -18,8 +22,9 @@ import lombok.Data;
 @Data
 public class AmsArticle implements Serializable {
     /**
-     * 主鍵(雪花算法,不可為空)
+     * 主鍵(雪花算法)
      */
+    @NotNull(message = "修改資料主鍵不可為空",groups = {Update.class})
     @TableId
     @JsonFormat(shape= JsonFormat.Shape.STRING)
     @TableField(value = "id")
@@ -28,30 +33,35 @@ public class AmsArticle implements Serializable {
     /**
      * 文章標題(不可為空,最多64字符)
      */
+    @NotBlank(message = "新增時文章標題不可為空",groups = {Insert.class})
     @TableField(value = "title")
     private String title;
 
     /**
      * 文章內容(不可為空)
      */
+    @NotBlank(message = "新增時文章內容不可為空",groups = {Insert.class})
     @TableField(value = "content")
     private String content;
 
     /**
      * 作者id(雪花算法,不可為空)
      */
+//    @NotNull(message = "作者ID不可為空",groups = {Insert.class})
     @TableField(value = "user_id")
     private Long userId;
 
     /**
      * 文章分類id
      */
+    @NotNull(message = "文章分類ID不可為空",groups = {Update.class,Insert.class})
     @TableField(value = "category_id")
     private Long categoryId;
 
     /**
      * 文章標籤id
      */
+//    @NotNull(message = "文章標籤不可為空",groups = {Insert.class})
     @TableField(value = "tag_id")
     private Long tagId;
 

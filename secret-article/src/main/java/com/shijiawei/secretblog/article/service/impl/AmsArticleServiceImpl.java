@@ -21,8 +21,12 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         amsArticle.setTitle(amsSaveArticleVo.getTitle());
         amsArticle.setCategoryId(amsSaveArticleVo.getCategoryId());
         amsArticle.setContent(amsSaveArticleVo.getContent());
-        this.baseMapper.insert(amsArticle);
         //TODO 新增文章添加用戶ID與TAGID
+//        amsArticle.setUserId(1L);
+//        amsArticle.setTagId(1L);
+        this.baseMapper.insert(amsArticle);
+
+
 
     }
 }

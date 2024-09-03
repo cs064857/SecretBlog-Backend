@@ -5,8 +5,10 @@ import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.common.vaildation.Insert;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,13 +28,11 @@ public class AmsArticleController {
     AmsArticleService amsArticleService;
 
     @PostMapping("/save")
-    public R postArticle(@RequestBody AmsSaveArticleVo amsSaveArticleVo) {
+    public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo) {
         log.info("amsSaveArticleVo:{}",amsSaveArticleVo);
         amsArticleService.saveArticle(amsSaveArticleVo);
         //log.info("完成");
-        R ok = R.ok();
-        log.info("ok:{}",ok);
-        return ok;
+        return R.ok();
     }
     @GetMapping("/list")
     public R<List<AmsArticle>> listArticle() {

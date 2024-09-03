@@ -13,7 +13,16 @@ import java.util.List;
  */
 @Data
 public class AmsCategoryTreeVo {
+    /**
+     * 分類ID
+     */
     private Long id;
+    /**
+     * 分類名稱
+     */
     private String label;
+    /**
+     * 分類子類
+     */
     private List<AmsCategoryTreeVo> children;
 }
