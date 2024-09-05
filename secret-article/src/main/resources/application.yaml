@@ -12,7 +12,20 @@ spring:
       discovery:
         server-addr: 192.168.91.133:8848
   config:
-    import: nacos:application.yml
+    import: nacos:application.yaml
+  data:
+    redis:
+      port: 6379
+      database: 0
+      host: 192.168.91.133
+#  cache:
+#    redis:
+#      #以下配置為配合SpringCache使用時
+#      use-key-prefix: true #開啟前綴
+#      key-prefix: SecretBlog #設置前綴
+#      time-to-live: 86400000 #設置Redis緩存過期時間，設置為一天，解決緩存雪崩問題
+#      cache-null-values: true  #緩存空值,避免緩存穿透
+#    type: redis #設置SpringCache緩存使用Redis
 logging:
   level:
     root: info
