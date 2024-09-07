@@ -2,14 +2,17 @@ package com.shijiawei.secretblog.article.AOP;
 
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.redisson.api.RBucket;
 import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RQueue;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
@@ -28,6 +31,7 @@ public class DelayDoubleDeleteAspect {
     @Autowired
     RedissonClient redissonClient;
 
+    final SpelExpressionParser parser = new SpelExpressionParser();
     /**
      * Redisson延遲雙刪
      * @param joinPoint
@@ -40,8 +44,14 @@ public class DelayDoubleDeleteAspect {
         MethodSignature methodSignature = (MethodSignature)joinPoint.getSignature();
         //透過方法簽名獲取方法上的註解
         com.shijiawei.secretblog.article.annotation.DelayDoubleDelete annotation = methodSignature.getMethod().getAnnotation(com.shijiawei.secretblog.article.annotation.DelayDoubleDelete.class);
-        //獲取類註解裡定義的key
-        String key = annotation.key();
+
+        String keyExpression = annotation.key();
+        //若keyExpression中包含SpEL表達式的話
+        if(keyExpression.contains("#")){
+            keyExpression = generateKey(keyExpression,joinPoint);
+        }
+        //組合成最終key
+        String key = annotation.prefix()+":"+keyExpression;
 
         //初次刪除在Redis中的緩存,避免再新增時有人讀取緩存數據
         redissonClient.getBucket(key).delete();
@@ -77,5 +87,18 @@ public class DelayDoubleDeleteAspect {
                 }
             }
         }).start();
+    }
+
+    public String generateKey(String keyExpression, ProceedingJoinPoint joinPoint){
+        MethodSignature methodSignature = (MethodSignature)joinPoint.getSignature();
+        String[] parameterNames = methodSignature.getParameterNames();
+        Object[] args = joinPoint.getArgs();
+
+        EvaluationContext context = new StandardEvaluationContext();
+        for (int i = 0; i < parameterNames.length; i++) {
+            context.setVariable(parameterNames[i], args[i]);
+        }
+
+        return parser.parseExpression(keyExpression).getValue(context, String.class);
     }
 }

@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DelayDoubleDelete {
+    String prefix() default "";
     String key() default "";
     int delay() default 5;
     TimeUnit timeUnit() default TimeUnit.SECONDS;

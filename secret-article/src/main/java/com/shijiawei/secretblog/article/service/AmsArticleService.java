@@ -1,5 +1,7 @@
 package com.shijiawei.secretblog.article.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
@@ -17,4 +19,6 @@ public interface AmsArticleService extends IService<AmsArticle> {
     void saveArticles(AmsSaveArticleVo amsSaveArticleVo);
 
     List<AmsArticle> getListArticle();
+
+    Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
 }

@@ -68,7 +68,6 @@ public class AmsCategoryController {
      */
 
     @PutMapping("/{id}")
-
     public R updateTreeCategory(@PathVariable Long id,@RequestBody String categoryName) {
         log.info("id:{}",id);
         log.info("categoryName {}", categoryName);

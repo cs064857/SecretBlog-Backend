@@ -1,5 +1,9 @@
 package com.shijiawei.secretblog.article.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
@@ -50,7 +54,7 @@ public class AmsArticleController {
         return R.ok(articles);
     }
 
-    @GetMapping("/get/{articleId}")
+    @GetMapping("/articles/{articleId}")
     public R<AmsArticle> getArticle(@PathVariable Long articleId) {
 //        log.info("articleId:{}",articleId);
         AmsArticle article = amsArticleService.getById(articleId);
@@ -59,4 +63,20 @@ public class AmsArticleController {
 //        log.info("ok:{}",ok);
         return ok;
     }
+
+    /**
+     * 根據categoryId與routerPage分頁查詢文章列表
+     * @param categoryId
+     * @param routePage
+     * @return
+     */
+
+    @GetMapping("/categories/{categoryId}/articles")
+    public R<Page<AmsArticle>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
+        log.info("categoryId:{}",categoryId);
+        log.info("routePage:{}",routePage);
+        Page<AmsArticle> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
+        return R.ok(Page);
+    }
+
 }
