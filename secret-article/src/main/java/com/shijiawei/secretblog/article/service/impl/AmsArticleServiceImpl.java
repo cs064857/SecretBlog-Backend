@@ -34,7 +34,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     RedissonClient redissonClient;
 
     @OpenLog//開啟方法執行時間紀錄
-    @DelayDoubleDelete(prefix = "AmsArticles", key = "'categoryId_' + #categoryId + ':routerPage_' + #routePage + ':articles'")
+    @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
 //    @DelayDoubleDelete(prefix = "AmsArticle",key = "articles",delay = 5,timeUnit = TimeUnit.SECONDS)//AOP延遲雙刪
     @Override
     public void saveArticles(AmsSaveArticleVo amsSaveArticleVo) {
@@ -64,7 +64,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     }
 
     @OpenLog
-    @OpenCache(prefix = "AmsArticles", key = "'categoryId_' + #categoryId + ':routerPage_' + #routePage + ':articles'")
+    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
     @Override
     public Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
         //根據categoryId分類查詢

@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.article;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
@@ -14,11 +15,16 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.ParserContext;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.time.Duration;
 import java.util.Arrays;
 
 //@SpringBootTest
+@Slf4j
 class SecretArticleApplicationTests {
 	@Autowired
 	private RedissonClient redissonClient;
@@ -60,5 +66,25 @@ class SecretArticleApplicationTests {
 				.filter(s -> s.startsWith("#"))                // 確保保留以 # 開頭的數組
 				.toArray(String[]::new);                       // 轉換成 String 陣列
 		System.out.println();
+	}
+	@Test
+	public void test2(){
+		Integer categoryId=8;
+		Integer routerPage=1;
+		String keyExpression= "AmsArticles:categoryId_#{#categoryId}:routePage_#{#routePage}"; //正確,使用ParserContext.TEMPLATE_EXPRESSION,未使用則失敗
+		//上述結論若使用ParserContext.TEMPLATE_EXPRESSION需要#{#變量}
+
+//		String keyExpression= "'AmsArticles:categoryId_' + #categoryId +':routePage_' + #routePage";//正確,不使用ParserContext.TEMPLATE_EXPRESSION
+		//上述結論若不使用ParserContext.TEMPLATE_EXPRESSION需要#變量,並且使用連接符號,不需要{與}
+
+
+		EvaluationContext context=new StandardEvaluationContext();
+
+		context.setVariable("categoryId",categoryId);
+		context.setVariable("routePage",routerPage);
+		log.info("context:{}",context);
+		SpelExpressionParser parser = new SpelExpressionParser();
+		String key = parser.parseExpression(keyExpression,ParserContext.TEMPLATE_EXPRESSION).getValue(context, String.class);
+		log.info("key:{}",key);
 	}
 }

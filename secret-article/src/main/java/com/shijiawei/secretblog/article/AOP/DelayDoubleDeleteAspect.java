@@ -2,27 +2,22 @@ package com.shijiawei.secretblog.article.AOP;
 
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.redisson.api.RDelayedQueue;
+import org.redisson.api.RKeys;
 import org.redisson.api.RQueue;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.ParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * ClassName: DelayDoubleDeleteAspect
- * Description:
- *
- * @Create 2024/9/5 上午1:11
- */
 @Component
 @Slf4j
 @Aspect
@@ -32,56 +27,53 @@ public class DelayDoubleDeleteAspect {
     RedissonClient redissonClient;
 
     final SpelExpressionParser parser = new SpelExpressionParser();
-    /**
-     * Redisson延遲雙刪
-     * @param joinPoint
-     * @return
-     * @throws Throwable
-     */
+
     @Around("@annotation(com.shijiawei.secretblog.article.annotation.DelayDoubleDelete)")
     public Object delayDoubleDelete(ProceedingJoinPoint joinPoint) throws Throwable {
-        //獲取被AOP代理的方法簽名
         MethodSignature methodSignature = (MethodSignature)joinPoint.getSignature();
-        //透過方法簽名獲取方法上的註解
         com.shijiawei.secretblog.article.annotation.DelayDoubleDelete annotation = methodSignature.getMethod().getAnnotation(com.shijiawei.secretblog.article.annotation.DelayDoubleDelete.class);
 
         String keyExpression = annotation.key();
-        //若keyExpression中包含SpEL表達式的話
         if(keyExpression.contains("#")){
             keyExpression = generateKey(keyExpression,joinPoint);
         }
-        //組合成最終key
-        String key = annotation.prefix()+":"+keyExpression;
+        String keyPrefix = annotation.prefix() + ":" + keyExpression;
 
-        //初次刪除在Redis中的緩存,避免再新增時有人讀取緩存數據
-        redissonClient.getBucket(key).delete();
-        //執行原代碼
+        // 修改這裡：使用模式匹配刪除所有相關的鍵
+        long deletedCount = deleteKeysWithPrefix(keyPrefix);
+        log.info("首次刪除({})快取數據，共刪除{}個鍵", keyPrefix, deletedCount);
+
         Object proceed = joinPoint.proceed();
-        scheduleDelayedCacheDeletion(key,annotation.delay(),annotation.timeUnit());//時間由註解定義,默認為5秒
+        scheduleDelayedCacheDeletion(keyPrefix, annotation.delay(), annotation.timeUnit());
         return proceed;
     }
 
+    private long deleteKeysWithPrefix(String keyPrefix) {
+        RKeys keys = redissonClient.getKeys();
+        Iterable<String> keysToDelete = keys.getKeysByPattern(keyPrefix + "*");
+        long count = 0;
+        for (String key : keysToDelete) {
+            redissonClient.getBucket(key).delete();
+            count++;
+        }
+        return count;
+    }
 
-    public void scheduleDelayedCacheDeletion(String key, long delay, TimeUnit timeUnit){
-        //創建普通隊列
-        RQueue<Object> cacheDeletionQueue = redissonClient.getQueue("cacheDeletionQueue:"+key);
-        //創建延遲隊列並將普通隊列放置於其中
+    public void scheduleDelayedCacheDeletion(String keyPrefix, long delay, TimeUnit timeUnit){
+        RQueue<Object> cacheDeletionQueue = redissonClient.getQueue("cacheDeletionQueue:" + keyPrefix);
         RDelayedQueue<Object> delayedQueue = redissonClient.getDelayedQueue(cacheDeletionQueue);
-        //到達延遲時間時,將key作為Value放入延遲隊列中,key為"cacheDeletionQueue:"+key,value為key
-        delayedQueue.offer(key,delay,timeUnit);
+        delayedQueue.offer(keyPrefix, delay, timeUnit);
 
-        //自動刪除該緩存鍵
-        // 模擬阻塞等待
         new Thread(() -> {
             while (true) {
                 Object poll = cacheDeletionQueue.poll();
                 if (poll != null) {
-                    redissonClient.getBucket(key).delete();
-                    log.info("延遲雙刪完畢...刪除鍵:{}", poll);
+                    long deletedCount = deleteKeysWithPrefix(keyPrefix);
+                    log.info("延遲雙刪完畢...刪除前綴:{}，共刪除{}個鍵", poll, deletedCount);
                     break;
                 }
                 try {
-                    Thread.sleep(100); // 等待 100 毫秒再嘗試
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -98,7 +90,9 @@ public class DelayDoubleDeleteAspect {
         for (int i = 0; i < parameterNames.length; i++) {
             context.setVariable(parameterNames[i], args[i]);
         }
-
-        return parser.parseExpression(keyExpression).getValue(context, String.class);
-    }
+        return parser.parseExpression(keyExpression, ParserContext.TEMPLATE_EXPRESSION).getValue(context, String.class);
 }
+
+
+    }
+

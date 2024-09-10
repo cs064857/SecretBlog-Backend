@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.ParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
@@ -21,9 +22,9 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Arrays;
 
-// @Component 註解表示這個類是一個 Spring 組件，Spring 會自動創建它的實例
-// @Aspect 註解表示這是一個切面類，用於實現AOP（面向切面編程）
-// @Slf4j 是 Lombok 提供的註解，自動為類添加一個 log 字段，用於日誌記錄
+/**
+ * 使用範例：@OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
+ */
 @Component
 @Aspect
 @Slf4j
@@ -62,11 +63,13 @@ public class OpenCacheAspect {
         log.debug("Method: {}", method.getName());
         log.debug("Key expression: {}", keyExpression);
 
+        //若包含SpEL表達示
+        if(keyExpression.contains("#")){
+            // 生成緩存的 key
+            keyExpression = generateKey(keyExpression, method, joinPoint.getArgs());
+        }
 
-
-        // 生成緩存的 key
-        String key = generateKey(keyExpression, method, joinPoint.getArgs());
-        key = prefix + ":" + key;
+        String key = prefix + ":" + keyExpression;
 
         // 記錄生成的緩存 key
         log.info("Generated cache key: {}", key);
@@ -137,7 +140,7 @@ public class OpenCacheAspect {
              * 變成
              * "categoryId_2:routerPage_2:articles"
              */
-            return parser.parseExpression(keyExpression).getValue(context, String.class);
+            return parser.parseExpression(keyExpression, ParserContext.TEMPLATE_EXPRESSION).getValue(context, String.class);
         } catch (Exception e) {
             // 如果解析失敗，記錄錯誤並返回原始表達式
             log.error("解析key表達式時出錯: {}", e.getMessage());
