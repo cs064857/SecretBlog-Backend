@@ -11,5 +11,7 @@
     <modules>
         <module>secret-common</module>
         <module>secret-article</module>
+        <module>secret-gateway</module>
+        <module>secret-user</module>
     </modules>
 </project>

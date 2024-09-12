@@ -1,0 +1,59 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.91.133:3306/secretblog_ums?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+    username: root
+    password: root
+  application:
+    name: secret-user
+  cloud:
+    nacos:
+      server-addr: 192.168.91.133:8848
+      discovery:
+        server-addr: 192.168.91.133:8848
+  config:
+    import: nacos:application.yaml
+  data:
+    redis:
+      port: 6379
+      database: 0
+      host: 192.168.91.133
+#  cache:
+#    redis:
+#      #以下配置為配合SpringCache使用時
+#      use-key-prefix: true #開啟前綴
+#      key-prefix: SecretBlog #設置前綴
+#      time-to-live: 86400000 #設置Redis緩存過期時間，設置為一天，解決緩存雪崩問題
+#      cache-null-values: true  #緩存空值,避免緩存穿透
+#    type: redis #設置SpringCache緩存使用Redis
+logging:
+  level:
+    root: info
+server:
+  port: 22000
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+# springdoc-openapi
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.shijiawei.secretblog.user.controller
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
