@@ -1,9 +1,7 @@
 package com.shijiawei.secretblog.article.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -48,7 +46,7 @@ public class AmsArticle implements Serializable {
      * 作者id(雪花算法,不可為空)
      */
 //    @NotNull(message = "作者ID不可為空",groups = {Insert.class})
-    @TableField(value = "user_id")
+    @TableField(value = "user_Id")
     private Long userId;
 
     /**
@@ -75,13 +73,13 @@ public class AmsArticle implements Serializable {
     /**
      * 創建時間
      */
-    @TableField(value = "create_time")
+    @TableField(value = "create_time",fill= FieldFill.INSERT)
     private LocalDateTime createTime;
 
     /**
      * 更新時間
      */
-    @TableField(value = "update_time")
+    @TableField(value = "update_time",fill= FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     @TableField(exist = false)
