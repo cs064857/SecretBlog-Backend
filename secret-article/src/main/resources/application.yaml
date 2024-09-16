@@ -11,6 +11,8 @@ spring:
       server-addr: 192.168.91.133:8848
       discovery:
         server-addr: 192.168.91.133:8848
+      config:
+        timeout: 300000
   config:
     import: nacos:application.yaml
   data:

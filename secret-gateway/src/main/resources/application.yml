@@ -17,6 +17,7 @@ spring:
         server-addr: 192.168.91.133:8848
       config:
         server-addr: 192.168.91.133:8848
+        timeout: 30000
     gateway:
       discovery:
         locator:
@@ -28,4 +29,9 @@ spring:
             - Path=/api/article/**
           filters:
             - RewritePath=/api/?(?<segment>.*), /$\{segment}
-
+        - id: user_route
+          uri: lb://secret-user
+          predicates:
+            - Path=/api/ums/**
+          filters:
+            - RewritePath=/api/?(?<segment>.*), /$\{segment}
