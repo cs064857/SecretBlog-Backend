@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.user.DTO;
+package com.shijiawei.secretblog.user.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.user.enumValue.Gender;
@@ -11,21 +11,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * ClassName: UmsUserDetailsDTO
+ * ClassName: UmsUpdateUserDetailsVO
  * Description:
  *
- * @Create 2024/9/15 上午1:43
+ * @Create 2024/9/21 下午5:51
  */
 @Data
-public class UmsUserDetailsDTO {
-    // 用戶ID
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private Long id;
-    // 用戶資訊ID
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private Long userInfoId;
-
+public class UmsUpdateUserDetailsVO {
     // 姓名
     private String name;
 
@@ -34,8 +26,6 @@ public class UmsUserDetailsDTO {
 
     //帳號狀態(0正常,1封禁中)
     private Status status;
-    // 邏輯刪除 (0 未刪除, 1 已刪除)
-    private int deleted;
 
     // UmsUserInfo 的欄位
     private String accountName;    // 帳號名稱
@@ -45,10 +35,14 @@ public class UmsUserDetailsDTO {
     private Gender gender;            // 性別 (1 男性, 2 女性, 3 不願透露)
     private String address;        // 居住地址
     private String phoneNumber;    // 手機號碼
-    private LocalDateTime createTime;  // 註冊時間 (LocalDateTime in Java)
 
     // 來自 UmsRole 的欄位
     private Role roleId;       // 權限名稱
 
-
+    public boolean isEmpty() {
+        return ObjectUtils.allNull(
+                name, avatar, status, accountName, password, email, birthday, gender,
+                address, phoneNumber,roleId
+        );
+    }
 }

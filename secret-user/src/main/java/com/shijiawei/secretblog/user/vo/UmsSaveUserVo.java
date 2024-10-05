@@ -1,6 +1,9 @@
 package com.shijiawei.secretblog.user.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.shijiawei.secretblog.user.enumValue.Gender;
+import com.shijiawei.secretblog.user.enumValue.Role;
+import com.shijiawei.secretblog.user.enumValue.Status;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -13,14 +16,14 @@ import java.time.LocalDate;
  */
 @Data
 public class UmsSaveUserVo {
-
+    private Status status;
     private String name;
     private String accountName;
     private String password;
     private String checkPassword;
     private LocalDate birthday;
-    private Integer gender;
-    private String roleId;
+    private Gender gender;
+    private Role roleId;
     private String email;
     private String address;
     private String phoneNumber;
