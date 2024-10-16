@@ -34,8 +34,8 @@ public class UmsUserDetailsDTO {
 
     //帳號狀態(0正常,1封禁中)
     private Status status;
-    // 邏輯刪除 (0 未刪除, 1 已刪除)
-    private int deleted;
+//    // 邏輯刪除 (0 未刪除, 1 已刪除)
+//    private int deleted;
 
     // UmsUserInfo 的欄位
     private String accountName;    // 帳號名稱

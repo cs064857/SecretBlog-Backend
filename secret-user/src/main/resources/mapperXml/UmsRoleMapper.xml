@@ -1,0 +1,214 @@
+<!--<?xml version="1.0" encoding="UTF-8"?>-->
+<!--<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">-->
+<!--<mapper namespace="com.shijiawei.secretblog.user.mapper.UmsRoleMapper">-->
+<!--  <resultMap id="BaseResultMap" type="com.shijiawei.secretblog.user.entity.UmsRole">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    &lt;!&ndash;@Table ums_role&ndash;&gt;-->
+<!--    <id column="id" jdbcType="BIGINT" property="id" />-->
+<!--    <result column="role_name" jdbcType="VARCHAR" property="roleName" />-->
+<!--    <result column="role_level" jdbcType="TINYINT" property="roleLevel" />-->
+<!--    <result column="deleted" jdbcType="TINYINT" property="deleted" />-->
+<!--  </resultMap>-->
+<!--  <sql id="Base_Column_List">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    id, role_name, role_level, deleted-->
+<!--  </sql>-->
+<!--  <update id="updateBatch" parameterType="java.util.List">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    update ums_role-->
+<!--    <trim prefix="set" suffixOverrides=",">-->
+<!--      <trim prefix="role_name = case" suffix="end,">-->
+<!--        <foreach collection="list" index="index" item="item">-->
+<!--          when id = #{item.id,jdbcType=BIGINT} then #{item.roleName,jdbcType=VARCHAR}-->
+<!--        </foreach>-->
+<!--      </trim>-->
+<!--      <trim prefix="role_level = case" suffix="end,">-->
+<!--        <foreach collection="list" index="index" item="item">-->
+<!--          when id = #{item.id,jdbcType=BIGINT} then #{item.roleLevel,jdbcType=TINYINT}-->
+<!--        </foreach>-->
+<!--      </trim>-->
+<!--      <trim prefix="deleted = case" suffix="end,">-->
+<!--        <foreach collection="list" index="index" item="item">-->
+<!--          when id = #{item.id,jdbcType=BIGINT} then #{item.deleted,jdbcType=TINYINT}-->
+<!--        </foreach>-->
+<!--      </trim>-->
+<!--    </trim>-->
+<!--    where id in-->
+<!--    <foreach close=")" collection="list" item="item" open="(" separator=", ">-->
+<!--      #{item.id,jdbcType=BIGINT}-->
+<!--    </foreach>-->
+<!--  </update>-->
+<!--  <update id="updateBatchSelective" parameterType="java.util.List">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    update ums_role-->
+<!--    <trim prefix="set" suffixOverrides=",">-->
+<!--      <trim prefix="role_name = case" suffix="end,">-->
+<!--        <foreach collection="list" index="index" item="item">-->
+<!--          <if test="item.roleName != null">-->
+<!--            when id = #{item.id,jdbcType=BIGINT} then #{item.roleName,jdbcType=VARCHAR}-->
+<!--          </if>-->
+<!--        </foreach>-->
+<!--      </trim>-->
+<!--      <trim prefix="role_level = case" suffix="end,">-->
+<!--        <foreach collection="list" index="index" item="item">-->
+<!--          <if test="item.roleLevel != null">-->
+<!--            when id = #{item.id,jdbcType=BIGINT} then #{item.roleLevel,jdbcType=TINYINT}-->
+<!--          </if>-->
+<!--        </foreach>-->
+<!--      </trim>-->
+<!--      <trim prefix="deleted = case" suffix="end,">-->
+<!--        <foreach collection="list" index="index" item="item">-->
+<!--          <if test="item.deleted != null">-->
+<!--            when id = #{item.id,jdbcType=BIGINT} then #{item.deleted,jdbcType=TINYINT}-->
+<!--          </if>-->
+<!--        </foreach>-->
+<!--      </trim>-->
+<!--    </trim>-->
+<!--    where id in-->
+<!--    <foreach close=")" collection="list" item="item" open="(" separator=", ">-->
+<!--      #{item.id,jdbcType=BIGINT}-->
+<!--    </foreach>-->
+<!--  </update>-->
+<!--  <insert id="batchInsert" parameterType="map">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    insert into ums_role-->
+<!--    (id, role_name, role_level, deleted)-->
+<!--    values-->
+<!--    <foreach collection="list" item="item" separator=",">-->
+<!--      (#{item.id,jdbcType=BIGINT}, #{item.roleName,jdbcType=VARCHAR}, #{item.roleLevel,jdbcType=TINYINT}, -->
+<!--        #{item.deleted,jdbcType=TINYINT})-->
+<!--    </foreach>-->
+<!--  </insert>-->
+<!--  <delete id="deleteByPrimaryKeyIn">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    delete from ums_role where id in -->
+<!--    <foreach close=")" collection="list" item="id" open="(" separator=", ">-->
+<!--      #{id,jdbcType=BIGINT}-->
+<!--    </foreach>-->
+<!--  </delete>-->
+<!--  <update id="updateBatch" parameterType="java.util.List">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    <foreach collection="list" item="item" separator=";">-->
+<!--      update ums_role-->
+<!--      <set>-->
+<!--        <if test="item.roleName != null">-->
+<!--          role_name = #{item.roleName,jdbcType=VARCHAR},-->
+<!--        </if>-->
+<!--        <if test="item.roleLevel != null">-->
+<!--          role_level = #{item.roleLevel,jdbcType=TINYINT},-->
+<!--        </if>-->
+<!--        <if test="item.deleted != null">-->
+<!--          deleted = #{item.deleted,jdbcType=TINYINT},-->
+<!--        </if>-->
+<!--      </set>-->
+<!--      where id = #{item.id,jdbcType=BIGINT}-->
+<!--    </foreach>-->
+<!--  </update>-->
+<!--  <insert id="batchInsertSelectiveUseDefaultForNull" parameterType="map">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    insert into ums_role-->
+<!--    (id, role_name, role_level, deleted)-->
+<!--    values-->
+<!--    <foreach collection="list" item="item" separator=",">-->
+<!--      (-->
+<!--      <choose>-->
+<!--        <when test="item.id != null">-->
+<!--          #{item.id,jdbcType=BIGINT},-->
+<!--        </when>-->
+<!--        &lt;!&ndash;@ignoreSql&ndash;&gt;-->
+<!--        <otherwise>-->
+<!--          DEFAULT,-->
+<!--        </otherwise>-->
+<!--      </choose>-->
+<!--      <choose>-->
+<!--        <when test="item.roleName != null">-->
+<!--          #{item.roleName,jdbcType=VARCHAR},-->
+<!--        </when>-->
+<!--        &lt;!&ndash;@ignoreSql&ndash;&gt;-->
+<!--        <otherwise>-->
+<!--          DEFAULT,-->
+<!--        </otherwise>-->
+<!--      </choose>-->
+<!--      <choose>-->
+<!--        <when test="item.roleLevel != null">-->
+<!--          #{item.roleLevel,jdbcType=TINYINT},-->
+<!--        </when>-->
+<!--        &lt;!&ndash;@ignoreSql&ndash;&gt;-->
+<!--        <otherwise>-->
+<!--          DEFAULT,-->
+<!--        </otherwise>-->
+<!--      </choose>-->
+<!--      <choose>-->
+<!--        <when test="item.deleted != null">-->
+<!--          #{item.deleted,jdbcType=TINYINT}-->
+<!--        </when>-->
+<!--        &lt;!&ndash;@ignoreSql&ndash;&gt;-->
+<!--        <otherwise>-->
+<!--          DEFAULT-->
+<!--        </otherwise>-->
+<!--      </choose>-->
+<!--      )-->
+<!--    </foreach>-->
+<!--  </insert>-->
+<!--  <insert id="insertOrUpdate" parameterType="com.shijiawei.secretblog.user.entity.UmsRole">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    insert into ums_role-->
+<!--    (id, role_name, role_level, deleted)-->
+<!--    values-->
+<!--    (#{id,jdbcType=BIGINT}, #{roleName,jdbcType=VARCHAR}, #{roleLevel,jdbcType=TINYINT}, -->
+<!--      #{deleted,jdbcType=TINYINT})-->
+<!--    on duplicate key update -->
+<!--    id = #{id,jdbcType=BIGINT}, -->
+<!--    role_name = #{roleName,jdbcType=VARCHAR}, -->
+<!--    role_level = #{roleLevel,jdbcType=TINYINT}, -->
+<!--    deleted = #{deleted,jdbcType=TINYINT}-->
+<!--  </insert>-->
+<!--  <insert id="insertOrUpdateSelective" parameterType="com.shijiawei.secretblog.user.entity.UmsRole">-->
+<!--    &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--    insert into ums_role-->
+<!--    <trim prefix="(" suffix=")" suffixOverrides=",">-->
+<!--      <if test="id != null">-->
+<!--        id,-->
+<!--      </if>-->
+<!--      <if test="roleName != null">-->
+<!--        role_name,-->
+<!--      </if>-->
+<!--      <if test="roleLevel != null">-->
+<!--        role_level,-->
+<!--      </if>-->
+<!--      <if test="deleted != null">-->
+<!--        deleted,-->
+<!--      </if>-->
+<!--    </trim>-->
+<!--    values-->
+<!--    <trim prefix="(" suffix=")" suffixOverrides=",">-->
+<!--      <if test="id != null">-->
+<!--        #{id,jdbcType=BIGINT},-->
+<!--      </if>-->
+<!--      <if test="roleName != null">-->
+<!--        #{roleName,jdbcType=VARCHAR},-->
+<!--      </if>-->
+<!--      <if test="roleLevel != null">-->
+<!--        #{roleLevel,jdbcType=TINYINT},-->
+<!--      </if>-->
+<!--      <if test="deleted != null">-->
+<!--        #{deleted,jdbcType=TINYINT},-->
+<!--      </if>-->
+<!--    </trim>-->
+<!--    on duplicate key update -->
+<!--    <trim suffixOverrides=",">-->
+<!--      <if test="id != null">-->
+<!--        id = #{id,jdbcType=BIGINT},-->
+<!--      </if>-->
+<!--      <if test="roleName != null">-->
+<!--        role_name = #{roleName,jdbcType=VARCHAR},-->
+<!--      </if>-->
+<!--      <if test="roleLevel != null">-->
+<!--        role_level = #{roleLevel,jdbcType=TINYINT},-->
+<!--      </if>-->
+<!--      <if test="deleted != null">-->
+<!--        deleted = #{deleted,jdbcType=TINYINT},-->
+<!--      </if>-->
+<!--    </trim>-->
+<!--  </insert>-->
+<!--</mapper>-->
