@@ -17,7 +17,7 @@ import java.util.HashMap;
  */
 @Data
 
-public class R<T>{
+public class R<T> {
     private int code;
     private String msg;
     private T data;
@@ -35,12 +35,13 @@ public class R<T>{
 
     /**
      * 使用泛型返回
+     *
      * @param data
-     * @return
      * @param <T>
+     * @return
      */
     public static <T> R<T> ok(T data) {
-        return(new R<T>(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription(), data));
+        return (new R<T>(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription(), data));
     }
 
 //    public static <T> R<T> ok(T data) {
@@ -51,8 +52,8 @@ public class R<T>{
 //    }
 
 
-    public static  R ok() {
-        return(new R(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription()));
+    public static R ok() {
+        return (new R(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription()));
     }
 
 //    public static  R ok() {
@@ -64,6 +65,7 @@ public class R<T>{
 
     /**
      * 錯誤,無參
+     *
      * @return
      */
     public static R error() {
@@ -71,15 +73,15 @@ public class R<T>{
     }
 
 
-
     /**
      * 錯誤,參數為自訂訊息、校驗異常資訊(校驗屬性與錯誤原因)
+     *
      * @param errorData
-     * @return
      * @param <T>
+     * @return
      */
-    public static <T> R<T> error(String msg,T errorData) {
-        return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(),msg,errorData);
+    public static <T> R<T> error(String msg, T errorData) {
+        return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(), msg, errorData);
     }
 
     public R() {
@@ -104,7 +106,7 @@ public class R<T>{
         this.msg = msg;
     }
 
-    public R(int code, String msg,T data) {
+    public R(int code, String msg, T data) {
         this.code = code;
         this.msg = msg;
         this.data = data;
