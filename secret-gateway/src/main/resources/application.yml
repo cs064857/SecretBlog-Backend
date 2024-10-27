@@ -35,3 +35,9 @@ spring:
             - Path=/api/ums/**
           filters:
             - RewritePath=/api/?(?<segment>.*), /$\{segment}
+        - id: minio_route
+          uri: lb://secret-minio
+          predicates:
+            - Path=/api/mms/**
+          filters:
+            - RewritePath=/api/?(?<segment>.*), /$\{segment}
