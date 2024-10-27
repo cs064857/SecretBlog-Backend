@@ -1,11 +1,17 @@
+var:
+  endPoint: http://192.168.26.5:9000
+  secretblog:
+    bucketName: secretblog
+    accessKey: p6KMsat29WtFgrWPasyR
+    secretKey: bNgTw96toBr5LbGrzKFnL4oXIV0g7khBYuPB4Zhs
 spring:
 #  datasource:
 #    driver-class-name: com.mysql.cj.jdbc.Driver
-#    url: jdbc:mysql://192.168.26.5:3306/secretblog_mms?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+#    url: jdbc:mysql://192.168.26.5:3306/secretblog_sms?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
 #    username: root
 #    password: root
   application:
-    name: secret-minio
+    name: secret-storage
   cloud:
     nacos:
       server-addr: 192.168.26.5:8848
@@ -53,7 +59,7 @@ springdoc:
   group-configs:
     - group: 'default'
       paths-to-match: '/**'
-      packages-to-scan: com.shijiawei.secretblog.minio.controller
+      packages-to-scan: com.shijiawei.secretblog.storage.controller
 # knife4j
 knife4j:
   enable: true

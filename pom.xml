@@ -13,6 +13,6 @@
         <module>secret-article</module>
         <module>secret-gateway</module>
         <module>secret-user</module>
-        <module>secret-minio</module>
+        <module>secret-storage</module>
     </modules>
 </project>
