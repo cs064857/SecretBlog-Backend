@@ -1,5 +1,5 @@
 var:
-  endPoint: http://192.168.26.5:9000
+  endPoint: http://192.168.26.5:9001
   secretblog:
     bucketName: secretblog
     accessKey: p6KMsat29WtFgrWPasyR

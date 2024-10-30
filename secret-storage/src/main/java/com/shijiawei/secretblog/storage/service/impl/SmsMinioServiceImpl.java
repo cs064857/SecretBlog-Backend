@@ -1,12 +1,14 @@
 package com.shijiawei.secretblog.storage.service.impl;
 
+import com.shijiawei.secretblog.storage.feignClient.UmsUserFeignClient;
 import com.shijiawei.secretblog.storage.service.SmsMinioService;
-import io.minio.GetPresignedObjectUrlArgs;
-import io.minio.MinioClient;
+import io.minio.*;
 import io.minio.errors.*;
+import io.minio.http.Method;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,7 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ClassName: SmsMinioServiceImpl
@@ -30,44 +34,50 @@ public class SmsMinioServiceImpl implements SmsMinioService {
     @Autowired
     private MinioClient minioClient;
 
-//    @Value("${var.secretblog.bucketName}")
+    @Value("${var.secretblog.bucketName}")
     private String bucketName;
 
-    /**
-     * 生成預簽名URL
-     * @return
-     * @throws ServerException
-     * @throws InsufficientDataException
-     * @throws ErrorResponseException
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws InvalidResponseException
-     * @throws XmlParserException
-     * @throws InternalException
-     */
-    @Override
-    public String generatePreSignedUrl() throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+    @Autowired
+    private UmsUserFeignClient umsUserFeignClient;
 
+//    /**
+//     * 生成預簽名URL
+//     * @return
+//     * @throws ServerException
+//     * @throws InsufficientDataException
+//     * @throws ErrorResponseException
+//     * @throws IOException
+//     * @throws NoSuchAlgorithmException
+//     * @throws InvalidKeyException
+//     * @throws InvalidResponseException
+//     * @throws XmlParserException
+//     * @throws InternalException
+//     */
+//    @Override
+//    public String generatePreSignedUrl() throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+//
+//
+//            String storageName= UUID.randomUUID().toString();
+//            String presignedObjectUrl = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+//                    .bucket(bucketName)
+//                    .object(storageName)
+//                    .method(Method.POST)
+//                    .expiry(30, TimeUnit.MINUTES)
+//                    .build());
+//
+//            if(StringUtils.isNotEmpty(presignedObjectUrl)){
+//                log.info("成功生成預簽名 URL: {}", presignedObjectUrl);
+//                return presignedObjectUrl;
+//            }
+//
+//        return null;
+//    }
 
-            String storageName= UUID.randomUUID().toString();
-            String presignedObjectUrl = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
-                    .bucket(bucketName)
-                    .build());
-
-            if(StringUtils.isNotEmpty(presignedObjectUrl)){
-                log.info("成功生成預簽名 URL: {}", presignedObjectUrl);
-                return presignedObjectUrl;
-            }
-
-        return null;
-    }
-
-    /**
-     * 限制預簽名URL上傳次數
-     * @param urlId
-     * @return
-     */
+//    /**
+//     * 限制預簽名URL上傳次數
+//     * @param urlId
+//     * @return
+//     */
 //    public boolean checkAndUpdateUrlUsage(String urlId) {
 //        return urlUsageCount.computeIfPresent(urlId, (key, count) -> {
 //            if (count > 0) {
@@ -95,24 +105,28 @@ public class SmsMinioServiceImpl implements SmsMinioService {
      */
     @Override
     public String uploadImageToMinio(MultipartFile file) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
-        System.out.println();
-//        String name = file.getName();
 
         String originalFilename = file.getOriginalFilename();
         if (StringUtils.isNotBlank(originalFilename)) {
-            String[] split = originalFilename.split("\\.");//獲取文件副檔名
-            String storageName= UUID.randomUUID().toString()+"."+split[1];
-            String presignedObjectUrl = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+            String storageName = UUID.randomUUID().toString();
+            minioClient.putObject(PutObjectArgs.builder()
                     .bucket(bucketName)
                     .object(storageName)
+                    .contentType(file.getContentType())
+                    .stream(file.getInputStream(), file.getSize(), -1)
                     .build());
 
-            if(StringUtils.isNotEmpty(presignedObjectUrl)){
-                log.info("成功生成預簽名 URL: {}", presignedObjectUrl);
-                return presignedObjectUrl;
-            }
+            String imgUrl =String.format("%s/api/v1/buckets/%s/objects/download?preview=true&prefix=%s&version_id=null",
+                    "http://192.168.26.5:9000",
+                    bucketName,
+                    storageName);
+            log.info("成功上傳圖片: {}", imgUrl);
+
+            // 將圖片 URL 存入 UMS
+            umsUserFeignClient.updateUmsUserAndUserInfo(imgUrl, storageName);
+
+            return imgUrl;
         }
         return null;
     }
-
 }

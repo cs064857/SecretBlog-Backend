@@ -47,7 +47,12 @@ public class UmsUserController {
         umsUserService.saveUmsUser(umsSaveUserVo);
         return R.ok();
     }
+    @PutMapping("/imgUrl/{userId}/{imgUrl}")
+    public void updateUmsUserAndUserInfo(@PathVariable String userId,@PathVariable String imgUrl){
+        log.info("userId:{}",userId);
+        log.info("imgUrl:{}",imgUrl);
 
+    }
     /**
      * 獲取所有使用者
      *
@@ -77,4 +82,5 @@ public class UmsUserController {
         umsUserService.updateUmsUserDetails(updateUserDetailsVO,userId,userInfoId);
         return R.ok();
     }
+
 }

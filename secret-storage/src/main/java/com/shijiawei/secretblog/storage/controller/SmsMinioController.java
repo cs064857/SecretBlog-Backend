@@ -5,9 +5,7 @@ import com.shijiawei.secretblog.storage.service.SmsMinioService;
 import io.minio.errors.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -28,8 +26,14 @@ public class SmsMinioController {
     @Autowired
     private SmsMinioService smsMinioService;
 
+//    @GetMapping
+//    public R getPreSignedUrlFromMinio() throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+//        String preSignedUrl =smsMinioService.generatePreSignedUrl();
+//        return R.ok(preSignedUrl);
+//    }
+
     @PostMapping
-    public R uploadImageToMinio(MultipartFile file) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+    public R uploadImageToMinio(@RequestParam("file") MultipartFile file) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
         log.info("file:{}",file);
         String imgUrl =smsMinioService.uploadImageToMinio(file);
         return R.ok(imgUrl);
