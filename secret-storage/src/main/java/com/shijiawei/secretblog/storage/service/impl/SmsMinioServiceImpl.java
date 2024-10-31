@@ -104,7 +104,7 @@ public class SmsMinioServiceImpl implements SmsMinioService {
      * @throws InternalException
      */
     @Override
-    public String uploadImageToMinio(MultipartFile file) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+    public String uploadImageToMinio(MultipartFile file,String userId) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
 
         String originalFilename = file.getOriginalFilename();
         if (StringUtils.isNotBlank(originalFilename)) {
@@ -121,9 +121,9 @@ public class SmsMinioServiceImpl implements SmsMinioService {
                     bucketName,
                     storageName);
             log.info("成功上傳圖片: {}", imgUrl);
-
             // 將圖片 URL 存入 UMS
-            umsUserFeignClient.updateUmsUserAndUserInfo(imgUrl, storageName);
+
+            umsUserFeignClient.updateUmsUserAvatar(imgUrl,userId);
 
             return imgUrl;
         }

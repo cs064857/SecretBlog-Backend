@@ -33,9 +33,11 @@ public class SmsMinioController {
 //    }
 
     @PostMapping
-    public R uploadImageToMinio(@RequestParam("file") MultipartFile file) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+    public R uploadImageToMinio(@RequestParam("file") MultipartFile file,String userId) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
         log.info("file:{}",file);
-        String imgUrl =smsMinioService.uploadImageToMinio(file);
+        log.info("userId:{}",userId);
+        String imgUrl =smsMinioService.uploadImageToMinio(file,userId);
+        log.info("imgUrl:{}",imgUrl);
         return R.ok(imgUrl);
     }
 }

@@ -47,11 +47,12 @@ public class UmsUserController {
         umsUserService.saveUmsUser(umsSaveUserVo);
         return R.ok();
     }
-    @PutMapping("/imgUrl/{userId}/{imgUrl}")
-    public void updateUmsUserAndUserInfo(@PathVariable String userId,@PathVariable String imgUrl){
-        log.info("userId:{}",userId);
-        log.info("imgUrl:{}",imgUrl);
 
+    @PutMapping
+    public void updateUmsUserAvatar(@RequestParam String imgUrl,@RequestParam String userId){
+        log.info("imgUrl:{}",imgUrl);
+        umsUserService.updateUmsUserAvatar(imgUrl,userId);
+        System.out.println();
     }
     /**
      * 獲取所有使用者

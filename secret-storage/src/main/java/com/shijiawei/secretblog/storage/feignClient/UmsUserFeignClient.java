@@ -5,6 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * ClassName: UmsUserFeignClient
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 @FeignClient(name = "secret-user")
 public interface UmsUserFeignClient {
 
-    @PutMapping("/imgUrl/{userId}/{imgUrl}")
-    void updateUmsUserAndUserInfo(@PathVariable String userId, @PathVariable String imgUrl);
+    @PutMapping("/ums/user")
+    void updateUmsUserAvatar(@RequestParam String imgUrl,@RequestParam String userId);
 
 }

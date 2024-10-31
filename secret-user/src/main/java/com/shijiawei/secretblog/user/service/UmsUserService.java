@@ -41,4 +41,6 @@ public interface UmsUserService extends IService<UmsUser>{
     void deleteUmsUserDetails(List<Long> userIdList);
 
     void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId, Long userInfoId);
+
+    void updateUmsUserAvatar(String imgUrl, String userId);
 }

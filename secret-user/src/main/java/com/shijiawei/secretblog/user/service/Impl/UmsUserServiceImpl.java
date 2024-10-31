@@ -13,6 +13,7 @@ import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,7 @@ import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 import com.shijiawei.secretblog.user.service.UmsUserService;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+import org.springframework.util.CollectionUtils;
 
 /**
 * ClassName: UmsUserServiceImpl
@@ -297,7 +298,16 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     }
 
+    @Override
+    public void updateUmsUserAvatar(String imgUrl, String userId) {
+        UmsUser umsUser = this.baseMapper.selectById(userId);
+        if(!umsUser.isEmpty()){
+            umsUser.setAvatar(imgUrl);
+            this.baseMapper.updateById(umsUser);
+        }
 
+
+    }
 
 
 }
