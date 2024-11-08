@@ -28,6 +28,7 @@ public class SmsMinioController {
 
 //    @GetMapping
 //    public R getPreSignedUrlFromMinio() throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+//        ///TODO 身分驗證
 //        String preSignedUrl =smsMinioService.generatePreSignedUrl();
 //        return R.ok(preSignedUrl);
 //    }
@@ -40,4 +41,6 @@ public class SmsMinioController {
         log.info("imgUrl:{}",imgUrl);
         return R.ok(imgUrl);
     }
+
+
 }

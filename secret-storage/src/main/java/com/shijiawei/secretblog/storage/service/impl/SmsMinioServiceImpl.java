@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -61,7 +62,7 @@ public class SmsMinioServiceImpl implements SmsMinioService {
 //            String presignedObjectUrl = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
 //                    .bucket(bucketName)
 //                    .object(storageName)
-//                    .method(Method.POST)
+//                    .method(Method.PUT)
 //                    .expiry(30, TimeUnit.MINUTES)
 //                    .build());
 //
@@ -105,7 +106,21 @@ public class SmsMinioServiceImpl implements SmsMinioService {
      */
     @Override
     public String uploadImageToMinio(MultipartFile file,String userId) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+        //TODO 身分驗證、限制該用戶上傳頻率、限制上傳的文檔類型及大小、CAPTCHA 或人機驗證、IP 黑名單、日誌記錄和監控
+        if(file.isEmpty()){
+            throw new RuntimeException("圖片不存在");
+        };
+        log.info("file.getContentType():{}",file.getContentType());
 
+        //判斷是否為圖片,若不為圖片則拋出異常
+        if(!Objects.requireNonNull(file.getContentType()).startsWith("image/")){
+            throw new RuntimeException("並非圖片類型");
+        };
+        log.info("file.getSize():{}",file.getSize());
+        //若圖片大小大於5MB,則拋出異常
+        if(file.getSize()>1024*1024*5){
+            throw new RuntimeException("圖片必須小於5MB");
+        };
         String originalFilename = file.getOriginalFilename();
         if (StringUtils.isNotBlank(originalFilename)) {
             String storageName = UUID.randomUUID().toString();
@@ -122,8 +137,10 @@ public class SmsMinioServiceImpl implements SmsMinioService {
                     storageName);
             log.info("成功上傳圖片: {}", imgUrl);
             // 將圖片 URL 存入 UMS
+            if(StringUtils.isNotEmpty(userId)){
+                umsUserFeignClient.updateUmsUserAvatar(imgUrl,userId);
+            }
 
-            umsUserFeignClient.updateUmsUserAvatar(imgUrl,userId);
 
             return imgUrl;
         }
