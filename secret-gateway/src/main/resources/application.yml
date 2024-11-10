@@ -17,7 +17,7 @@ spring:
         server-addr: 192.168.26.5:8848
       config:
         server-addr: 192.168.26.5:8848
-        timeout: 30000
+        timeout: 300000
     gateway:
       discovery:
         locator:
