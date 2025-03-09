@@ -87,6 +87,8 @@ public enum HttpCodeEnum {
      */
     USERNAME_EXISTS(302, "用戶名已存在!"),
 
+    EMAIL_EXISTS(303,"信箱已註冊!"),
+
     //======================= 其他枚舉 ==============================
 
     /**
@@ -108,6 +110,11 @@ public enum HttpCodeEnum {
      * 請求方式錯誤
      */
     METHOD_ERR(405, "請求方式錯誤,請檢查後重試!"),
+
+    /**
+     * 請求限流
+     */
+    TOO_MANY_REQUESTS(406,"請求次數過多，請稍後再試。"),
 
     /**
      * 參數格式不合法

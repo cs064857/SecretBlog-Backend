@@ -46,7 +46,7 @@ public class UmsUserInfo implements Serializable {
      */
     @TableField(value = "account_name")
     @Schema(description="帳號名稱")
-    @Size(max = 255,message = "帳號名稱最大長度要小於 255")
+    @Size(max = 32,message = "帳號名稱最大長度要小於 32")
     private String accountName;
 
     /**

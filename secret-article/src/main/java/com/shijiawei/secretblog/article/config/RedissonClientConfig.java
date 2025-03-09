@@ -32,7 +32,7 @@ public class RedissonClientConfig {
         Config config = new Config();
         // 連接到Redis的基本URL或其他參數
         config.useSingleServer()
-                .setAddress("redis://192.168.26.5:6379");
+                .setAddress("redis://4.240.82.138:56379");
 
 
         config.setCodec(StringCodec.INSTANCE);// 設置Redisson使用String進行序列化和反序列化

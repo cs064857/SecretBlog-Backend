@@ -3,7 +3,7 @@ package com.shijiawei.secretblog.article.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
-import com.shijiawei.secretblog.article.annotation.OpenCache;
+import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.entity.AmsCategory;
 import com.shijiawei.secretblog.article.service.AmsCategoryService;

@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
-import com.shijiawei.secretblog.article.annotation.OpenCache;
+import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
@@ -68,7 +68,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Override
     public Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
         //根據categoryId分類查詢
-        Page<AmsArticle> iPage = this.baseMapper.selectPage(new Page<>(routePage, 10),
+        Page<AmsArticle> iPage = this.baseMapper.selectPage(new Page<>(routePage, 20),
                 new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
         return iPage;
     }

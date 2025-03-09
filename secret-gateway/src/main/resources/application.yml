@@ -12,11 +12,11 @@ spring:
     name: secret-gateway
   cloud:
     nacos:
-      server-addr: 192.168.26.5:8848
+      server-addr: 4.240.82.138:8848
       discovery:
-        server-addr: 192.168.26.5:8848
+        server-addr: 4.240.82.138:8848
       config:
-        server-addr: 192.168.26.5:8848
+        server-addr: 4.240.82.138:8848
         timeout: 300000
     gateway:
       discovery:

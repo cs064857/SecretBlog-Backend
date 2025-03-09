@@ -33,6 +33,8 @@ public class UmsSaveUserVo {
     private String address;
     private String phoneNumber;
 
+
+
     // ID相關
 //    private String id;  // 或 Long id;
 //    private String userInfoId;  // 或 Long userInfoId;

@@ -1,20 +1,22 @@
 package com.shijiawei.secretblog.user.controller;
 
 import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.entity.UmsUser;
-import com.shijiawei.secretblog.user.service.Impl.UmsUserServiceImpl;
 import com.shijiawei.secretblog.user.service.UmsUserService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
+
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RList;
+import org.redisson.api.RedissonClient;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.ByteArrayInputStream;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -31,6 +33,9 @@ public class UmsUserController {
      */
     @Autowired
     private UmsUserService umsUserService;
+
+    @Autowired
+    private RedissonClient redissonClient;
 
     /**
      * 通過主鍵查詢單條數據
@@ -86,4 +91,31 @@ public class UmsUserController {
         return R.ok();
     }
 
+    /**
+     * 用戶註冊帳號
+     * @param umsUserRegisterDTO
+     * @return
+     */
+    @PostMapping("/register")
+    public R register(@Validated @RequestBody UmsUserRegisterDTO umsUserRegisterDTO){
+        log.info("umsUserRegisterDTO:{}",umsUserRegisterDTO);
+        return umsUserService.UmsUserRegister(umsUserRegisterDTO);
+    }
+
+    @PostMapping("/email-verify-code")
+    public R sendVerificationCode(@RequestBody UmsUserEmailVerifyDTO umsUserEmailVerifyDTO){
+        return umsUserService.sendVerificationCode(umsUserEmailVerifyDTO);
+    }
+
+//    @PostMapping("/login")
+//    public R userLogin(@Validated UmsUserLoginDTO umsUserLoginDTO){
+//        umsUserService.userLogin(umsUserLoginDTO);
+//        return R.ok();
+//    }
+
+
+    @GetMapping("/login")
+    public String index() {
+        return "index";
+    }
 }

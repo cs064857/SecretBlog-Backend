@@ -1,9 +1,10 @@
-package com.shijiawei.secretblog.article.AOP;
+package com.shijiawei.secretblog.user.AOP;
 
 
-import com.alibaba.fastjson2.JSON;
-import com.shijiawei.secretblog.common.annotation.OpenCache;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.reflect.Method;
+import java.time.Duration;
+import java.util.Arrays;
+
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -18,9 +19,10 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
-import java.time.Duration;
-import java.util.Arrays;
+import com.alibaba.fastjson2.JSON;
+import com.shijiawei.secretblog.common.annotation.OpenCache ;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 使用範例：@OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")

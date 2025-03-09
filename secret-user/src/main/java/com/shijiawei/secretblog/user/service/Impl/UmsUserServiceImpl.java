@@ -1,35 +1,50 @@
 package com.shijiawei.secretblog.user.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
-import com.shijiawei.secretblog.user.entity.UmsRole;
-import com.shijiawei.secretblog.user.entity.UmsUserInfo;
-import com.shijiawei.secretblog.user.enumValue.Gender;
-import com.shijiawei.secretblog.user.enumValue.Role;
-import com.shijiawei.secretblog.user.service.UmsRoleService;
-import com.shijiawei.secretblog.user.service.UmsUserInfoService;
-import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
-import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Random;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.shijiawei.secretblog.user.entity.UmsUser;
-import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
-import com.shijiawei.secretblog.user.service.UmsUserService;
+import org.redisson.api.RRateLimiter;
+import org.redisson.api.RateIntervalUnit;
+import org.redisson.api.RateType;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.shijiawei.secretblog.common.codeEnum.HttpCodeEnum;
+import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.common.utils.RedisRateLimiterUtils;
+import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+import com.shijiawei.secretblog.user.entity.UmsRole;
+import com.shijiawei.secretblog.user.entity.UmsUser;
+import com.shijiawei.secretblog.user.entity.UmsUserInfo;
+import com.shijiawei.secretblog.user.enumValue.Role;
+import com.shijiawei.secretblog.user.enumValue.Status;
+import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
+import com.shijiawei.secretblog.user.service.UmsRoleService;
+import com.shijiawei.secretblog.user.service.UmsUserInfoService;
+import com.shijiawei.secretblog.user.service.UmsUserService;
+import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
+import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 
 /**
 * ClassName: UmsUserServiceImpl
@@ -45,6 +60,24 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Autowired
     private UmsRoleService umsRoleService;
+
+    @Value("${user.default-avatar}")
+    private String defaultAvatar;
+
+    @Autowired
+    private RedissonClient redissonClient;
+
+    @Autowired
+    private HttpServletRequest httpServletRequest;
+
+    @Autowired
+    private RedisRateLimiterUtils redisRateLimiterUtils;
+
+
+    @Override
+    public R userLogin(UmsUserLoginDTO umsUserLoginDTO) {
+        return null;
+    }
 
     @Override
     public int updateBatch(List<UmsUser> list) {
@@ -305,8 +338,104 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             umsUser.setAvatar(imgUrl);
             this.baseMapper.updateById(umsUser);
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public R UmsUserRegister(UmsUserRegisterDTO umsUserRegisterDTO) {
+
+        UmsUser umsUser = new UmsUser();
+        UmsUserInfo umsUserInfo = new UmsUserInfo();
+        BeanUtils.copyProperties(umsUserRegisterDTO, umsUser);
+        BeanUtils.copyProperties(umsUserRegisterDTO, umsUserInfo);
+
+        //獲取user與userInfo主鍵
+        long user_id = IdWorker.getId(umsUser);
+        long userInfo_id = IdWorker.getId(umsUserInfo);
+
+        //設置user資料
+        umsUser.setId(user_id);
+        umsUser.setUserinfoId(userInfo_id);
+        umsUser.setRoleId(Role.NORMALUSER);//設置角色為普通用戶
+        umsUser.setAvatar(defaultAvatar);//設置默認頭像
+        //設置userInfo資料
+        umsUserInfo.setId(userInfo_id);
+        umsUserInfo.setUserId(user_id);
+
+        
+        ///TODO 確認信箱驗證碼
+        ///TODO 再次判斷用戶是否已註冊
+        //獲得用戶輸入的驗證碼
+        String vaildCode = umsUserRegisterDTO.getEmailValidCode();
+        //獲得用戶的信箱
+        String email = umsUserRegisterDTO.getEmail();
+        //從Redis中取得驗證碼並校驗，桶名為umsuser:validcode:abcd@gmail.com:
+        String bucket = "umsuser:validcode_"+email;
+        String validCodeFromRedis = (String) redissonClient.getBucket(bucket).get();
+        //判斷驗證碼是否正確
+        if(vaildCode.equals(validCodeFromRedis)){
+            //將用戶資料插入資料庫
+            baseMapper.insert(umsUser);
+            umsUserInfoService.saveUmsUserInfo(umsUserInfo);
+            //將Redis中保存的驗證碼刪除
+            redissonClient.getBucket(bucket).deleteAsync();
+            return R.ok();
+        }else {
+            //回傳驗證碼錯誤
+            return new R(HttpCodeEnum.CAPTCHA_ERR.getCode(), HttpCodeEnum.CAPTCHA_ERR.getDescription());
+        }
+
+    }
 
 
+    @Override
+    public R sendVerificationCode(UmsUserEmailVerifyDTO umsUserEmailVerifyDTO) {
+
+        //根據IP判斷進行限流,短時間內嘗試過多次則暫時禁止
+        String remoteAddr = httpServletRequest.getRemoteAddr();
+        log.info("remoteAddr：{}",remoteAddr);
+        /*
+         * Redis限流
+         */
+        //Redis中IP嘗試計數的桶名
+        String rateLimitBucket = "umsuser:validcode_ratelimit_ipaddr_"+remoteAddr;
+
+//
+        ///TODO 調整驗證碼嘗試限流時間，目前30秒3次
+//        RRateLimiter rateLimiter = redissonClient.getRateLimiter(rateLimitBucket);
+//        rateLimiter.trySetRate(RateType.OVERALL,3,30, RateIntervalUnit.SECONDS);
+        RRateLimiter rateLimiter = redisRateLimiterUtils.setRedisRateLimiter(rateLimitBucket, RateType.PER_CLIENT, 3, 30, RateIntervalUnit.SECONDS);
+
+
+
+        // 嘗試獲取許可
+        if (redisRateLimiterUtils.tryAcquire(rateLimiter)) {
+            /*
+              成功獲取許可，執行業務邏輯
+             */
+            String accountName = umsUserEmailVerifyDTO.getAccountName();
+            String email = umsUserEmailVerifyDTO.getEmail();
+            Optional<UmsUserInfo> existsByEmail = Optional.ofNullable(umsUserInfoService.lambdaQuery().eq(UmsUserInfo::getEmail, email).one());
+            Optional<UmsUserInfo> existsByAccountName = Optional.ofNullable(umsUserInfoService.lambdaQuery().eq(UmsUserInfo::getAccountName, accountName).one());
+            return existsByEmail.map(userInfo -> new R(HttpCodeEnum.EMAIL_EXISTS.getCode(),HttpCodeEnum.EMAIL_EXISTS.getDescription()))
+                    .or(()->existsByAccountName.map(userInfo -> new R(HttpCodeEnum.USERNAME_EXISTS.getCode(), HttpCodeEnum.USERNAME_EXISTS.getDescription())))
+                    .orElseGet(()->{
+                        Random random = new Random();
+                        String VaildCodeString = String.format("%06d", random.nextInt(90000) + 10000);
+                        ///TODO 取消顯示驗證碼
+                        log.info("驗證碼：{}", VaildCodeString);
+
+                        //將驗證碼保存在Redis中，設置過期時間為15分鐘，桶名為umsuser:validcode:abcd@gmail.com:
+                        String bucket = "umsuser:validcode_"+email;
+                        //Redis快取中儲存新的驗證碼
+                        redissonClient.getBucket(bucket).set(VaildCodeString, Duration.of(15,ChronoUnit.MINUTES));
+                        ///TODO 發送驗證碼到用戶的信箱中
+                        return R.ok("驗證碼已發送至您的郵箱");
+                    });
+        } else {
+            // 超過請求限流，拒絕請求
+            return new R(HttpCodeEnum.TOO_MANY_REQUESTS.getCode(), HttpCodeEnum.TOO_MANY_REQUESTS.getDescription());
+        }
     }
 
 

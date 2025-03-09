@@ -132,7 +132,7 @@ public class SmsMinioServiceImpl implements SmsMinioService {
                     .build());
 
             String imgUrl =String.format("%s/api/v1/buckets/%s/objects/download?preview=true&prefix=%s&version_id=null",
-                    "http://192.168.26.5:9000",
+                    "http://4.240.82.138:9000",
                     bucketName,
                     storageName);
             log.info("成功上傳圖片: {}", imgUrl);

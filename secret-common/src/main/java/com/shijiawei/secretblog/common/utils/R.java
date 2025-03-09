@@ -72,7 +72,9 @@ public class R<T> {
         return (new R(HttpCodeEnum.OPERATION_ERR.getCode(), HttpCodeEnum.OPERATION_ERR.getDescription()));
     }
 
-
+    public static <T> R<T> error(String msg) {
+        return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(), msg);
+    }
     /**
      * 錯誤,參數為自訂訊息、校驗異常資訊(校驗屬性與錯誤原因)
      *

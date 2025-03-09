@@ -2,7 +2,11 @@ package com.shijiawei.secretblog.user.service;
 
 import java.util.List;
 
+import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
@@ -15,6 +19,8 @@ import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 */
 public interface UmsUserService extends IService<UmsUser>{
 
+
+    R userLogin(UmsUserLoginDTO umsUserLoginDTO);
 
     int updateBatch(List<UmsUser> list);
 
@@ -43,4 +49,8 @@ public interface UmsUserService extends IService<UmsUser>{
     void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId, Long userInfoId);
 
     void updateUmsUserAvatar(String imgUrl, String userId);
+
+    R UmsUserRegister(UmsUserRegisterDTO umsUserRegisterDTO);
+
+    R sendVerificationCode(UmsUserEmailVerifyDTO umsUserEmailVerifyDTO);
 }
