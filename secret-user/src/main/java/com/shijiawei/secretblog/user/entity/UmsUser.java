@@ -23,6 +23,7 @@ import org.apache.commons.lang3.ObjectUtils;
 @Data
 @TableName(value = "ums_user")
 public class UmsUser implements Serializable {
+
     /**
      * 主鍵(雪花算法,不可為空)
      */

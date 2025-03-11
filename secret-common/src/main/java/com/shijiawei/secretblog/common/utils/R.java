@@ -44,6 +44,10 @@ public class R<T> {
         return (new R<T>(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription(), data));
     }
 
+    public static <T> R<T> ok(String message,T data) {
+        return (new R<T>(HttpCodeEnum.SUCCESS.getCode(), message, data));
+    }
+
 //    public static <T> R<T> ok(T data) {
 //        R<T> r = new R<T>();
 //        r.put("code", HttpCodeEnum.SUCCESS.getCode());

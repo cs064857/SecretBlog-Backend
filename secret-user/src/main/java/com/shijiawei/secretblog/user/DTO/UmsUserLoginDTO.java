@@ -1,19 +1,26 @@
 package com.shijiawei.secretblog.user.DTO;
 
+import com.shijiawei.secretblog.user.enumValue.Role;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-/**
- * ClassName: UmsUserLoginDTO
- * Description:
- *
- * @Create 2025/3/2 上午3:48
- */
 @Data
+@Schema(description = "用戶登入 DTO")
 public class UmsUserLoginDTO {
-    ///TODO JSR303
+
+    @Schema(description = "帳號名稱")
     private String accountName;
-    private String email;
+
+    @Schema(description = "密碼")
     private String password;
 
+    @Schema(description = "信箱地址")
+    private String email;
 
+    @Schema(description = "使用者組Id")
+    private Role roleId;
+
+    @Schema(description = "邏輯刪除(0未刪除,1被刪除)")
+    private Byte deleted;
 }
+

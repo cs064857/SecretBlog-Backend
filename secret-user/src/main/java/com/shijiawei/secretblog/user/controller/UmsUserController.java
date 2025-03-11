@@ -1,17 +1,22 @@
 package com.shijiawei.secretblog.user.controller;
 
+import com.shijiawei.secretblog.common.utils.JSON;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo;
 import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.shijiawei.secretblog.user.service.UmsUserService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -114,8 +119,30 @@ public class UmsUserController {
 //    }
 
 
-    @GetMapping("/login")
-    public String index() {
-        return "index";
+//    @GetMapping("/login")
+//    public String index() {
+//        return "index";
+//    }
+
+    @GetMapping("/login/business2")
+    public R getA(){
+
+        UserLoginInfo userLoginInfo = (UserLoginInfo)SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+        System.out.println("自家登入信息："+ JSON.stringify(userLoginInfo));
+        return new R("自家登入成功",userLoginInfo);
+    }
+
+    @PostMapping("/logout")
+    public R logout(HttpServletRequest request, HttpServletResponse response) {
+        // 清除安全上下文
+        SecurityContextHolder.clearContext();
+
+        // 可以在這裡添加將token加入黑名單的邏輯
+        // 例如，將當前token存入Redis黑名單，設置過期時間為token剩餘有效期
+
+        return R.ok("登出成功");
     }
 }
