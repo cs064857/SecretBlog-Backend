@@ -4,8 +4,13 @@ logging:
 server:
   port: 88
 spring:
-#  main:
-#    web-application-type: reactive
+  main:
+    allow-bean-definition-overriding: true
+  data:
+    redis:
+      port: 56379
+      database: 0
+      host: 4.240.82.138
   config:
     import: nacos:application.yml
   application:

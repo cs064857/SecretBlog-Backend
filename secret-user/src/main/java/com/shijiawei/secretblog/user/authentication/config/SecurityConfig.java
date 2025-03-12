@@ -111,30 +111,30 @@ public class SecurityConfig {
 
     }
 
-    @Bean
-    public SecurityFilterChain Business2ApiFilterChain(HttpSecurity http) throws Exception {
-        //關閉不需要的過濾器
-        commonHttpSetting(http);
-
-        /**
-         * 必要的配置，決定哪些請求需要登入
-         */
-        http
-                .securityMatcher("/ums/user/login/business2","/article/articles/**")
-                .authorizeHttpRequests(authorize -> authorize
-                        .anyRequest().authenticated()
-                );
-
-//        String business2LoginPath = "/ums/user/login/business2";
-        // 加一個登錄方式。用戶名、密碼登錄
-        MyJwtAuthenticationFilter filter = new MyJwtAuthenticationFilter(applicationContext.getBean(JwtService.class));
-        /**
-         * 將自訂的過濾器加至過濾鏈中，在UsernamePasswordAuthenticationFilter之前(LogoutFilter之後)
-         */
-        http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
+//    @Bean
+//    public SecurityFilterChain Business2ApiFilterChain(HttpSecurity http) throws Exception {
+//        //關閉不需要的過濾器
+//        commonHttpSetting(http);
+//
+//        /**
+//         * 必要的配置，決定哪些請求需要登入
+//         */
+//        http
+//                .securityMatcher("/ums/user/login/business2","/article/articles/**")
+//                .authorizeHttpRequests(authorize -> authorize
+//                        .anyRequest().authenticated()
+//                );
+//
+////        String business2LoginPath = "/ums/user/login/business2";
+//        // 加一個登錄方式。用戶名、密碼登錄
+//        MyJwtAuthenticationFilter filter = new MyJwtAuthenticationFilter(applicationContext.getBean(JwtService.class));
+//        /**
+//         * 將自訂的過濾器加至過濾鏈中，在UsernamePasswordAuthenticationFilter之前(LogoutFilter之後)
+//         */
+//        http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
 
     /**
      * 文章API安全配置
