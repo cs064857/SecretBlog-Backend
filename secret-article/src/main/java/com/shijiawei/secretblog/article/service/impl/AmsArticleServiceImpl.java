@@ -72,6 +72,12 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
         return iPage;
     }
+
+//    @Override
+//    public Page<AmsArticle> getLatestArticles() {
+//
+//
+//    }
 }
 
 

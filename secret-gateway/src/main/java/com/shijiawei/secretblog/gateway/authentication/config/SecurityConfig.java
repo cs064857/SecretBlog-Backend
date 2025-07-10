@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.gateway.authentication.config;
 
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -67,9 +68,10 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeExchange(authorizeExchange -> authorizeExchange
                 .pathMatchers("/ums/user/login/business2").permitAll()
-                .pathMatchers("api/article/articles/**").authenticated()
+//                .pathMatchers("api/article/articles/**").authenticated()
                 .anyExchange().permitAll())
             .addFilterAt(new ReactiveJwtAuthenticationFilter(jwtService), SecurityWebFiltersOrder.AUTHENTICATION);
+
 
         return http.build();
     }

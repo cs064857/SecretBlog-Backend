@@ -78,5 +78,12 @@ public class AmsArticleController {
         Page<AmsArticle> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
         return R.ok(Page);
     }
-
+    /**
+     * 獲得最新文章的文章列表(按照日期遞減排序顯示文章)
+     */
+//    @GetMapping("/latest")
+//    public R<Page<AmsArticle>> getLatestArticles(){
+//        Page<AmsArticle> Page  = amsArticleService.getLatestArticles();
+//        return Page;
+//    }
 }

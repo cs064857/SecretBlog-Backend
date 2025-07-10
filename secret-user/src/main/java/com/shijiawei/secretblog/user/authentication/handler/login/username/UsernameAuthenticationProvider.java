@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.user.authentication.handler.login.username;
 
 
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -23,6 +24,7 @@ import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
  * 帳號密碼登錄認證
  */
 @Component
+@Slf4j
 public class UsernameAuthenticationProvider implements AuthenticationProvider {
 
   @Autowired
@@ -44,9 +46,9 @@ public class UsernameAuthenticationProvider implements AuthenticationProvider {
   @Override
   public Authentication authenticate(Authentication authentication) throws AuthenticationException {
     // 用戶提交的用戶名 + 密碼：
-    String username = (String)authentication.getPrincipal();
+    String usernameOrEmail = (String)authentication.getPrincipal();
     String password = (String) authentication.getCredentials();
-    System.out.println("校驗：UserName:"+username+",Password:"+password);
+    System.out.println("校驗：UserName/Email:"+usernameOrEmail+",Password:"+password);
 
     ///TODO 實現登入邏輯
     //相當於是Controller層中//2、校驗用戶名及密碼邏輯，自行實現登入邏輯
@@ -54,7 +56,8 @@ public class UsernameAuthenticationProvider implements AuthenticationProvider {
       查數據庫，匹配用戶信息
      */
 
-    UmsUserLoginDTO UmsUserLoginDTO = userService.getUserFromDB(username);
+    UmsUserLoginDTO UmsUserLoginDTO = userService.getUserFromDB(usernameOrEmail);
+    log.info("UmsUserLoginDTO:{}",UmsUserLoginDTO);
     if (UmsUserLoginDTO == null
 //            || Byte.valueOf((byte)1).equals(userLoginDTO.getPassword())
             || !passwordEncoder.matches(password, UmsUserLoginDTO.getPassword())) {

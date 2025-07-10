@@ -413,12 +413,12 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             /*
               成功獲取許可，執行業務邏輯
              */
-            String accountName = umsUserEmailVerifyDTO.getAccountName();
+//            String accountName = umsUserEmailVerifyDTO.getAccountName();
             String email = umsUserEmailVerifyDTO.getEmail();
             Optional<UmsUserInfo> existsByEmail = Optional.ofNullable(umsUserInfoService.lambdaQuery().eq(UmsUserInfo::getEmail, email).one());
-            Optional<UmsUserInfo> existsByAccountName = Optional.ofNullable(umsUserInfoService.lambdaQuery().eq(UmsUserInfo::getAccountName, accountName).one());
+//            Optional<UmsUserInfo> existsByAccountName = Optional.ofNullable(umsUserInfoService.lambdaQuery().eq(UmsUserInfo::getAccountName, accountName).one());
             return existsByEmail.map(userInfo -> new R(HttpCodeEnum.EMAIL_EXISTS.getCode(),HttpCodeEnum.EMAIL_EXISTS.getDescription()))
-                    .or(()->existsByAccountName.map(userInfo -> new R(HttpCodeEnum.USERNAME_EXISTS.getCode(), HttpCodeEnum.USERNAME_EXISTS.getDescription())))
+//                    .or(()->existsByAccountName.map(userInfo -> new R(HttpCodeEnum.USERNAME_EXISTS.getCode(), HttpCodeEnum.USERNAME_EXISTS.getDescription())))
                     .orElseGet(()->{
                         Random random = new Random();
                         String VaildCodeString = String.format("%06d", random.nextInt(90000) + 10000);

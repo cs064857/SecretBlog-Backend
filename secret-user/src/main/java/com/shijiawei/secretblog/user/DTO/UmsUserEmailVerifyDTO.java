@@ -24,8 +24,8 @@ public class UmsUserEmailVerifyDTO {
     )
     private String email;
 
-    @TableField(value = "account_name")
-    @Schema(description="帳號名稱")
-    @Size(max = 32,message = "帳號名稱最大長度要小於 32")
-    private String accountName;
+//    @TableField(value = "account_name")
+//    @Schema(description="帳號名稱")
+//    @Size(max = 32,message = "帳號名稱最大長度要小於 32")
+//    private String accountName;
 }
