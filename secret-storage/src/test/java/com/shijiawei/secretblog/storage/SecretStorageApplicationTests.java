@@ -29,9 +29,13 @@ class SecretStorageApplicationTests {
     public void test() throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
 
         MinioClient minioClient = MinioClient.builder()
-                .endpoint("http://4.240.82.138:9001")
-                .credentials("p6KMsat29WtFgrWPasyR", "bNgTw96toBr5LbGrzKFnL4oXIV0g7khBYuPB4Zhs")
+                .endpoint("https://static-host-ah8wqcve-secret.ap-northeast-1.clawcloudrun.com")
+                .credentials("ah8wqcve", "ms4xccbfqjzsk8zz")
                 .build();
+//        minioClient = MinioClient.builder()
+//                .endpoint("http://4.240.82.138:9001")
+//                .credentials("p6KMsat29WtFgrWPasyR", "bNgTw96toBr5LbGrzKFnL4oXIV0g7khBYuPB4Zhs")
+//                .build();
 
         String storageName= UUID.randomUUID().toString();
         String presignedObjectUrl = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()

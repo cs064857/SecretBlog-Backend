@@ -8,20 +8,26 @@ spring:
     allow-bean-definition-overriding: true
   data:
     redis:
-      port: 56379
+      port: 6379
       database: 0
-      host: 4.240.82.138
+      host: touched-yak-39531.upstash.io
+      password: AZprAAIjcDE1N2VhNmU1OGMyYzA0ZmQzODcwYmM0YzQ0MWI4NzQ0MXAxMA
+      username: default
+      ssl:
+        enabled: true
   config:
-    import: nacos:application.yml
+    import: nacos:secretblog_gateway_application.yml
   application:
     name: secret-gateway
   cloud:
     nacos:
-      server-addr: 4.240.82.138:8848
+      server-addr: 35.209.184.74:8848
+      password: nacos
+      username: nacos
       discovery:
-        server-addr: 4.240.82.138:8848
+        server-addr: 35.209.184.74:8848
       config:
-        server-addr: 4.240.82.138:8848
+        server-addr: 35.209.184.74:8848
         timeout: 300000
     gateway:
       discovery:
