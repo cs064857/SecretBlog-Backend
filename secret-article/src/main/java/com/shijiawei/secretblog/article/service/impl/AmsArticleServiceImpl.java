@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
+import com.shijiawei.secretblog.article.entity.AmsArtinfo;
+import com.shijiawei.secretblog.article.service.AmsArtinfoService;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author User
@@ -32,7 +35,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     @Autowired
     RedissonClient redissonClient;
-
+    @Autowired
+    private AmsArtinfoService amsArtinfoService;
     @OpenLog//開啟方法執行時間紀錄
     @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
 //    @DelayDoubleDelete(prefix = "AmsArticle",key = "articles",delay = 5,timeUnit = TimeUnit.SECONDS)//AOP延遲雙刪
@@ -70,6 +74,18 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         //根據categoryId分類查詢
         Page<AmsArticle> iPage = this.baseMapper.selectPage(new Page<>(routePage, 20),
                 new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
+
+        ///TODO 讚、喜歡、觀看等
+
+//        List<AmsArticle> records = iPage.getRecords();
+//
+//        List<Long> articleIds = records.stream().map(AmsArticle::getId)
+//                .toList();
+//
+//        List<AmsArtinfo> amsArtinfos = amsArtinfoService.list(new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleIds));
+//
+//        System.out.println(amsArtinfos);
+
         return iPage;
     }
 

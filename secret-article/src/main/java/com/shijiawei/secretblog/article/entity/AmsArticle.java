@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.baomidou.mybatisplus.core.conditions.update.Update;
+import com.esotericsoftware.kryo.util.IntArray;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import jakarta.validation.constraints.NotBlank;
@@ -81,6 +82,8 @@ public class AmsArticle implements Serializable {
      */
     @TableField(value = "update_time",fill= FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

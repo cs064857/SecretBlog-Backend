@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.article.service;
 import com.shijiawei.secretblog.article.entity.AmsCategory;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.vo.AmsCategoryTreeVo;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
@@ -11,6 +12,7 @@ import java.util.List;
 * @description 针对表【ams_category】的数据库操作Service
 * @createDate 2024-08-28 17:47:50
 */
+
 public interface AmsCategoryService extends IService<AmsCategory> {
 
     List<AmsCategoryTreeVo> getTreeCategoryVo();
