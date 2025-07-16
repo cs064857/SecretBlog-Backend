@@ -68,7 +68,7 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeExchange(authorizeExchange -> authorizeExchange
                 .pathMatchers("/ums/user/login/business2").permitAll()
-//                .pathMatchers("api/article/articles/**").authenticated()
+                // 所有請求都允許通過 Gateway，具體的認證由各個微服務處理
                 .anyExchange().permitAll())
             .addFilterAt(new ReactiveJwtAuthenticationFilter(jwtService), SecurityWebFiltersOrder.AUTHENTICATION);
 
