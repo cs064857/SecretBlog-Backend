@@ -3,8 +3,10 @@ package com.shijiawei.secretblog.article.controller;
 import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.common.vaildation.Insert;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -22,7 +24,7 @@ public class AmsCommentController {
     AmsCommentService amsCommentService;
 
     @PostMapping("/create")
-    public R createComment (@RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
+    public R createComment (@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
         R r = amsCommentService.createComment(amsCommentCreateDTO);
 
         return r;

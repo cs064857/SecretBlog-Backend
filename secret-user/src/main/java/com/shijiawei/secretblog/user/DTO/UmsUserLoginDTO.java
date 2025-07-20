@@ -22,5 +22,8 @@ public class UmsUserLoginDTO {
 
     @Schema(description = "邏輯刪除(0未刪除,1被刪除)")
     private Byte deleted;
+
+    @Schema(description = "用戶ID")
+    private Long userId;
 }
 

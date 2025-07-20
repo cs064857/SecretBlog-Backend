@@ -56,6 +56,7 @@ public class SecurityConfig {
          * 關閉非前後端分離時所需的或者不需要的過濾器
          */
         http
+                .securityMatcher("/article/comment/**")
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)

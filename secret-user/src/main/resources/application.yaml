@@ -1,4 +1,23 @@
+
+user:
+  default-avatar: https://shijiawei.oss-cn-beijing.aliyuncs.com/secretblog/avatar/default_avatar.jpg
 spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://secretblog-passerby064857-7179.f.aivencloud.com:15228/secretblog_ums?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+    username: avnadmin
+    password: AVNS_CqdanQfHdIVI8zaK5BW
+    hikari:
+      # 10個連接
+      maximum-pool-size: 10
+      # 保持3個空閒連接，可以應對突發流量
+      minimum-idle: 3
+      # 連接最大存活30分鐘
+      max-lifetime: 1800000
+      # 等待連接的超時時間設為20秒
+      connection-timeout: 20000
+      # 空閒連接10分鐘後釋放
+      idle-timeout: 600000
   application:
     name: secret-user
   cloud:
@@ -11,4 +30,53 @@ spring:
       config:
         timeout: 300000
   config:
-    import: nacos:secretblog_user_application.yaml
+    import: optional:nacos:secretblog_user_application.yaml
+  data:
+    redis:
+      port: 6379
+      database: 0
+      host: uncommon-imp-32102.upstash.io
+      password: AX1mAAIjcDE0ZWE1M2UwMTNhMjA0Y2U3YmMxZjgyZDQ3OTBmZDFmNHAxMA
+      username: default
+      ssl:
+        enabled: true
+#  cache:
+#    redis:
+#      #以下配置為配合SpringCache使用時
+#      use-key-prefix: true #開啟前綴
+#      key-prefix: SecretBlog #設置前綴
+#      time-to-live: 86400000 #設置Redis緩存過期時間，設置為一天，解決緩存雪崩問題
+#      cache-null-values: true  #緩存空值,避免緩存穿透
+#    type: redis #設置SpringCache緩存使用Redis
+logging:
+  level:
+    root: info
+    org.springframework.security: debug
+server:
+  port: 22000
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+# springdoc-openapi
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.shijiawei.secretblog.user.controller
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn

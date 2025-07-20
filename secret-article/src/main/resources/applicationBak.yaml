@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: secret-article
+  cloud:
+    nacos:
+      server-addr: 35.209.184.74:8848
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: 35.209.184.74:8848
+      config:
+        timeout: 300000
+        file-extension: yml
+        group: DEFAULT_GROUP
+  config:
+    import: optional:nacos:secretblog_article_application.yaml

@@ -74,10 +74,12 @@ public class UsernameAuthenticationProvider implements AuthenticationProvider {
     UserLoginInfo userLoginInfo = new UserLoginInfo();
 //    userLoginInfo.setSessionId();
 //    userLoginInfo.setExpiredTime();
+    userLoginInfo.setUserId(UmsUserLoginDTO.getUserId());
     userLoginInfo.setNickname(UmsUserLoginDTO.getAccountName());
     userLoginInfo.setRoleId(UmsUserLoginDTO.getRoleId().toString());
     token.setCurrentUser(userLoginInfo);
     token.setAuthenticated(true); // 認證通過，這裡一定要設成true
+    log.debug("userLoginInfo:{}",userLoginInfo);
     return token;
   }
 

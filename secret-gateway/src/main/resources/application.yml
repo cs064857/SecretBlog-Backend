@@ -10,13 +10,13 @@ spring:
     redis:
       port: 6379
       database: 0
-      host: touched-yak-39531.upstash.io
-      password: AZprAAIjcDE1N2VhNmU1OGMyYzA0ZmQzODcwYmM0YzQ0MWI4NzQ0MXAxMA
+      host: uncommon-imp-32102.upstash.io
+      password: AX1mAAIjcDE0ZWE1M2UwMTNhMjA0Y2U3YmMxZjgyZDQ3OTBmZDFmNHAxMA
       username: default
       ssl:
         enabled: true
   config:
-    import: nacos:secretblog_gateway_application.yml
+    import: optional:nacos:secretblog_gateway_application.yml
   application:
     name: secret-gateway
   cloud:

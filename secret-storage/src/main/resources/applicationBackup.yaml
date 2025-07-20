@@ -28,7 +28,7 @@ spring:
       config:
         timeout: 300000
   config:
-    import: nacos:secretblog_storage_application.yaml
+    import: optional:nacos:secretblog_storage_application.yaml
 #  data:
 #    redis:
 #      port: 56379

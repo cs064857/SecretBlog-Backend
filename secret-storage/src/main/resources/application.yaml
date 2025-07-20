@@ -18,5 +18,5 @@ spring:
 
   # 導入 Nacos 配置
   config:
-    import: nacos:secretblog_storage_application.yaml
+    import: optional:nacos:secretblog_storage_application.yaml
 

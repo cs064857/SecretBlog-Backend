@@ -6,11 +6,19 @@ package com.shijiawei.secretblog.user.authentication.handler.login;
 public class UserLoginInfo {
 
   private String sessionId; // 會話id，全局唯一
-//  private Long userId;
+  private Long userId;
   private String nickname; // 昵稱
   private String roleId;
 
   private Long expiredTime; // 過期時間
+
+  public Long getUserId(){
+    return userId;
+  }
+
+  public void setUserId(Long userId){
+    this.userId=userId;
+  }
 
   public String getSessionId() {
     return sessionId;

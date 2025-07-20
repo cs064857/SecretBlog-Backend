@@ -32,9 +32,9 @@ public class RedissonClientConfig {
         Config config = new Config();
         // 連接到Redis的基本URL或其他參數
         config.useSingleServer()
-                .setAddress("rediss://touched-yak-39531.upstash.io:6379")
+                .setAddress("rediss://uncommon-imp-32102.upstash.io:6379")
                 .setUsername("default")
-                .setPassword("AZprAAIjcDE1N2VhNmU1OGMyYzA0ZmQzODcwYmM0YzQ0MWI4NzQ0MXAxMA");
+                .setPassword("AX1mAAIjcDE0ZWE1M2UwMTNhMjA0Y2U3YmMxZjgyZDQ3OTBmZDFmNHAxMA");
 //        config.useSingleServer()
 //                .setAddress("redis://4.240.82.138:56379");
 

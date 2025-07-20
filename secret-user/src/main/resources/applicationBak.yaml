@@ -1,18 +1,14 @@
 spring:
   application:
-    name: secret-gateway
-  config:
-    import: nacos:secretblog_gateway_application.yml
-
+    name: secret-user
   cloud:
     nacos:
       server-addr: 35.209.184.74:8848
-      password: nacos
       username: nacos
+      password: nacos
       discovery:
         server-addr: 35.209.184.74:8848
       config:
-        server-addr: 35.209.184.74:8848
         timeout: 300000
-
-
+  config:
+    import: optional:nacos:secretblog_user_application.yaml

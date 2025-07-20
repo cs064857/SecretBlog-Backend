@@ -144,6 +144,7 @@ public class UserService {
               return Optional.ofNullable(umsUser)
                       .map(user -> {
                         UmsUserLoginDTO loginUser = new UmsUserLoginDTO();
+                        loginUser.setUserId(umsUserInfo.getUserId());
                         loginUser.setAccountName(umsUserInfo.getAccountName());
                         loginUser.setDeleted(user.getDeleted());
                         loginUser.setEmail(umsUserInfo.getEmail());

@@ -10,9 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,7 +80,19 @@ public class LoginSuccessHandler extends
   public String generateToken(UserLoginInfo currentUser) {
     long expiredTime = TimeTool.nowMilli() + TimeUnit.MINUTES.toMillis(10); // 10分鐘後過期
     currentUser.setExpiredTime(expiredTime);
-    return jwtService.createJwt(currentUser, expiredTime);
+    String jwt = jwtService.createJwt(currentUser, expiredTime);
+    Map<String,Object> hashMap = jwtService.verifyJwt(jwt, HashMap.class);
+    Set<Map.Entry<String, Object>> entrySet = hashMap.entrySet();
+    entrySet.forEach(item-> {
+      String key = item.getKey();
+      if(key.equals("userId")){
+        String userId = (String)item.getValue();
+        System.out.println(userId);
+
+      }
+    });
+
+    return jwt;
   }
 
   private String generateRefreshToken(UserLoginInfo loginInfo) {

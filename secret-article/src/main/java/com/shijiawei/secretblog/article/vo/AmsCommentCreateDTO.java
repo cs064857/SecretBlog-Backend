@@ -28,5 +28,6 @@ public class AmsCommentCreateDTO {
     @NotNull(message = "評論內容不可為空",groups = {Insert.class,Update.class})
     private String commentContent;
 
-
+    @NotNull(groups = {Insert.class})
+    private String jwtToken;
 }
