@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.user.authentication.handler.login.business;
 
 import java.io.IOException;
 
+import com.shijiawei.secretblog.common.utils.JwtService;
 import jakarta.servlet.http.Cookie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.shijiawei.secretblog.common.exception.ExceptionTool;
 import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo;
-import com.shijiawei.secretblog.user.authentication.service.JwtService;
+
 
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
