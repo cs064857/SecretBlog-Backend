@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
+import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
@@ -58,6 +59,7 @@ public class AmsArticleController {
     public R<AmsArticle> getArticle(@PathVariable Long articleId) {
 //        log.info("articleId:{}",articleId);
         AmsArticle article = amsArticleService.getById(articleId);
+//        AmsArticleVo article = amsArticleService.getArticle(articleId);
 //        log.info("article:{}",article);
         R<AmsArticle> ok = R.ok(article);
 //        log.info("ok:{}",ok);

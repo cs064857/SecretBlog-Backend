@@ -22,6 +22,9 @@ public class AmsArtinfo implements Serializable {
     @TableId(value = "id")
     private Long id;
 
+    @TableId(value = "user_name")
+    private String userName;
+    
     /**
      * 文章id(雪花算法,不可為空)
      */

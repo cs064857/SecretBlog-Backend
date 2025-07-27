@@ -43,15 +43,24 @@ public class AmsArticleVo {
     private Long userId;
 
     /**
+     * 文章父評論的id(可為空)
+     */
+
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    private Long parent_comment_id;
+    /**
      * 文章分類id
      */
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long categoryId;
 
     /**
      * 文章標籤id
      */
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long tagId;
 
     /**

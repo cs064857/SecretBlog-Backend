@@ -36,7 +36,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     int insertOrUpdateSelective(UmsUser record);
 
-        UmsUser selectByPrimaryKey(Integer id);
+        UmsUser selectByPrimaryKey(Long id);
 
         void saveUmsUser(UmsSaveUserVo umsUser);
 
@@ -53,4 +53,6 @@ public interface UmsUserService extends IService<UmsUser>{
     R UmsUserRegister(UmsUserRegisterDTO umsUserRegisterDTO);
 
     R sendVerificationCode(UmsUserEmailVerifyDTO umsUserEmailVerifyDTO);
+
+    UmsUser selectUsersByIds(List<Long> ids);
 }

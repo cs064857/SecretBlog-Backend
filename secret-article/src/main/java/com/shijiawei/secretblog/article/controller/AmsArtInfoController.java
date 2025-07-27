@@ -27,6 +27,7 @@ public class AmsArtInfoController {
 
     @PostMapping
     public R saveArticleInfo(@RequestBody AmsSaveArtInfoVo amsSaveArtInfoVo){
+        ///TODO 儲存用戶姓名與用戶ID
         log.info("amsSaveArtInfoVo:{}", amsSaveArtInfoVo);
         amsArtinfoService.saveArticleInfo(amsSaveArtInfoVo);
         return R.ok();

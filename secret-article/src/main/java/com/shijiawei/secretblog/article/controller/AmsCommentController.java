@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.article.controller;
 
 import com.shijiawei.secretblog.article.service.AmsCommentService;
+import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.vo.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
@@ -17,18 +18,24 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping("/article/comment")
+@RequestMapping("/article")
 public class AmsCommentController {
 
     @Autowired
     AmsCommentService amsCommentService;
 
-    @PostMapping("/create")
+    @PostMapping("/comment/create")
     public R createComment (@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
         R r = amsCommentService.createComment(amsCommentCreateDTO);
 
         return r;
     }
+    @GetMapping("/{articleId}/comments")
+    public R<AmsArtCommentsVo> getArtComments(@PathVariable Long articleId){
 
+        log.debug("articleId:{}",articleId);
+        R<AmsArtCommentsVo> r = amsCommentService.getArtComments(articleId);
+        return null;
 
+    }
 }

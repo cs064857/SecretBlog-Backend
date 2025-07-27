@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.update.Update;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Null;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,9 @@ public class AmsCommentCreateDTO {
 
     @NotNull(message = "評論內容不可為空",groups = {Insert.class,Update.class})
     private String commentContent;
+
+    //可為空
+    private Long parent_comment_id;
 
     @NotNull(groups = {Insert.class})
     private String jwtToken;

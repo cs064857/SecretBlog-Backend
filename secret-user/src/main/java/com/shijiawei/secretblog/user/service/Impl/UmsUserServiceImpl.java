@@ -110,7 +110,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     }
 
     @Override
-    public UmsUser selectByPrimaryKey(Integer id) {
+    public UmsUser selectByPrimaryKey(Long id) {
         return this.baseMapper.selectById(id);
     }
     @Transactional(rollbackFor = Exception.class)
@@ -436,6 +436,11 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             // 超過請求限流，拒絕請求
             return new R(HttpCodeEnum.TOO_MANY_REQUESTS.getCode(), HttpCodeEnum.TOO_MANY_REQUESTS.getDescription());
         }
+    }
+
+    @Override
+    public UmsUser selectUsersByIds(List<Long> ids) {
+        return null;
     }
 
 

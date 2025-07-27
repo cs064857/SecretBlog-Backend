@@ -49,11 +49,15 @@ public class UmsUserController {
      * @return 單條數據
      */
     @GetMapping("selectOne")
-    public R<UmsUser> selectOne(Integer id) {
+    public R<UmsUser> getUserById(Long id) {
         UmsUser umsUser = umsUserService.selectByPrimaryKey(id);
         return R.ok(umsUser);
     }
-
+    @GetMapping("selectOne")
+    public R<UmsUser> getUsersByIds(List<Long> ids) {
+        UmsUser umsUser = umsUserService.selectUsersByIds(ids);
+        return R.ok(umsUser);
+    }
     @PostMapping
     public R saveUmsUser(@RequestBody UmsSaveUserVo umsSaveUserVo) {
         log.info("umsSaveUserVo:{}",umsSaveUserVo);
