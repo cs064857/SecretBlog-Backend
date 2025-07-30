@@ -1,16 +1,10 @@
-package com.shijiawei.secretblog.article.vo;
+package com.shijiawei.secretblog.article.DTO;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.core.conditions.update.Update;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.common.vaildation.Insert;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Null;
-import lombok.Data;
 
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
 /**
  * ClassName: AmsCommentCreateDTO

@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * ClassName: AmsSaveArticleVo
  * Description:編輯器中新增文章
@@ -32,4 +34,9 @@ public class AmsSaveArticleVo {
      */
     @NotNull(message = "文章分類ID不可為空",groups = {Update.class,Insert.class})
     private Long categoryId;
+
+    private String jwtToken;
+
+    private List<Long> tagsId;
+
 }

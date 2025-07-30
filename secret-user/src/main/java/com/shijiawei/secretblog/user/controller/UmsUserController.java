@@ -53,7 +53,7 @@ public class UmsUserController {
         UmsUser umsUser = umsUserService.selectByPrimaryKey(id);
         return R.ok(umsUser);
     }
-    @GetMapping("selectOne")
+    @GetMapping("list")
     public R<UmsUser> getUsersByIds(List<Long> ids) {
         UmsUser umsUser = umsUserService.selectUsersByIds(ids);
         return R.ok(umsUser);

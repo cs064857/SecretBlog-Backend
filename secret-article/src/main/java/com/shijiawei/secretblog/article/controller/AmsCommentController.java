@@ -2,7 +2,7 @@ package com.shijiawei.secretblog.article.controller;
 
 import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
-import com.shijiawei.secretblog.article.vo.AmsCommentCreateDTO;
+import com.shijiawei.secretblog.article.DTO.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import lombok.extern.slf4j.Slf4j;

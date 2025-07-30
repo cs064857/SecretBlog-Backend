@@ -18,9 +18,10 @@ public interface AmsArticleService extends IService<AmsArticle> {
 
     void saveArticles(AmsSaveArticleVo amsSaveArticleVo);
 
-    List<AmsArticle> getListArticle();
-
-    Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
-
-//    Page<AmsArticle> getLatestArticles();
+//    List<AmsArticle> getListArticle();
+//
+//    Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
+//
+//
+////    Page<AmsArticle> getLatestArticles();
 }

@@ -2,7 +2,6 @@ package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import com.baomidou.mybatisplus.extension.ddl.history.IDdlGenerator;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.entity.AmsCommentInfo;
@@ -10,15 +9,12 @@ import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
 import com.shijiawei.secretblog.article.service.AmsCommentInfoService;
 import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
-import com.shijiawei.secretblog.article.vo.AmsCommentCreateDTO;
+import com.shijiawei.secretblog.article.DTO.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.common.utils.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +22,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * ClassName: AmsCommentServiceImpl
@@ -43,8 +38,6 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     @Autowired
     private AmsCommentInfoService amsCommentInfoService;
-
-    @Autowired
 
 
     @Transactional
