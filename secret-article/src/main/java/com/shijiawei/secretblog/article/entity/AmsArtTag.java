@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * @Create 2025/7/29 上午1:41
  */
 @Data
-@TableName("art_tag")
+@TableName("ams_art_tag")
 public class AmsArtTag {
 
     @NotNull(message = "主鍵ID不可為空",groups = {ValidationGroups.Delete.class,ValidationGroups.Update.class})

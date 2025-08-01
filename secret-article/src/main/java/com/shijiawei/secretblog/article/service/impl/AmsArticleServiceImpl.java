@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
+import com.shijiawei.secretblog.article.entity.AmsArtTag;
 import com.shijiawei.secretblog.article.entity.AmsArtinfo;
 import com.shijiawei.secretblog.article.entity.AmsTags;
+import com.shijiawei.secretblog.article.service.AmsArtTagService;
 import com.shijiawei.secretblog.article.service.AmsArtinfoService;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
@@ -22,6 +24,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -47,9 +50,13 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private AmsArtTagService amsArtTagService;
+
     @OpenLog//開啟方法執行時間紀錄
     @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
 //    @DelayDoubleDelete(prefix = "AmsArticle",key = "articles",delay = 5,timeUnit = TimeUnit.SECONDS)//AOP延遲雙刪
+    @Transactional
     @Override
     public void saveArticles(AmsSaveArticleVo amsSaveArticleVo) {
         AmsArticle amsArticle = new AmsArticle();
@@ -72,7 +79,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 log.error("Token 中未找到 userId 信息");
             }
             // 從 Token 中獲取用戶ID
-            userNameFromToken = (String) hashMap.get("Nickname");
+            userNameFromToken = (String) hashMap.get("nickname");
             if (userNameFromToken == null) {
                 log.error("Token 中未找到 userName 信息");
             }
@@ -82,18 +89,31 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             log.debug("從Token解析的userName: {}", userNameFromToken);
 
             //從jwtToken中取得用戶ID及用戶名並存入artInfo中
-            amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
 
 
             amsArticle.setTitle(amsSaveArticleVo.getTitle());
 
             amsArticle.setContent(amsSaveArticleVo.getContent());
-
+            this.baseMapper.insert(amsArticle);
+            amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
+            amsArtinfo.setUserName(userNameFromToken);
+            amsArtinfo.setArticleId(amsArticle.getId());
+            amsArtinfo.setUserId(userId);
+            amsArtinfoService.save(amsArtinfo);
             //TODO 新增文章添加用戶ID與TAGID
+            List<AmsArtTag> amsArtTagList = amsSaveArticleVo.getTagsId().stream().map(tagsId -> {
+
+                AmsArtTag amsArtTag = new AmsArtTag();
+                amsArtTag.setTagsId(tagsId);
+                ///TODO ID取消自動填入
+                amsArtTag.setArticleId(amsArticle.getId());
+                return amsArtTag;
+            }).toList();
+            amsArtTagService.saveBatch(amsArtTagList);
 //        amsArticle.setUserId(1L);
 //        amsArticle.setTagId(1L);
 
-            this.baseMapper.insert(amsArticle);
+
 
         } catch (NumberFormatException e) {
             log.error("Token 中的 userId 格式錯誤: {}", userIdFromToken, e);
