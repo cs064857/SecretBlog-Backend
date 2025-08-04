@@ -66,20 +66,20 @@ public class AmsArticleController {
 //        return ok;
 //    }
 //
-//    /**
-//     * 根據categoryId與routerPage分頁查詢文章列表
-//     * @param categoryId
-//     * @param routePage
-//     * @return
-//     */
-//
-//    @GetMapping("/categories/{categoryId}/articles")
-//    public R<Page<AmsArticle>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
-//        log.info("categoryId:{}",categoryId);
-//        log.info("routePage:{}",routePage);
-//        Page<AmsArticle> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
-//        return R.ok(Page);
-//    }
+    /**
+     * 根據categoryId與routerPage分頁查詢文章列表
+     * @param categoryId
+     * @param routePage
+     * @return
+     */
+
+    @GetMapping("/categories/{categoryId}/articles")
+    public R<Page<AmsArticle>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
+        log.info("categoryId:{}",categoryId);
+        log.info("routePage:{}",routePage);
+        Page<AmsArticle> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
+        return R.ok(Page);
+    }
 //    /**
 //     * 獲得最新文章的文章列表(按照日期遞減排序顯示文章)
 //     */

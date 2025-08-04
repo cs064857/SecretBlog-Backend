@@ -5,14 +5,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
-import com.shijiawei.secretblog.article.entity.AmsArtTag;
-import com.shijiawei.secretblog.article.entity.AmsArtinfo;
-import com.shijiawei.secretblog.article.entity.AmsTags;
+import com.shijiawei.secretblog.article.entity.*;
+import com.shijiawei.secretblog.article.service.AmsArtStatusService;
 import com.shijiawei.secretblog.article.service.AmsArtTagService;
 import com.shijiawei.secretblog.article.service.AmsArtinfoService;
+import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
-import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
@@ -31,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +52,9 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     @Autowired
     private AmsArtTagService amsArtTagService;
+
+    @Autowired
+    private AmsArtStatusService amsArtStatusService;
 
     @OpenLog//開啟方法執行時間紀錄
     @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
@@ -105,11 +108,15 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
                 AmsArtTag amsArtTag = new AmsArtTag();
                 amsArtTag.setTagsId(tagsId);
-                ///TODO ID取消自動填入
                 amsArtTag.setArticleId(amsArticle.getId());
                 return amsArtTag;
             }).toList();
             amsArtTagService.saveBatch(amsArtTagList);
+
+            AmsArtStatus amsArtStatus = new AmsArtStatus();
+            amsArtStatus.setArticleId(amsArticle.getId());
+            amsArtStatusService.save(amsArtStatus);
+
 //        amsArticle.setUserId(1L);
 //        amsArticle.setTagId(1L);
 
@@ -136,27 +143,48 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        return articles;
 //    }
 //
-//    @OpenLog
-//    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
-//    @Override
-//    public Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
-//        //根據categoryId分類查詢
+    @OpenLog
+    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
+    @Override
+    public Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
+        //根據categoryId分類查詢
+
+        Page<AmsArtinfo> amsArtinfoPage = amsArtinfoService.page(new Page<>(routePage, 20), new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getCategoryId, categoryId));
+        List<AmsArtinfo> amsArtinfoRecords = amsArtinfoPage.getRecords();
+
+        //從文章資訊列表獲取所有的文章ID
+        List<Long> articleIdList = amsArtinfoRecords.stream().map(AmsArtinfo::getArticleId).collect(Collectors.toList());
+        //利用所有獲取到的文章ID列出所有關聯文章的列表
+        List<AmsArticle> amsArticleList = this.baseMapper.selectBatchIds(articleIdList);
+
+        Map<Long, AmsArtinfo> amsArtinfoMap = amsArtinfoRecords.stream().collect(Collectors.toMap(AmsArtinfo::getId, Function.identity()));
+        Map<Long, AmsArticle> amsArticleMap = amsArticleList.stream().collect(Collectors.toMap(AmsArticle::getId, Function.identity()));
+
+        AmsArticlePreviewVo amsArticlePreviewVo = new AmsArticlePreviewVo();
+
+
+
+        //        this.baseMapper.selectPage(new Page<>(routePage, 20),
+//                new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
+
+//        this.baseMapper.selectPage(new Page<>(routePage, 20),
+//                new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
 //        Page<AmsArticle> iPage = this.baseMapper.selectPage(new Page<>(routePage, 20),
 //                new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
+
+        ///TODO 讚、喜歡、觀看等
+
+//        List<AmsArticle> records = iPage.getRecords();
 //
-//        ///TODO 讚、喜歡、觀看等
+//        List<Long> articleIds = records.stream().map(AmsArticle::getId)
+//                .toList();
 //
-////        List<AmsArticle> records = iPage.getRecords();
-////
-////        List<Long> articleIds = records.stream().map(AmsArticle::getId)
-////                .toList();
-////
-////        List<AmsArtinfo> amsArtinfos = amsArtinfoService.list(new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleIds));
-////
-////        System.out.println(amsArtinfos);
+//        List<AmsArtinfo> amsArtinfos = amsArtinfoService.list(new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleIds));
 //
-//        return iPage;
-//    }
+//        System.out.println(amsArtinfos);
+
+        return null;
+    }
 //
 //
 //
