@@ -1,8 +1,8 @@
 //package com.shijiawei.secretblog.user.controller;
 //
 //import com.shijiawei.secretblog.common.utils.R;
-//import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
-//import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+//import com.shijiawei.secretblog.user.dto.UmsUserLoginDTO;
+//import com.shijiawei.secretblog.user.dto.UmsUserRegisterDTO;
 //import com.shijiawei.secretblog.user.service.UmsAuthService;
 //import org.springframework.validation.annotation.Validated;
 //import org.springframework.web.bind.annotation.PostMapping;

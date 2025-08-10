@@ -2,14 +2,13 @@ package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.shijiawei.secretblog.article.DTO.AssociateTagsToArticleDTO;
+import com.shijiawei.secretblog.article.dto.AssociateTagsToArticleDTO;
 import com.shijiawei.secretblog.article.entity.AmsArtTag;
 import com.shijiawei.secretblog.article.mapper.AmsArtTagMapper;
 import com.shijiawei.secretblog.article.service.AmsArtTagService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
 import java.util.List;
 
 /**

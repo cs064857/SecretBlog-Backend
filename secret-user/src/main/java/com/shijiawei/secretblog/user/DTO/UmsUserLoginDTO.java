@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
-@Schema(description = "用戶登入 DTO")
+@Schema(description = "用戶登入 dto")
 public class UmsUserLoginDTO {
 
     @Schema(description = "帳號名稱")

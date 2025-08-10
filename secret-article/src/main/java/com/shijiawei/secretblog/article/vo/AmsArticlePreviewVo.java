@@ -1,10 +1,12 @@
 package com.shijiawei.secretblog.article.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.shijiawei.secretblog.article.entity.AmsArtTag;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * ClassName: ArticlePreviewVo
@@ -24,13 +26,13 @@ public class AmsArticlePreviewVo {
     private String username;
     private Long userId;
     private String avatar;
-
+    private String accountName;
 
     private String categoryName;
     private Long categoryId;
 
-    private String tagsId;
-    private String tagsName;
+    private List<AmsArtTag> amsArtTagList;
+
     /**
      * 創建時間
      */

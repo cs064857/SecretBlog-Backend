@@ -9,7 +9,7 @@ import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
 import com.shijiawei.secretblog.article.service.AmsCommentInfoService;
 import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
-import com.shijiawei.secretblog.article.DTO.AmsCommentCreateDTO;
+import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.common.utils.R;
 import lombok.extern.slf4j.Slf4j;

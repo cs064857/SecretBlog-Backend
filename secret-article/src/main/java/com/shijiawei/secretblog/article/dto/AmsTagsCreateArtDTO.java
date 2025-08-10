@@ -1,8 +1,7 @@
-package com.shijiawei.secretblog.article.DTO;
+package com.shijiawei.secretblog.article.dto;
 
 import com.shijiawei.secretblog.common.vaildation.ValidationGroups;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**

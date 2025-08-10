@@ -56,7 +56,7 @@
 //      KeyFactory kf = KeyFactory.getInstance("RSA");
 //      PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(Decoders.BASE64.decode(privateKeyBase64));
 //      return kf.generatePrivate(ks);
-//    } catch (Exception e) {
+//    } catch (exception e) {
 //      logger.error(e.getMessage(), e);
 //      ExceptionTool.throwException("獲取Jwt私鑰失敗");
 //      return null;
@@ -72,7 +72,7 @@
 //      KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 //      PublicKey pk = keyFactory.generatePublic(keySpec);
 //      return Jwts.parserBuilder().setSigningKey(pk).build();
-//    } catch (Exception e) {
+//    } catch (exception e) {
 //      // 獲取公鑰失敗
 //      ExceptionTool.throwException("獲取Jwt公鑰失敗");
 //      return null;
@@ -80,7 +80,7 @@
 //  }
 //
 //  @Override
-//  public void afterPropertiesSet() throws Exception {
+//  public void afterPropertiesSet() throws exception {
 //    privateKey = getPrivateKey();
 //    jwtParser = getJwtParser();
 //  }
@@ -107,7 +107,7 @@
 //      // 可以直接取中間一段，進行Base64解碼
 //      byte[] decodedBytes = Base64.getDecoder().decode(jwt.split("\\.")[1]);
 //      return JSON.parse(new String(decodedBytes), jwtPayloadClass);
-//    } catch (Exception e) {
+//    } catch (exception e) {
 //      return null;
 //    }
 //  }

@@ -7,7 +7,7 @@
 //import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 //import org.springframework.stereotype.Service;
 //
-//import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+//import com.shijiawei.secretblog.user.dto.UmsUserRegisterDTO;
 //import com.shijiawei.secretblog.user.service.UmsAuthService;
 //import com.shijiawei.secretblog.user.service.UmsUserService;
 //

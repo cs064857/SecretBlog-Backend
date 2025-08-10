@@ -1,7 +1,7 @@
 package com.shijiawei.secretblog.article.controller;
 
-import com.shijiawei.secretblog.article.DTO.AmsTagsCreateArtDTO;
-import com.shijiawei.secretblog.article.DTO.AmsTagsDeleteDTO;
+import com.shijiawei.secretblog.article.dto.AmsTagsCreateArtDTO;
+import com.shijiawei.secretblog.article.dto.AmsTagsDeleteDTO;
 import com.shijiawei.secretblog.article.entity.AmsTags;
 import com.shijiawei.secretblog.article.service.AmsTagsService;
 import com.shijiawei.secretblog.common.utils.R;

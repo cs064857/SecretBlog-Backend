@@ -6,17 +6,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.entity.*;
-import com.shijiawei.secretblog.article.service.AmsArtStatusService;
-import com.shijiawei.secretblog.article.service.AmsArtTagService;
-import com.shijiawei.secretblog.article.service.AmsArtinfoService;
+import com.shijiawei.secretblog.article.feign.UserFeignClient;
+
+
+import com.shijiawei.secretblog.article.service.*;
+import com.shijiawei.secretblog.common.dto.UserDTO;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
-import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.common.vaildation.ValidationGroups;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
@@ -26,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +39,7 @@ import java.util.stream.Collectors;
 
 /**
  * @author User
- * @description 针对表【ams_article(文章內容)】的数据库操作Service实现
+ * @description 針對表【ams_article(文章內容)】的數據庫操作Service實現
  * @createDate 2024-08-26 00:17:06
  */
 @Slf4j
@@ -51,10 +55,16 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     private JwtService jwtService;
 
     @Autowired
+    private UserFeignClient userFeignClient;
+
+    @Autowired
     private AmsArtTagService amsArtTagService;
 
     @Autowired
     private AmsArtStatusService amsArtStatusService;
+
+    @Autowired
+    private AmsCategoryService amsCategoryService;
 
     @OpenLog//開啟方法執行時間紀錄
     @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
@@ -143,47 +153,100 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        return articles;
 //    }
 //
-    @OpenLog
-    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
+
+    //    @OpenLog
+//    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
     @Override
     public Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
-        //根據categoryId分類查詢
+//        List<Long> userIds= new ArrayList<>();
+//        userIds.add(1893727717732917249L);
+//        userIds.add(1893723890149498881L);
 
+//        R userById = userFeignClient.getUserById(1941406633102176258L);
+//        log.info("user資料:{}",userById);
+//        R usersByIds = userFeignClient.getUsersByIds(userIds);
+//
+//        log.info("users資料:{}",usersByIds);
+
+
+        /**
+         *根據categoryId分類查詢
+         */
         Page<AmsArtinfo> amsArtinfoPage = amsArtinfoService.page(new Page<>(routePage, 20), new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getCategoryId, categoryId));
         List<AmsArtinfo> amsArtinfoRecords = amsArtinfoPage.getRecords();
 
-        //從文章資訊列表獲取所有的文章ID
+        /**
+         * 從文章資訊列表獲取所有的文章ID
+         */
         List<Long> articleIdList = amsArtinfoRecords.stream().map(AmsArtinfo::getArticleId).collect(Collectors.toList());
-        //利用所有獲取到的文章ID列出所有關聯文章的列表
+        List<Long> userIdList = amsArtinfoRecords.stream().map(AmsArtinfo::getUserId).collect(Collectors.toList());
+        /**
+         *利用所有獲取到的文章ID列出所有關聯文章的列表
+         */
         List<AmsArticle> amsArticleList = this.baseMapper.selectBatchIds(articleIdList);
 
+        List<AmsArtStatus> amsArtStatusList = amsArtStatusService.list(new LambdaQueryWrapper<AmsArtStatus>().in(AmsArtStatus::getArticleId,articleIdList));
+        log.info("amsArtStatusList:{}",amsArtStatusList);
+
+        AmsCategory amsCategory = amsCategoryService.getById(categoryId);
+
+        List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().in(AmsArtTag::getArticleId, articleIdList));
+
+        /**
+         * 利用文章Ids獲取關聯的文章status資訊,key為articleId,value為amsArtStatus對象
+         */
+
+        Map<Long, AmsArtStatus> amsArtStatusMap = amsArtStatusList.stream().collect(Collectors.toMap(AmsArtStatus::getArticleId, Function.identity()));
+        log.info("amsArtStatusMap:{}",amsArtStatusMap);
+        /**
+         * 利用文章InfoIds獲取關聯的文章Artinfo資訊,key為articleInfoId,value為amsArtInfo對象
+         */
         Map<Long, AmsArtinfo> amsArtinfoMap = amsArtinfoRecords.stream().collect(Collectors.toMap(AmsArtinfo::getId, Function.identity()));
+        log.info("amsArtinfoMap:{}",amsArtinfoMap);
+        /**
+         * 利用文章InfoIds獲取關聯的文章Article資訊,key為articleId,value為amsArticle對象
+         */
         Map<Long, AmsArticle> amsArticleMap = amsArticleList.stream().collect(Collectors.toMap(AmsArticle::getId, Function.identity()));
+        log.info("amsArticleMap:{}",amsArticleMap);
+        /**
+         * 利用文章Ids獲取關聯的文章amsArtTag資訊,key為articleId,value為amsArtTag對象
+         */
+        Map<Long, List<AmsArtTag>> amsArtTagMap = amsArtTagList.stream().collect(Collectors.groupingBy(AmsArtTag::getArticleId));
+        log.info("amsArtTagMap:{}",amsArticleMap);
 
-        AmsArticlePreviewVo amsArticlePreviewVo = new AmsArticlePreviewVo();
+        R<List<UserDTO>> usersByIds = userFeignClient.getUsersByIds(userIdList);
+        Map<Long, UserDTO> userDTOMap = usersByIds.getData().stream().collect(Collectors.toMap(UserDTO::getUserId, Function.identity()));
+        log.info("users資料:{}",usersByIds);
+//        List<UserDTO> usersByIdsData = usersByIds.getData();
+        List<AmsArticlePreviewVo> amsArticlePreviewVoList = new ArrayList<AmsArticlePreviewVo>();
+        amsArtinfoMap.forEach((artInfoId, artInfo) -> {
+
+            AmsArticlePreviewVo amsArticlePreviewVo = new AmsArticlePreviewVo();
+            BeanUtils.copyProperties(artInfo, amsArticlePreviewVo);
+            BeanUtils.copyProperties(amsArtStatusMap.get(artInfo.getArticleId()),amsArticlePreviewVo);
+            //從遠程服務獲取用戶資料
+            UserDTO userDTO = userDTOMap.get(artInfo.getUserId());
+            ///TODO 設置用戶的AccountName
 
 
+            //            amsArticlePreviewVo.setAvatar(userDTO.getAvatar());
+//            amsArticlePreviewVo.setUsername(userDTO.getUsername());
+//            amsArticlePreviewVo.setUserId(userDTO.getUserId());
+            amsArticlePreviewVo.setAccountName("Test");
+            BeanUtils.copyProperties(userDTO,amsArticlePreviewVo);
+            amsArticlePreviewVoList.add(amsArticlePreviewVo);
 
-        //        this.baseMapper.selectPage(new Page<>(routePage, 20),
-//                new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
+            amsArticlePreviewVo.setCategoryName(amsCategory.getCategoryName());
+            amsArticlePreviewVo.setAmsArtTagList(amsArtTagMap.get(artInfo.getArticleId()));
+            log.info("amsArticlePreviewVo:{}",amsArticlePreviewVo);
 
-//        this.baseMapper.selectPage(new Page<>(routePage, 20),
-//                new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
-//        Page<AmsArticle> iPage = this.baseMapper.selectPage(new Page<>(routePage, 20),
-//                new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getCategoryId, categoryId));
+            log.info("userDTO:{}",userDTO);
 
-        ///TODO 讚、喜歡、觀看等
 
-//        List<AmsArticle> records = iPage.getRecords();
-//
-//        List<Long> articleIds = records.stream().map(AmsArticle::getId)
-//                .toList();
-//
-//        List<AmsArtinfo> amsArtinfos = amsArtinfoService.list(new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleIds));
-//
-//        System.out.println(amsArtinfos);
+        });
 
-        return null;
+        log.info("amsArticlePreviewVoList:{}",amsArticlePreviewVoList);
+        return amsArticlePreviewVoList;
     }
 //
 //
@@ -194,8 +257,4 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 ////
 ////    }
 }
-
-
-
-
 

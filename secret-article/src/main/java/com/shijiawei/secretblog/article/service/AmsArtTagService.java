@@ -1,9 +1,8 @@
 package com.shijiawei.secretblog.article.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.shijiawei.secretblog.article.DTO.AssociateTagsToArticleDTO;
+import com.shijiawei.secretblog.article.dto.AssociateTagsToArticleDTO;
 import com.shijiawei.secretblog.article.entity.AmsArtTag;
-import com.shijiawei.secretblog.common.utils.R;
 
 import java.util.List;
 

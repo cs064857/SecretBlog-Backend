@@ -1,11 +1,8 @@
-package com.shijiawei.secretblog.article.Exception;
+package com.shijiawei.secretblog.article.exception;
 
 import com.shijiawei.secretblog.common.codeEnum.HttpCodeEnum;
 import com.shijiawei.secretblog.common.utils.R;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.MethodNotSupportedException;
-import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;

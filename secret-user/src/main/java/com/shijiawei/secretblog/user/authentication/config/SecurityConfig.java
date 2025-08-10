@@ -113,7 +113,7 @@ public class SecurityConfig {
     }
 
 //    @Bean
-//    public SecurityFilterChain Business2ApiFilterChain(HttpSecurity http) throws Exception {
+//    public SecurityFilterChain Business2ApiFilterChain(HttpSecurity http) throws exception {
 //        //關閉不需要的過濾器
 //        commonHttpSetting(http);
 //
@@ -142,7 +142,7 @@ public class SecurityConfig {
      * 保護/article/articles/**路徑，使其只有登錄用戶才能訪問
      */
 //    @Bean
-//    public SecurityFilterChain ArticleApiFilterChain(HttpSecurity http) throws Exception {
+//    public SecurityFilterChain ArticleApiFilterChain(HttpSecurity http) throws exception {
 //        //關閉不需要的過濾器
 //        commonHttpSetting(http);
 //

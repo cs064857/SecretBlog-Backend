@@ -438,10 +438,6 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         }
     }
 
-    @Override
-    public UmsUser selectUsersByIds(List<Long> ids) {
-        return null;
-    }
 
 
 }

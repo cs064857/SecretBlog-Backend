@@ -1,8 +1,7 @@
 package com.shijiawei.secretblog.article.controller;
 
-import com.shijiawei.secretblog.article.DTO.AssociateTagsToArticleDTO;
+import com.shijiawei.secretblog.article.dto.AssociateTagsToArticleDTO;
 import com.shijiawei.secretblog.article.entity.AmsArtTag;
-import com.shijiawei.secretblog.article.entity.AmsTags;
 import com.shijiawei.secretblog.article.service.AmsArtTagService;
 import com.shijiawei.secretblog.common.utils.R;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;

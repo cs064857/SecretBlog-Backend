@@ -1,8 +1,8 @@
 //package com.shijiawei.secretblog.user.service;
 //
 //import com.baomidou.mybatisplus.extension.service.IService;
-//import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
-//import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+//import com.shijiawei.secretblog.user.dto.UmsUserLoginDTO;
+//import com.shijiawei.secretblog.user.dto.UmsUserRegisterDTO;
 //import com.shijiawei.secretblog.user.entity.UmsUser;
 //import org.springframework.stereotype.Service;
 //

@@ -11,6 +11,8 @@ import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.shijiawei.secretblog.user.service.UmsUserService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
+import com.shijiawei.secretblog.common.dto.UserDTO;
+import com.shijiawei.secretblog.user.converter.UserConverter;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -42,6 +44,10 @@ public class UmsUserController {
     @Autowired
     private RedissonClient redissonClient;
 
+    @Autowired
+    private UserConverter userConverter;
+
+
     /**
      * 通過主鍵查詢單條數據
      *
@@ -49,14 +55,17 @@ public class UmsUserController {
      * @return 單條數據
      */
     @GetMapping("selectOne")
-    public R<UmsUser> getUserById(Long id) {
+    public R<UserDTO> getUserById(Long id) {
         UmsUser umsUser = umsUserService.selectByPrimaryKey(id);
-        return R.ok(umsUser);
+        UserDTO userDTO = userConverter.toDTO(umsUser);
+        return R.ok(userDTO);
     }
+
     @GetMapping("list")
-    public R<UmsUser> getUsersByIds(List<Long> ids) {
-        UmsUser umsUser = umsUserService.selectUsersByIds(ids);
-        return R.ok(umsUser);
+    public R<List<UserDTO>> getUsersByIds(@RequestParam("ids") List<Long> ids) {
+        List<UmsUser> users = umsUserService.listByIds(ids);
+        List<UserDTO> userDTOs = userConverter.toDTOList(users);
+        return R.ok(userDTOs);
     }
     @PostMapping
     public R saveUmsUser(@RequestBody UmsSaveUserVo umsSaveUserVo) {

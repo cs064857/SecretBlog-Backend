@@ -53,6 +53,4 @@ public interface UmsUserService extends IService<UmsUser>{
     R UmsUserRegister(UmsUserRegisterDTO umsUserRegisterDTO);
 
     R sendVerificationCode(UmsUserEmailVerifyDTO umsUserEmailVerifyDTO);
-
-    UmsUser selectUsersByIds(List<Long> ids);
 }

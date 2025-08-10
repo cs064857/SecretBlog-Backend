@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.article.DTO;
+package com.shijiawei.secretblog.article.dto;
 
 import com.baomidou.mybatisplus.core.conditions.update.Update;
 import com.shijiawei.secretblog.common.vaildation.Insert;

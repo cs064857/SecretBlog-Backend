@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.article.DTO;
+package com.shijiawei.secretblog.article.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
