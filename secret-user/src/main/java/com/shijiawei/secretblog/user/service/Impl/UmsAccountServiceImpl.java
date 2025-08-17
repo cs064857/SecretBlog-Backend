@@ -29,9 +29,9 @@
 ////    }
 ////
 ////    @Override
-////    public String login(String username, String password) {
+////    public String login(String nickName, String password) {
 ////        // TODO: 實現登錄邏輯
-////        log.info("用戶登錄: username={}", username);
+////        log.info("用戶登錄: nickName={}", nickName);
 ////        return "token";
 ////    }
 ////

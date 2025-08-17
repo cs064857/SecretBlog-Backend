@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
  */
 @Data
 public class UmsUpdateUserDetailsVO {
-    // 姓名
-    private String name;
+    // 用戶名(原 name -> nickName)
+    private String nickName;
 
     // 使用者頭像
     private String avatar;
@@ -29,7 +29,7 @@ public class UmsUpdateUserDetailsVO {
 
     // UmsUserInfo 的欄位
     private String accountName;    // 帳號名稱
-    private String password;       // 密碼
+//    private String password;       // 密碼
     private String email;          // 信箱地址
     private LocalDate birthday;    // 生日 (LocalDate in Java)
     private Gender gender;            // 性別 (1 男性, 2 女性, 3 不願透露)
@@ -41,7 +41,7 @@ public class UmsUpdateUserDetailsVO {
 
     public boolean isEmpty() {
         return ObjectUtils.allNull(
-                name, avatar, status, accountName, password, email, birthday, gender,
+                nickName, avatar, status, accountName, email, birthday, gender,
                 address, phoneNumber,roleId
         );
     }

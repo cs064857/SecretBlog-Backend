@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -79,37 +80,50 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain LoginApiFilterChain(HttpSecurity http) throws Exception {
-        //關閉不需要的過濾器
+        // 關閉不需要的過濾器與通用異常處理
         commonHttpSetting(http);
 
-        /**
-         * 必要的配置，決定哪些請求需要登入
-         */
-        http
-                .securityMatcher("/ums/user/login/username")
-                .authorizeHttpRequests(authorize -> authorize
-                        .anyRequest().authenticated()
-                );
+        // 僅匹配登入端點
+        http.securityMatcher("/ums/user/login/username")
+            .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated());
 
         LoginSuccessHandler loginSuccessHandler = applicationContext.getBean(LoginSuccessHandler.class);
         LoginFailHandler loginFailHandler = applicationContext.getBean(LoginFailHandler.class);
 
-
         String usernameLoginPath = "/ums/user/login/username";
-        // 加一個登錄方式。用戶名、密碼登錄
         UsernameAuthenticationFilter usernameLoginFilter = new UsernameAuthenticationFilter(
-                new AntPathRequestMatcher(usernameLoginPath, HttpMethod.POST.name()),
-                new ProviderManager(
-                        List.of(applicationContext.getBean(UsernameAuthenticationProvider.class))),
-                loginSuccessHandler,
-                loginFailHandler);
-        /**
-         * 將自訂的過濾器加至過濾鏈中，在UsernamePasswordAuthenticationFilter之前(LogoutFilter之後)
-         */
+            new AntPathRequestMatcher(usernameLoginPath, HttpMethod.POST.name()),
+            new ProviderManager(List.of(applicationContext.getBean(UsernameAuthenticationProvider.class))),
+            loginSuccessHandler,
+            loginFailHandler
+        );
         http.addFilterBefore(usernameLoginFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
 
+    @Bean
+    public SecurityFilterChain UserApiFilterChain(HttpSecurity http) throws Exception {
+        // 通用設定
+        commonHttpSetting(http);
+
+        // 匹配使用者 API
+        http.securityMatcher("/ums/user/**")
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers(
+                    "/ums/user/login/username",
+                    "/ums/user/register",
+                    "/ums/user/email-verify-code"
+                ).permitAll()
+                .anyRequest().authenticated()
+            );
+
+        // 加入 JWT 濾器（從 Cookie 讀取 token 並設置 SecurityContext）
+        var jwtService = applicationContext.getBean(com.shijiawei.secretblog.common.utils.JwtService.class);
+        var blacklist = applicationContext.getBean(com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService.class);
+        http.addFilterBefore(new MyJwtAuthenticationFilter(jwtService, blacklist), UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
 //    @Bean
@@ -166,10 +180,14 @@ public class SecurityConfig {
 //    }
 
     /**
-     * 密碼加密使用的編碼器
+     * 密碼加密使用的編碼器 (臨時修改: 測試明文密碼, 使用 NoOpPasswordEncoder)
+     * TODO: 測試結束後恢復為 BCryptPasswordEncoder
      */
     @Bean
     public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
+        // 原正式版:
+        // return new BCryptPasswordEncoder();
+        // 臨時測試版(明文匹配, 嚴禁生產使用)
+        return NoOpPasswordEncoder.getInstance();
     }
 }

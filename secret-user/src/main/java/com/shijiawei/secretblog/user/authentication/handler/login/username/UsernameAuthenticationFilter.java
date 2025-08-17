@@ -32,7 +32,7 @@ public class UsernameAuthenticationFilter extends AbstractAuthenticationProcessi
   private static final Logger logger = LoggerFactory.getLogger(UsernameAuthenticationFilter.class);
 
   public UsernameAuthenticationFilter(AntPathRequestMatcher pathRequestMatcher,
-                                      AuthenticationManager authenticationManager,//url 相當於是Controller層中@PostMapping("/login/username")
+                                      AuthenticationManager authenticationManager,//url 相當於是Controller層中@PostMapping("/login/nickName")
                                       AuthenticationSuccessHandler authenticationSuccessHandler,
                                       AuthenticationFailureHandler authenticationFailureHandler) {
     super(pathRequestMatcher);

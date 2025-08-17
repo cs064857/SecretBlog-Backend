@@ -13,7 +13,7 @@ public class UmsUserRegisterDTO {
 //    @NotBlank(message = "用戶名不能為空")
 //    @Pattern(regexp = "^[A-Za-z0-9]{4,16}$",message = "用戶名只能包含英文和數字，長度在4-16之間")
 //    private String name;
-
+    ///TODO 待辦:目前只開放只用信箱註冊,可選添加帳號註冊
 //    @NotBlank(message = "帳號不能為空")
 //    @Pattern(regexp = "^[A-Za-z0-9]{4,16}$",message = "帳號只能包含英文和數字，長度在4-16之間")
 //    private String accountName;

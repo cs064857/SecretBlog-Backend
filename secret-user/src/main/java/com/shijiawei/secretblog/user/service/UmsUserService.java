@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.user.service;
 
 import java.util.List;
 
+import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
@@ -22,19 +23,32 @@ public interface UmsUserService extends IService<UmsUser>{
 
     R userLogin(UmsUserLoginDTO umsUserLoginDTO);
 
-    int updateBatch(List<UmsUser> list);
 
-    int updateBatchSelective(List<UmsUser> list);
 
-    int batchInsert(List<UmsUser> list);
 
-    int batchInsertSelectiveUseDefaultForNull(List<UmsUser> list);
 
-    int deleteByPrimaryKeyIn(List<Long> list);
+//    int updateBatch(List<UmsUser> list);
+//
+//    int updateBatchSelective(List<UmsUser> list);
+//
+//    int batchInsert(List<UmsUser> list);
+//
+//    int batchInsertSelectiveUseDefaultForNull(List<UmsUser> list);
+//
+//    int deleteByPrimaryKeyIn(List<Long> list);
+//
+//    int insertOrUpdateSelective(UmsUser record);
+
+
+
+
+
+
+
 
 //    int insertOrUpdate(UmsUser record);
 
-    int insertOrUpdateSelective(UmsUser record);
+
 
         UmsUser selectByPrimaryKey(Long id);
 
@@ -44,13 +58,15 @@ public interface UmsUserService extends IService<UmsUser>{
 
     List<UmsUser> listUmsUser();
 
-    void deleteUmsUserDetails(List<Long> userIdList);
+    R deleteUmsUserDetails(List<Long> userIdList);
 
-    void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId, Long userInfoId);
+    void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId);
 
     void updateUmsUserAvatar(String imgUrl, String userId);
 
     R UmsUserRegister(UmsUserRegisterDTO umsUserRegisterDTO);
 
     R sendVerificationCode(UmsUserEmailVerifyDTO umsUserEmailVerifyDTO);
+
+    List<UserBasicDTO> selectUserBasicInfoByIds(List<Long> ids);
 }

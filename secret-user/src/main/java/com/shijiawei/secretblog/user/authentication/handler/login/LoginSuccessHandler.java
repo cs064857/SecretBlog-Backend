@@ -59,8 +59,16 @@ public class LoginSuccessHandler extends
 
     // 生成token和refreshToken
     Map<String, Object> responseData = new LinkedHashMap<>();
-    responseData.put("token", generateToken(currentUser));
+    String token = generateToken(currentUser); // TEMP 取得 token 以便下方設置 Cookie
+    responseData.put("token", token);
     responseData.put("refreshToken", generateRefreshToken(currentUser));
+
+    // TEMP Set-Cookie: 將 JWT 寫入 HttpOnly Cookie (測試用途, 之後可改為 Secure; SameSite 設為 Lax 避免 csrf 基本攻擊)
+
+      /**
+       * 將jwtToken寫入Cookie中
+       */
+    response.addHeader("Set-Cookie", "jwtToken=" + token + "; Path=/; Max-Age=600; HttpOnly; SameSite=Lax");
 
     // 一些特殊的登錄參數。比如三方登錄，需要額外返回一個字段是否需要跳轉的綁定已有賬號頁面
     Object details = authentication.getDetails();

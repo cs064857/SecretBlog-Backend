@@ -86,22 +86,7 @@ public class UmsUserInfoServiceImpl extends ServiceImpl<UmsUserInfoMapper, UmsUs
      */
     @Override
     public void passwordMatchesDatabase(Long userInfoId, String password){
-        ///TODO 密碼安全性判斷
-        String encode = (String) this.baseMapper.selectObjs(
-                new LambdaQueryWrapper<UmsUserInfo>()
-                        .select(UmsUserInfo::getPassword)
-                        .eq(UmsUserInfo::getId, userInfoId)
-        ).stream().findFirst().orElse(null);
-
-        if(!ObjectUtils.isEmpty(encode)){
-            log.info("encode:{}", encode);
-             BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
-            boolean matches = bCryptPasswordEncoder.matches(password, encode.toString());//true
-            log.info("matches:{}",matches);
-            if(matches){//若密碼符合
-
-            }
-        }
-
+        ///TODO DDL變更: UmsUserInfo 已無 password 欄位，原密碼校驗流程需重新設計（例如移至其它表或改用認證服務）
+        // 暫時不進行任何校驗，直接返回
     }
 }

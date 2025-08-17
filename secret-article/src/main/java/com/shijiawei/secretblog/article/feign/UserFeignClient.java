@@ -1,6 +1,6 @@
 package com.shijiawei.secretblog.article.feign;
 
-import com.shijiawei.secretblog.common.dto.UserDTO;
+import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +23,7 @@ public interface UserFeignClient {
      * @return 用戶信息
      */
     @GetMapping("/selectOne")
-    R<UserDTO> getUserById(@RequestParam("id") Long id);
+    R<UserBasicDTO> getUserById(@RequestParam("id") Long id);
 
     /**
      * 根據用戶ID列表批量獲取用戶信息
@@ -31,5 +31,5 @@ public interface UserFeignClient {
      * @return 用戶信息列表
      */
     @GetMapping("/list")
-    R<List<UserDTO>> getUsersByIds(@RequestParam("ids") List<Long> ids);
+    R<List<UserBasicDTO>> getUsersByIds(@RequestParam("ids") List<Long> ids);
 }

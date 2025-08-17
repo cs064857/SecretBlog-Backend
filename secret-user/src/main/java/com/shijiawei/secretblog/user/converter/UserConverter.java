@@ -1,10 +1,14 @@
 package com.shijiawei.secretblog.user.converter;
 
-import com.shijiawei.secretblog.common.dto.UserDTO;
+import com.shijiawei.secretblog.common.dto.UserBasicDTO;
+
 import com.shijiawei.secretblog.user.entity.UmsUser;
+import com.shijiawei.secretblog.user.entity.UmsUserInfo;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -16,31 +20,38 @@ public class UserConverter {
     /**
      * 將實體轉換為DTO
      */
-    public UserDTO toDTO(UmsUser umsUser) {
+    public UserBasicDTO toDTO(UmsUser umsUser, UmsUserInfo userInfo) {
         if (umsUser == null) {
             return null;
         }
 
-        UserDTO userDTO = new UserDTO();
-        userDTO.setUserId(umsUser.getId());
-        userDTO.setUsername(umsUser.getName());
-        userDTO.setAvatar(umsUser.getAvatar());
-        /// TODO 增加AccountName
-//        userDTO.setAccountName(umsUser);
+        UserBasicDTO userBasicDTO = new UserBasicDTO();
+        userBasicDTO.setUserId(umsUser.getId());
+        userBasicDTO.setNickName(umsUser.getNickName());
+        userBasicDTO.setAvatar(umsUser.getAvatar());
+        userBasicDTO.setAccountName(userInfo.getAccountName());
         // 注意：不暴露敏感信息
-        return userDTO;
+        return userBasicDTO;
     }
 
     /**
      * 批量轉換實體為DTO
      */
-    public List<UserDTO> toDTOList(List<UmsUser> umsUsers) {
+    public List<UserBasicDTO> toDTOList(List<UmsUser> umsUsers, List<UmsUserInfo> userInfos) {
         if (umsUsers == null) {
             return null;
         }
 
+        Map<Long, UmsUserInfo> umsUserInfoMap = userInfos.stream().collect(Collectors.toMap(UmsUserInfo::getUserId, Function.identity()));
+
+
+
         return umsUsers.stream()
-                .map(this::toDTO)
+                .map(user->{
+                    UmsUserInfo umsUserInfo = umsUserInfoMap.get(user.getId());
+
+                    return this.toDTO(user,umsUserInfo);
+                })
                 .collect(Collectors.toList());
     }
 }

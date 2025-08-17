@@ -22,15 +22,19 @@ import java.time.LocalDateTime;
 public class UmsSaveUserVo {
 //    private Object avatar;
     private Status status;
-    private String name;
+    // DDL變更: 原 name 欄位更名為 nickName
+    private String nickName;
     private String accountName;
+    ///TODO password 欄位已從資料庫移除，如需保留請手動添加欄位
     private String password;
     private String checkPassword;
     private LocalDate birthday;
     private Gender gender;
     private Role roleId;
+    ///TODO email 欄位已從資料庫移除，如需保留請手動添加欄位
     private String email;
     private String address;
+    ///TODO phoneNumber 欄位已從資料庫移除，如需保留請手動添加欄位
     private String phoneNumber;
 
 

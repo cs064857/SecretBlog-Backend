@@ -26,8 +26,8 @@ public class UmsUserDetailsDTO {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long userInfoId;
 
-    // 姓名
-    private String name;
+    // 用戶名(原 name -> nickName)
+    private String nickName;
 
     // 使用者頭像
     private String avatar;
@@ -39,12 +39,16 @@ public class UmsUserDetailsDTO {
 
     // UmsUserInfo 的欄位
     private String accountName;    // 帳號名稱
+    ///TODO password 欄位已從資料庫移除，如需保留請手動添加欄位
     private String password;       // 密碼
+    ///TODO email 欄位已從資料庫移除，如需保留請手動添加欄位
     private String email;          // 信箱地址
     private LocalDate birthday;    // 生日 (LocalDate in Java)
     private Gender gender;            // 性別 (1 男性, 2 女性, 3 不願透露)
     private String address;        // 居住地址
+    ///TODO phoneNumber 欄位已從資料庫移除，如需保留請手動添加欄位
     private String phoneNumber;    // 手機號碼
+    ///TODO createTime 欄位已調整為 createAt/updateAt，如需保留請手動調整DTO
     private LocalDateTime createTime;  // 註冊時間 (LocalDateTime in Java)
 
     // 來自 UmsRole 的欄位

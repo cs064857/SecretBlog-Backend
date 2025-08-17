@@ -1,6 +1,5 @@
 package com.shijiawei.secretblog.user.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -11,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import lombok.Data;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -41,12 +41,13 @@ public class UmsUser implements Serializable {
     private Long userinfoId;
 
     /**
-     * 姓名
+     * 用戶名
+     * DDL變更: 原 name 欄位更名為 nick_name
      */
-    @TableField(value = "`name`")
-    @Schema(description="姓名")
-    @Size(max = 255,message = "姓名最大长度要小于 255")
-    private String name;
+    @TableField(value = "nick_name")
+    @Schema(description="用戶名")
+    @Size(max = 255,message = "用戶名最大长度要小于 255")
+    private String nickName;
 
     /**
      * 使用者組Id
@@ -82,9 +83,23 @@ public class UmsUser implements Serializable {
 
 
 
+    /**
+     * 創建時間
+     */
+    @TableField(value = "create_at")
+    @Schema(description="創建時間")
+    private LocalDateTime createAt;
+
+    /**
+     * 更新時間
+     */
+    @TableField(value = "update_at")
+    @Schema(description="更新時間")
+    private LocalDateTime updateAt;
+
     private static final long serialVersionUID = 1L;
 
     public boolean isEmpty() {
-        return ObjectUtils.allNull(name, avatar, status, roleId);
+        return ObjectUtils.allNull(nickName, avatar, status, roleId);
     }
 }

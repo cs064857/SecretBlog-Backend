@@ -47,7 +47,7 @@
 //	@Bean
 //	public InMemoryUserDetailsManager userDetailsService() {
 //		UserDetails user = User.withDefaultPasswordEncoder()
-//				.username("user")
+//				.nickName("user")
 //				.password("password")
 //				.roles("USER")
 //				.build();

@@ -1,7 +1,6 @@
 package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
@@ -10,16 +9,13 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 
 import com.shijiawei.secretblog.article.service.*;
-import com.shijiawei.secretblog.common.dto.UserDTO;
+import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
-import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.common.vaildation.ValidationGroups;
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
@@ -28,12 +24,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -214,10 +208,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         Map<Long, List<AmsArtTag>> amsArtTagMap = amsArtTagList.stream().collect(Collectors.groupingBy(AmsArtTag::getArticleId));
         log.info("amsArtTagMap:{}",amsArticleMap);
 
-        R<List<UserDTO>> usersByIds = userFeignClient.getUsersByIds(userIdList);
-        Map<Long, UserDTO> userDTOMap = usersByIds.getData().stream().collect(Collectors.toMap(UserDTO::getUserId, Function.identity()));
+        R<List<UserBasicDTO>> usersByIds = userFeignClient.getUsersByIds(userIdList);
+        Map<Long, UserBasicDTO> userDTOMap = usersByIds.getData().stream().collect(Collectors.toMap(UserBasicDTO::getUserId, Function.identity()));
         log.info("users資料:{}",usersByIds);
-//        List<UserDTO> usersByIdsData = usersByIds.getData();
+//        List<UserBasicDTO> usersByIdsData = usersByIds.getData();
         List<AmsArticlePreviewVo> amsArticlePreviewVoList = new ArrayList<AmsArticlePreviewVo>();
         amsArtinfoMap.forEach((artInfoId, artInfo) -> {
 
@@ -225,22 +219,22 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             BeanUtils.copyProperties(artInfo, amsArticlePreviewVo);
             BeanUtils.copyProperties(amsArtStatusMap.get(artInfo.getArticleId()),amsArticlePreviewVo);
             //從遠程服務獲取用戶資料
-            UserDTO userDTO = userDTOMap.get(artInfo.getUserId());
+            UserBasicDTO userBasicDTO = userDTOMap.get(artInfo.getUserId());
             ///TODO 設置用戶的AccountName
 
 
-            //            amsArticlePreviewVo.setAvatar(userDTO.getAvatar());
-//            amsArticlePreviewVo.setUsername(userDTO.getUsername());
-//            amsArticlePreviewVo.setUserId(userDTO.getUserId());
+            //            amsArticlePreviewVo.setAvatar(userBasicDTO.getAvatar());
+//            amsArticlePreviewVo.setNickName(userBasicDTO.getNickName());
+//            amsArticlePreviewVo.setUserId(userBasicDTO.getUserId());
             amsArticlePreviewVo.setAccountName("Test");
-            BeanUtils.copyProperties(userDTO,amsArticlePreviewVo);
+            BeanUtils.copyProperties(userBasicDTO,amsArticlePreviewVo);
             amsArticlePreviewVoList.add(amsArticlePreviewVo);
 
             amsArticlePreviewVo.setCategoryName(amsCategory.getCategoryName());
             amsArticlePreviewVo.setAmsArtTagList(amsArtTagMap.get(artInfo.getArticleId()));
             log.info("amsArticlePreviewVo:{}",amsArticlePreviewVo);
 
-            log.info("userDTO:{}",userDTO);
+            log.info("userBasicDTO:{}", userBasicDTO);
 
 
         });

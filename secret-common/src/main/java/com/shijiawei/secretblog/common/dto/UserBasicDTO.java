@@ -7,7 +7,7 @@ import lombok.Data;
  * 用於微服務間數據傳輸，避免直接依賴其他服務的實體類
  */
 @Data
-public class UserDTO {
+public class UserBasicDTO {
     /**
      * 用戶ID
      */
@@ -16,7 +16,7 @@ public class UserDTO {
     /**
      * 用戶名
      */
-    private String username;
+    private String nickName;
 
     /**
      * 用戶頭像

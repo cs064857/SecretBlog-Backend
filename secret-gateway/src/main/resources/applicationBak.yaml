@@ -6,13 +6,13 @@ spring:
 
   cloud:
     nacos:
-      server-addr: 35.209.184.74:8848
+      server-addr: 127.0.0.1:8848
       password: nacos
       username: nacos
       discovery:
-        server-addr: 35.209.184.74:8848
+        server-addr: 127.0.0.1:8848
       config:
-        server-addr: 35.209.184.74:8848
+        server-addr: 127.0.0.1:8848
         timeout: 300000
 
 

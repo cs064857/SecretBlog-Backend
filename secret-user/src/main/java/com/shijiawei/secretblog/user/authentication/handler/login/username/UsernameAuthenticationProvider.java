@@ -20,6 +20,8 @@ import com.shijiawei.secretblog.user.entity.UmsUserInfo;
 import com.shijiawei.secretblog.user.mapper.UmsUserInfoMapper;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 
+import java.util.Optional;
+
 /**
  * 帳號密碼登錄認證
  */
@@ -56,16 +58,18 @@ public class UsernameAuthenticationProvider implements AuthenticationProvider {
       查數據庫，匹配用戶信息
      */
 
-    UmsUserLoginDTO UmsUserLoginDTO = userService.getUserFromDB(usernameOrEmail);
-    log.info("UmsUserLoginDTO:{}",UmsUserLoginDTO);
-    if (UmsUserLoginDTO == null
+      UmsUserLoginDTO umsUserLoginDTO = userService.getUserFromDB(usernameOrEmail)
+              .orElseThrow(() -> new BadCredentialsException("用戶名或密碼不正確"));
+
+      log.info("umsUserLoginDTO:{}",umsUserLoginDTO);
+    if (umsUserLoginDTO == null
 //            || Byte.valueOf((byte)1).equals(userLoginDTO.getPassword())
-            || !passwordEncoder.matches(password, UmsUserLoginDTO.getPassword())) {
+            || !passwordEncoder.matches(password, umsUserLoginDTO.getPassword())) {
       // 密碼錯誤，直接拋異常。
       // 根據SpringSecurity框架的代碼邏輯，認證失敗時，應該拋這個異常：org.springframework.security.core.AuthenticationException
       // BadCredentialsException就是這個異常的子類
       // 拋出異常後後，AuthenticationFailureHandler的實現類會處理這個異常。
-      throw new BadCredentialsException("${invalid.username.or.pwd:用戶名或密碼不正確}");
+      throw new BadCredentialsException("${invalid.nickName.or.pwd:用戶名或密碼不正確}");
     }
 
     //創建Token
@@ -74,9 +78,9 @@ public class UsernameAuthenticationProvider implements AuthenticationProvider {
     UserLoginInfo userLoginInfo = new UserLoginInfo();
 //    userLoginInfo.setSessionId();
 //    userLoginInfo.setExpiredTime();
-    userLoginInfo.setUserId(UmsUserLoginDTO.getUserId());
-    userLoginInfo.setNickname(UmsUserLoginDTO.getAccountName());
-    userLoginInfo.setRoleId(UmsUserLoginDTO.getRoleId().toString());
+    userLoginInfo.setUserId(umsUserLoginDTO.getUserId());
+    userLoginInfo.setNickname(umsUserLoginDTO.getAccountName());
+    userLoginInfo.setRoleId(umsUserLoginDTO.getRoleId().toString());
     token.setCurrentUser(userLoginInfo);
     token.setAuthenticated(true); // 認證通過，這裡一定要設成true
     log.debug("userLoginInfo:{}",userLoginInfo);
