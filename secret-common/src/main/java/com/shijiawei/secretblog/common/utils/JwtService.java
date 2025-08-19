@@ -62,7 +62,7 @@ public class JwtService implements InitializingBean {
     } catch (Exception e) {
       logger.error("獲取Jwt私鑰失敗，詳細錯誤: {}", e.getMessage(), e);
       logger.error("私鑰內容: {}", privateKeyBase64);
-      ExceptionTool.throwException("獲取Jwt私鑰失敗: " + e.getMessage(), e);
+      ExceptionTool.throwException("獲取Jwt私鑰失敗: " , e);
       return null;
     }
   }

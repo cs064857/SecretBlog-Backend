@@ -58,7 +58,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     List<UmsUser> listUmsUser();
 
-    R deleteUmsUserDetails(List<Long> userIdList);
+    R deleteUserDetailsByIds(List<Long> userIdList);
 
     void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId);
 
@@ -69,4 +69,6 @@ public interface UmsUserService extends IService<UmsUser>{
     R sendVerificationCode(UmsUserEmailVerifyDTO umsUserEmailVerifyDTO);
 
     List<UserBasicDTO> selectUserBasicInfoByIds(List<Long> ids);
+
+    R deleteUserDetailsById(Long userId);
 }

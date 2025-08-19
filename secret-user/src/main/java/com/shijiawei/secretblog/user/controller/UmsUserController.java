@@ -1,9 +1,7 @@
 package com.shijiawei.secretblog.user.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
-import com.shijiawei.secretblog.common.utils.JSON;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.JwtService; // TEMP 新增
 import com.shijiawei.secretblog.common.utils.TimeTool;
@@ -13,20 +11,17 @@ import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo; // TEMP 新增
 import com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService; // TEMP 新增
 import com.shijiawei.secretblog.user.entity.UmsUser;
-import com.shijiawei.secretblog.user.entity.UmsUserInfo;
 import com.shijiawei.secretblog.user.service.UmsUserInfoService;
 import com.shijiawei.secretblog.user.service.UmsUserService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import com.shijiawei.secretblog.user.converter.UserConverter;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
@@ -34,9 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.security.Principal;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * (ums_user)表控制層
@@ -142,13 +135,19 @@ public class UmsUserController {
     @GetMapping("/userDetails")
     public R<List<UmsUserDetailsDTO>> userDetails() {
         List<UmsUserDetailsDTO> umsUserDetailsDTOList = umsUserService.listUmsUserDetails();
+        ///TODO 不要返回密碼
         return R.ok(umsUserDetailsDTOList);
     }
-
+    @DeleteMapping("/delete/userDetail")
+    public R deleteUserDetailsById(@RequestParam(name = "id") Long userId) {
+        log.info("userId:{}",userId);
+        R r = umsUserService.deleteUserDetailsById(userId);
+        return r;
+    }
     @DeleteMapping("/delete/userDetails")
-    public R deleteUmsUserAndUserInfo(@RequestParam(name = "ids") List<Long> userIdList) {
+    public R deleteUserDetailsByIds(@RequestParam(name = "ids") List<Long> userIdList) {
         log.info("userIdList:{}",userIdList);
-        R r = umsUserService.deleteUmsUserDetails(userIdList);
+        R r = umsUserService.deleteUserDetailsByIds(userIdList);
         return r;
     }
     @PutMapping("/userDetails/{userId}")

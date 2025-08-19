@@ -41,11 +41,11 @@ public class R<T> {
      * @return
      */
     public static <T> R<T> ok(T data) {
-        return (new R<T>(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription(), data));
+        return (new R<>(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription(), data));
     }
 
     public static <T> R<T> ok(String message,T data) {
-        return (new R<T>(HttpCodeEnum.SUCCESS.getCode(), message, data));
+        return (new R<>(HttpCodeEnum.SUCCESS.getCode(), message, data));
     }
 
 //    public static <T> R<T> ok(T data) {
@@ -56,8 +56,8 @@ public class R<T> {
 //    }
 
 
-    public static R ok() {
-        return (new R(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription()));
+    public static R<Void> ok() {
+        return (new R<>(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription()));
     }
 
 //    public static  R ok() {
@@ -72,10 +72,12 @@ public class R<T> {
      *
      * @return
      */
-    public static R error() {
-        return (new R(HttpCodeEnum.OPERATION_ERR.getCode(), HttpCodeEnum.OPERATION_ERR.getDescription()));
+    public static <T> R<T> error() {
+        return (new R<>(HttpCodeEnum.OPERATION_ERR.getCode(), HttpCodeEnum.OPERATION_ERR.getDescription()));
     }
-
+    public static <T> R<T> error(int code,String msg){
+        return new R<>(code, msg);
+    }
     public static <T> R<T> error(String msg) {
         return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(), msg);
     }

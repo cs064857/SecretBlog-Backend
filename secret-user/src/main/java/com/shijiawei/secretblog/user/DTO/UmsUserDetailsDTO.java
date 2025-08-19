@@ -49,7 +49,7 @@ public class UmsUserDetailsDTO {
     ///TODO phoneNumber 欄位已從資料庫移除，如需保留請手動添加欄位
     private String phoneNumber;    // 手機號碼
     ///TODO createTime 欄位已調整為 createAt/updateAt，如需保留請手動調整DTO
-    private LocalDateTime createTime;  // 註冊時間 (LocalDateTime in Java)
+    private LocalDateTime createAt;  // 註冊時間 (LocalDateTime in Java)
 
     // 來自 UmsRole 的欄位
     private Role roleId;       // 權限名稱

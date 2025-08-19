@@ -262,7 +262,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public R deleteUmsUserDetails(List<Long> userIdList) {
+    public R deleteUserDetailsByIds(List<Long> userIdList) {
 
 //        List<UmsUser> umsUserList = this.baseMapper.selectBatchIds(userIdList);
         //利用用戶ID查出用戶資訊ID
@@ -271,7 +271,10 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 //        List<Long> userinfoIdList = umsUserList.stream().map(UmsUser::getUserinfoId).toList();
 
         //刪除User資料,將deleted欄位改成1
-        this.baseMapper.deleteByIds(userIdList);
+        int deleted = this.baseMapper.deleteByIds(userIdList);
+        if(deleted==0){
+            throw new CustomBaseException("500","刪除失敗", HttpStatus.BAD_REQUEST);
+        }
         // 刪除UserInfo資料
 //        umsUserInfoService.removeByIds(userinfoIdList);
         // 刪除Auths資料
@@ -506,6 +509,32 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Override
     public List<UserBasicDTO> selectUserBasicInfoByIds(List<Long> ids) {
         return this.baseMapper.selectUserBasicInfoByIds(ids);
+    }
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public R deleteUserDetailsById(Long userId) {
+        //將user的deleted欄位設置為1(邏輯刪除)
+        int deleted = this.baseMapper.deleteById(userId);
+        if(deleted == 0){
+            throw new CustomBaseException("500","刪除失敗", HttpStatus.BAD_REQUEST);
+        }
+//        // 刪除使用者資訊
+//        if (!umsUserInfoService.remove(new LambdaQueryWrapper<UmsUserInfo>()
+//                .eq(UmsUserInfo::getUserId, userId))) {
+//            throw new CustomBaseException("500", "刪除使用者資訊失敗", HttpStatus.BAD_REQUEST);
+//        }
+//        // 刪除授權資料
+//        if (!umsAuthsService.remove(new LambdaQueryWrapper<UmsAuths>()
+//                .eq(UmsAuths::getUserId, userId))) {
+//            throw new CustomBaseException("500", "刪除授權資訊失敗", HttpStatus.BAD_REQUEST);
+//        }
+//        // 刪除憑證資料
+//        if (!umsCredentialsService.remove(new LambdaQueryWrapper<UmsCredentials>()
+//                .eq(UmsCredentials::getUserId, userId))) {
+//            throw new CustomBaseException("500", "刪除憑證資料失敗", HttpStatus.BAD_REQUEST);
+//        }
+        return R.ok();
+
     }
 
 
