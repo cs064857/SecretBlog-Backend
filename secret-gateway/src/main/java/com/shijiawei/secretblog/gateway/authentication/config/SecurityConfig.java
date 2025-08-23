@@ -67,8 +67,15 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeExchange(authorizeExchange -> authorizeExchange
-                .pathMatchers("/ums/user/login/business2").permitAll()
-                // 所有請求都允許通過 Gateway，具體的認證由各個微服務處理
+                // 開放登入/註冊等匿名端點（注意：Gateway 收的是 /api/** 前綴）
+                .pathMatchers(
+                    "/api/ums/user/login/business2",
+                    "/api/ums/user/login/username",
+                    "/api/ums/user/register",
+                    "/api/ums/user/email-verify-code"
+                ).permitAll()
+                // 其餘 API 要求已登入
+                .pathMatchers("/api/ums/**", "/api/article/**", "/api/sms/**","/api/AdminVue/**","/api/AdminVue").authenticated()
                 .anyExchange().permitAll())
             .addFilterAt(new ReactiveJwtAuthenticationFilter(jwtService), SecurityWebFiltersOrder.AUTHENTICATION);
 

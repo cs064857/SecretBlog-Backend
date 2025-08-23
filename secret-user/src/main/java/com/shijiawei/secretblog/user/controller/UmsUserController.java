@@ -138,12 +138,18 @@ public class UmsUserController {
         ///TODO 不要返回密碼
         return R.ok(umsUserDetailsDTOList);
     }
-    @DeleteMapping("/delete/userDetail")
-    public R deleteUserDetailsById(@RequestParam(name = "id") Long userId) {
+    @PostMapping("/delete/userDetail/{id}")
+    public R deleteUserDetailsById( @PathVariable(name = "id") Long userId) {
         log.info("userId:{}",userId);
-        R r = umsUserService.deleteUserDetailsById(userId);
-        return r;
+        return umsUserService.deleteUserDetailsById(userId);
+
     }
+//    @DeleteMapping("/delete/userDetail")
+//    public R deleteUserDetailsById(@RequestParam(name = "id") Long userId) {
+//        log.info("userId:{}",userId);
+//        R r = umsUserService.deleteUserDetailsById(userId);
+//        return r;
+//    }
     @DeleteMapping("/delete/userDetails")
     public R deleteUserDetailsByIds(@RequestParam(name = "ids") List<Long> userIdList) {
         log.info("userIdList:{}",userIdList);

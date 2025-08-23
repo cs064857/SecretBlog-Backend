@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public interface AmsArticleService extends IService<AmsArticle> {
 
 //    List<AmsArticle> getListArticle();
 //
-    Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
+    List<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
 //
 //
 ////    Page<AmsArticle> getLatestArticles();

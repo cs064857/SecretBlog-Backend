@@ -6,6 +6,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.shijiawei.secretblog.user", "com.shijiawei.secretblog.common"})
+
 public class SecretUserApplication {
 
     public static void main(String[] args) {

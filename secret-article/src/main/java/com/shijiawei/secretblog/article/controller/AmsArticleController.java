@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
+import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
@@ -74,10 +75,10 @@ public class AmsArticleController {
      */
 
     @GetMapping("/categories/{categoryId}/articles")
-    public R<Page<AmsArticle>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
+    public R<List<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
         log.info("categoryId:{}",categoryId);
         log.info("routePage:{}",routePage);
-        Page<AmsArticle> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
+        List<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
         return R.ok(Page);
     }
 //    /**

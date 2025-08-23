@@ -56,7 +56,8 @@ public class MyJwtAuthenticationFilter extends OncePerRequestFilter {
     logger.debug("JWT Token from cookie: {}", jwtToken);
 
     if (StringUtils.isEmpty(jwtToken)) {
-      ExceptionTool.throwException("JWT token is missing!", "miss.token");
+      // 未攜帶 JWT 視為未認證，統一回傳 401 以便前端攔截器觸發
+      ExceptionTool.throwException("JWT token is missing!", HttpStatus.UNAUTHORIZED, "miss.token");
     }
 
     try {

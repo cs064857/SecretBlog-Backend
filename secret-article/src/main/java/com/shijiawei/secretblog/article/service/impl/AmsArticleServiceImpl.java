@@ -151,7 +151,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     //    @OpenLog
 //    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
     @Override
-    public Page<AmsArticle> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
+    public List<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
 //        List<Long> userIds= new ArrayList<>();
 //        userIds.add(1893727717732917249L);
 //        userIds.add(1893723890149498881L);

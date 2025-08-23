@@ -111,10 +111,14 @@ public class SecurityConfig {
         http.securityMatcher("/ums/user/**")
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
+                    // 允許匿名訪問的端點
                     "/ums/user/login/username",
                     "/ums/user/register",
                     "/ums/user/email-verify-code"
                 ).permitAll()
+                //允許以授權的用戶使用DELETE端點刪除用戶資料(邏輯刪除)
+                .requestMatchers(HttpMethod.DELETE, "/ums/user/delete/userDetail").authenticated()
+
                 .anyRequest().authenticated()
             );
 
