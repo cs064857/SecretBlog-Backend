@@ -151,97 +151,73 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     //    @OpenLog
 //    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
     @Override
-    public List<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
-//        List<Long> userIds= new ArrayList<>();
-//        userIds.add(1893727717732917249L);
-//        userIds.add(1893723890149498881L);
-
-//        R userById = userFeignClient.getUserById(1941406633102176258L);
-//        log.info("user資料:{}",userById);
-//        R usersByIds = userFeignClient.getUsersByIds(userIds);
-//
-//        log.info("users資料:{}",usersByIds);
-
-
-        /**
-         *根據categoryId分類查詢
-         */
-        Page<AmsArtinfo> amsArtinfoPage = amsArtinfoService.page(new Page<>(routePage, 20), new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getCategoryId, categoryId));
+    public Page<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
+        // 根據categoryId分類查詢
+        Page<AmsArtinfo> amsArtinfoPage = amsArtinfoService.page(new Page<>(routePage, 20),
+                new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getCategoryId, categoryId));
         List<AmsArtinfo> amsArtinfoRecords = amsArtinfoPage.getRecords();
 
-        /**
-         * 從文章資訊列表獲取所有的文章ID
-         */
+        // 若本頁沒有資料，直接回傳空分頁但保留分頁資訊
+        if (amsArtinfoRecords == null || amsArtinfoRecords.isEmpty()) {
+            Page<AmsArticlePreviewVo> empty = new Page<>(amsArtinfoPage.getCurrent(), amsArtinfoPage.getSize(), amsArtinfoPage.getTotal());
+            empty.setRecords(new ArrayList<>());
+            return empty;
+        }
+
+        // 從文章資訊列表獲取所有的文章ID與用戶ID
         List<Long> articleIdList = amsArtinfoRecords.stream().map(AmsArtinfo::getArticleId).collect(Collectors.toList());
         List<Long> userIdList = amsArtinfoRecords.stream().map(AmsArtinfo::getUserId).collect(Collectors.toList());
-        /**
-         *利用所有獲取到的文章ID列出所有關聯文章的列表
-         */
+
+        // 查詢關聯資料
         List<AmsArticle> amsArticleList = this.baseMapper.selectBatchIds(articleIdList);
-
-        List<AmsArtStatus> amsArtStatusList = amsArtStatusService.list(new LambdaQueryWrapper<AmsArtStatus>().in(AmsArtStatus::getArticleId,articleIdList));
-        log.info("amsArtStatusList:{}",amsArtStatusList);
-
+        List<AmsArtStatus> amsArtStatusList = amsArtStatusService.list(new LambdaQueryWrapper<AmsArtStatus>().in(AmsArtStatus::getArticleId, articleIdList));
         AmsCategory amsCategory = amsCategoryService.getById(categoryId);
-
         List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().in(AmsArtTag::getArticleId, articleIdList));
 
-        /**
-         * 利用文章Ids獲取關聯的文章status資訊,key為articleId,value為amsArtStatus對象
-         */
-
-        Map<Long, AmsArtStatus> amsArtStatusMap = amsArtStatusList.stream().collect(Collectors.toMap(AmsArtStatus::getArticleId, Function.identity()));
-        log.info("amsArtStatusMap:{}",amsArtStatusMap);
-        /**
-         * 利用文章InfoIds獲取關聯的文章Artinfo資訊,key為articleInfoId,value為amsArtInfo對象
-         */
-        Map<Long, AmsArtinfo> amsArtinfoMap = amsArtinfoRecords.stream().collect(Collectors.toMap(AmsArtinfo::getId, Function.identity()));
-        log.info("amsArtinfoMap:{}",amsArtinfoMap);
-        /**
-         * 利用文章InfoIds獲取關聯的文章Article資訊,key為articleId,value為amsArticle對象
-         */
-        Map<Long, AmsArticle> amsArticleMap = amsArticleList.stream().collect(Collectors.toMap(AmsArticle::getId, Function.identity()));
-        log.info("amsArticleMap:{}",amsArticleMap);
-        /**
-         * 利用文章Ids獲取關聯的文章amsArtTag資訊,key為articleId,value為amsArtTag對象
-         */
+        // 映射加速查找
+        Map<Long, AmsArtStatus> amsArtStatusMap = amsArtStatusList.stream().collect(Collectors.toMap(AmsArtStatus::getArticleId, Function.identity(), (a, b) -> a));
+        Map<Long, AmsArticle> amsArticleMap = amsArticleList.stream().collect(Collectors.toMap(AmsArticle::getId, Function.identity(), (a, b) -> a));
         Map<Long, List<AmsArtTag>> amsArtTagMap = amsArtTagList.stream().collect(Collectors.groupingBy(AmsArtTag::getArticleId));
-        log.info("amsArtTagMap:{}",amsArticleMap);
 
         R<List<UserBasicDTO>> usersByIds = userFeignClient.getUsersByIds(userIdList);
-        Map<Long, UserBasicDTO> userDTOMap = usersByIds.getData().stream().collect(Collectors.toMap(UserBasicDTO::getUserId, Function.identity()));
-        log.info("users資料:{}",usersByIds);
-//        List<UserBasicDTO> usersByIdsData = usersByIds.getData();
-        List<AmsArticlePreviewVo> amsArticlePreviewVoList = new ArrayList<AmsArticlePreviewVo>();
-        amsArtinfoMap.forEach((artInfoId, artInfo) -> {
+        Map<Long, UserBasicDTO> userDTOMap = new HashMap<>();
+        if (usersByIds != null && usersByIds.getData() != null) {
+            userDTOMap = usersByIds.getData().stream().collect(Collectors.toMap(UserBasicDTO::getUserId, Function.identity(), (a, b) -> a));
+        }
 
-            AmsArticlePreviewVo amsArticlePreviewVo = new AmsArticlePreviewVo();
-            BeanUtils.copyProperties(artInfo, amsArticlePreviewVo);
-            BeanUtils.copyProperties(amsArtStatusMap.get(artInfo.getArticleId()),amsArticlePreviewVo);
-            //從遠程服務獲取用戶資料
+        // 組裝VO，按原 amsArtinfoRecords 順序
+        List<AmsArticlePreviewVo> amsArticlePreviewVoList = new ArrayList<>();
+        for (AmsArtinfo artInfo : amsArtinfoRecords) {
+            AmsArticlePreviewVo vo = new AmsArticlePreviewVo();
+            // artInfo 基本屬性
+            BeanUtils.copyProperties(artInfo, vo);
+
+            // article 基本屬性
+            AmsArticle amsArticle = amsArticleMap.get(artInfo.getArticleId());
+            vo.setTitle(amsArticle.getTitle());
+            // 狀態屬性
+            AmsArtStatus status = amsArtStatusMap.get(artInfo.getArticleId());
+            if (status != null) {
+                BeanUtils.copyProperties(status, vo);
+            }
+            // 使用者屬性
             UserBasicDTO userBasicDTO = userDTOMap.get(artInfo.getUserId());
-            ///TODO 設置用戶的AccountName
+            if (userBasicDTO != null) {
+                BeanUtils.copyProperties(userBasicDTO, vo);
+            }
+            // 分類與標籤
+            if (amsCategory != null) {
+                vo.setCategoryName(amsCategory.getCategoryName());
+            }
+            vo.setAmsArtTagList(amsArtTagMap.get(artInfo.getArticleId()));
 
+            amsArticlePreviewVoList.add(vo);
+        }
 
-            //            amsArticlePreviewVo.setAvatar(userBasicDTO.getAvatar());
-//            amsArticlePreviewVo.setNickName(userBasicDTO.getNickName());
-//            amsArticlePreviewVo.setUserId(userBasicDTO.getUserId());
-            amsArticlePreviewVo.setAccountName("Test");
-            BeanUtils.copyProperties(userBasicDTO,amsArticlePreviewVo);
-            amsArticlePreviewVoList.add(amsArticlePreviewVo);
-
-            amsArticlePreviewVo.setCategoryName(amsCategory.getCategoryName());
-            amsArticlePreviewVo.setAmsArtTagList(amsArtTagMap.get(artInfo.getArticleId()));
-            log.info("amsArticlePreviewVo:{}",amsArticlePreviewVo);
-
-            log.info("userBasicDTO:{}", userBasicDTO);
-
-
-        });
-
-        log.info("amsArticlePreviewVoList:{}",amsArticlePreviewVoList);
-
-        return amsArticlePreviewVoList;
+        // 包裝為分頁返回
+        Page<AmsArticlePreviewVo> resultPage = new Page<>(amsArtinfoPage.getCurrent(), amsArtinfoPage.getSize(), amsArtinfoPage.getTotal());
+        resultPage.setRecords(amsArticlePreviewVoList);
+        return resultPage;
     }
 //
 //

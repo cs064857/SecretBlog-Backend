@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shijiawei.secretblog.article.mapper.AmsArticleMapper">
+    <resultMap id="AmsCommentInfoBaseResultMap" type="com.shijiawei.secretblog.article.entity.AmsCommentInfo">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="article_id" property="articleId" jdbcType="BIGINT"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="comment_id" property="commentId" jdbcType="BIGINT"/>
+        <result column="parent_comment_id" property="parentCommentId" jdbcType="BIGINT"/>
+        <result column="create_at" property="createAt" jdbcType="TIMESTAMP"/>
+        <result column="update_at" property="updateAt" jdbcType="TIMESTAMP"/>
+        <result column="likes_count" property="likesCount" jdbcType="INTEGER"/>
+        <result column="replys_count" property="replysCount" jdbcType="INTEGER"/>
+    </resultMap>
+</mapper>

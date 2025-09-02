@@ -75,10 +75,10 @@ public class AmsArticleController {
      */
 
     @GetMapping("/categories/{categoryId}/articles")
-    public R<List<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
+    public R<Page<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
         log.info("categoryId:{}",categoryId);
         log.info("routePage:{}",routePage);
-        List<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
+        Page<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
         return R.ok(Page);
     }
 //    /**

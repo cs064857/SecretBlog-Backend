@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.article.feign;
 
+import com.shijiawei.secretblog.article.config.FeignInterceptorConfig;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -14,7 +15,7 @@ import java.util.List;
  * @Create 2025/8/5 上午3:10
  *
  */
-@FeignClient(name = "secret-user", path = "/ums/user")
+@FeignClient(name = "secret-user", path = "/ums/user",configuration = FeignInterceptorConfig.class)
 public interface UserFeignClient {
 
     /**

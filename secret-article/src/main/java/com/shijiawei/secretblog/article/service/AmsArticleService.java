@@ -21,7 +21,7 @@ public interface AmsArticleService extends IService<AmsArticle> {
 
 //    List<AmsArticle> getListArticle();
 //
-    List<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
+    Page<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
 //
 //
 ////    Page<AmsArticle> getLatestArticles();

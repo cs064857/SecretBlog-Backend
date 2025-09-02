@@ -21,7 +21,7 @@ public class AmsArticlePreviewVo {
      * 文章標題(不可為空,最多64字符)
      */
     private String title;
-
+    private Long articleId;
     ///TODO 預覽文章時列出用戶名及用戶頭像
     private String username;
     private Long userId;

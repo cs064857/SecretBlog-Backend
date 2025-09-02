@@ -1,3 +1,4 @@
+
 spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -29,6 +30,10 @@ spring:
         server-addr: 127.0.0.1:8848
       config:
         timeout: 300000
+#        透過openfeign在調用其他微服務時將登入訊息獲取過來
+    openfeign:
+      oauth2:
+        enabled: true
   config:
     import: optional:nacos:secretblog_article_application.yml
   data:
