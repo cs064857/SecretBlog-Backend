@@ -87,7 +87,7 @@ public class UmsUserController {
         return R.ok(user);
     }
 
-    @GetMapping("list/basic")
+    @GetMapping("/list/basic")
     public R<List<UserBasicDTO>> selectUserBasicInfoByIds(@RequestParam("ids") List<Long> ids) {
 
         List<UserBasicDTO> userBasicDTOS = umsUserService.selectUserBasicInfoByIds(ids);
@@ -98,8 +98,10 @@ public class UmsUserController {
         return R.ok(userBasicDTOS);
 
     }
-    @GetMapping("list/byids")
+
+    @GetMapping("/list/byids")
     public R<List<UmsUser>> getUsersByIds(@RequestParam("ids") List<Long> ids) {
+        log.info("getUsersByIds.ids:{}",ids);
         List<UmsUser> umsUserList = umsUserService.listByIds(ids);
         return R.ok(umsUserList);
     }

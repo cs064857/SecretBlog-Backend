@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * ClassName: AmsCommentController
  * Description:
@@ -31,11 +33,11 @@ public class AmsCommentController {
         return r;
     }
     @GetMapping("/{articleId}/comments")
-    public R<AmsArtCommentsVo> getArtComments(@PathVariable Long articleId){
+    public R<List<AmsArtCommentsVo>> getArtComments(@PathVariable Long articleId){
 
         log.debug("articleId:{}",articleId);
-        R<AmsArtCommentsVo> r = amsCommentService.getArtComments(articleId);
-        return null;
+        List<AmsArtCommentsVo> amsArtCommentsVo = amsCommentService.getArtComments(articleId);
+        return R.ok(amsArtCommentsVo);
 
     }
 }

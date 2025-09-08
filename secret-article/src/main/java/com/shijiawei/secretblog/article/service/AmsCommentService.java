@@ -6,6 +6,8 @@ import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.R;
 
+import java.util.List;
+
 /**
  * ClassName: AmsCommentService
  * Description:
@@ -17,5 +19,5 @@ public interface AmsCommentService extends IService<AmsComment> {
 
     R createComment(AmsCommentCreateDTO amsCommentCreateDTO);
 
-    R<AmsArtCommentsVo> getArtComments(Long articleId);
+    List<AmsArtCommentsVo> getArtComments(Long articleId);
 }

@@ -12,10 +12,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 public class UserLoginInfo {
 
   private String sessionId; // 會話id，全局唯一
-//  private Long userId;
+  private Long userId; // 新增：用戶ID
   private String nickname; // 昵稱
   private String roleId;
-
   private Long expiredTime; // 過期時間
 
   // 添加 getAuthorities 方法以支持 Spring Security 認證
@@ -35,6 +34,14 @@ public class UserLoginInfo {
     this.sessionId = sessionId;
   }
 
+  public Long getUserId() {
+    return userId;
+  }
+
+  public void setUserId(Long userId) {
+    this.userId = userId;
+  }
+
   public String getRoleId() {
     return roleId;
   }
@@ -42,14 +49,6 @@ public class UserLoginInfo {
   public void setRoleId(String roleId) {
     this.roleId = roleId;
   }
-
-//  public Long getUserId() {
-//    return userId;
-//  }
-//
-//  public void setUserId(Long userId) {
-//    this.userId = userId;
-//  }
 
   public String getNickname() {
     return nickname;
@@ -71,7 +70,7 @@ public class UserLoginInfo {
   public String toString() {
     return "UserLoginInfo{" +
             "sessionId='" + sessionId + '\'' +
-//            ", userId=" + userId +
+            ", userId=" + userId +
             ", nickname='" + nickname + '\'' +
             ", roleId='" + roleId + '\'' +
             ", expiredTime=" + expiredTime +
@@ -95,10 +94,10 @@ public class UserLoginInfo {
       return this;
     }
 
-//    public CurrentUserBuilder userId(Long userId) {
-//      currentUser.setUserId(userId);
-//      return this;
-//    }
+    public CurrentUserBuilder userId(Long userId) {
+      currentUser.setUserId(userId);
+      return this;
+    }
 
     public CurrentUserBuilder nickname(String nickname) {
       currentUser.setNickname(nickname);

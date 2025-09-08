@@ -20,5 +20,6 @@ public class AmsArtCommentsVo {
     private LocalDateTime createAt;
     private LocalDateTime  updateAt;
     private AmsArtCommentsVo parentComment;
-
+    private String avatar;
+    private Long commentId;
 }

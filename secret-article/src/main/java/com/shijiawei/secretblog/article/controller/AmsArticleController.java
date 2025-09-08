@@ -11,8 +11,10 @@ import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,9 +35,9 @@ public class AmsArticleController {
     AmsArticleService amsArticleService;
 
     @PostMapping("/save")
-    public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo) {
+    public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication) {
         log.info("amsSaveArticleVo:{}",amsSaveArticleVo);
-        amsArticleService.saveArticles(amsSaveArticleVo);
+        amsArticleService.saveArticles(amsSaveArticleVo,httpServletRequest,authentication);
         //log.info("完成");
         return R.ok();
     }
@@ -56,16 +58,16 @@ public class AmsArticleController {
 //        return R.ok(articles);
 //    }
 //
-//    @GetMapping("/articles/{articleId}")
-//    public R<AmsArticle> getArticle(@PathVariable Long articleId) {
-////        log.info("articleId:{}",articleId);
-//        AmsArticle article = amsArticleService.getById(articleId);
-////        AmsArticleVo article = amsArticleService.getArticle(articleId);
-////        log.info("article:{}",article);
-//        R<AmsArticle> ok = R.ok(article);
-////        log.info("ok:{}",ok);
-//        return ok;
-//    }
+    @GetMapping("/articles/{articleId}")
+    public R<AmsArticle> getArticle(@PathVariable Long articleId) {
+//        log.info("articleId:{}",articleId);
+        AmsArticle article = amsArticleService.getById(articleId);
+//        AmsArticleVo article = amsArticleService.getArticle(articleId);
+//        log.info("article:{}",article);
+        R<AmsArticle> ok = R.ok(article);
+//        log.info("ok:{}",ok);
+        return ok;
+    }
 //
     /**
      * 根據categoryId與routerPage分頁查詢文章列表

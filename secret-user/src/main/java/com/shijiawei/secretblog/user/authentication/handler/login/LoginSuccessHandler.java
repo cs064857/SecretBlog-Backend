@@ -68,7 +68,7 @@ public class LoginSuccessHandler extends
       /**
        * 將jwtToken寫入Cookie中
        */
-    response.addHeader("Set-Cookie", "jwtToken=" + token + "; Path=/; Max-Age=600; HttpOnly; SameSite=Lax");
+    response.addHeader("Set-Cookie", "jwtToken=" + token + "; Path=/; Max-Age=60000; HttpOnly; SameSite=Lax");
 
     // 一些特殊的登錄參數。比如三方登錄，需要額外返回一個字段是否需要跳轉的綁定已有賬號頁面
     Object details = authentication.getDetails();

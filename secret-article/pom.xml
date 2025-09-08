@@ -90,7 +90,13 @@
 			<artifactId>spring-cloud-starter-openfeign</artifactId>
 			<version>4.1.3</version>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>com.shijiawei.secretblog</groupId>
+            <artifactId>secret-user</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
 
 	<build>
 		<plugins>

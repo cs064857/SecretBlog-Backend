@@ -14,13 +14,15 @@ import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
-import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.common.utils.TimeTool;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo;
 
 /**
  * @author User
@@ -46,9 +49,6 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     private AmsArtinfoService amsArtinfoService;
 
     @Autowired
-    private JwtService jwtService;
-
-    @Autowired
     private UserFeignClient userFeignClient;
 
     @Autowired
@@ -60,78 +60,92 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Autowired
     private AmsCategoryService amsCategoryService;
 
+    ////    public R logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+//
+//        String originalJwtToken = null;
+//        // 1) 優先：從認證物件(MyJwtAuthentication)取出在過濾器中保存的原始JWT
+//        if (authentication instanceof com.shijiawei.secretblog.user.authentication.handler.login.business.MyJwtAuthentication auth) {
+//            originalJwtToken = auth.getJwtToken();
+//        }
+//
+//        log.info("Logout originalJwtToken: {}", originalJwtToken);
+//
+//        // 將當前 sessionId 放入黑名單（使用剩餘有效期作為TTL）
+//        if (authentication != null && authentication.isAuthenticated()) {
+//            Object principal = authentication.getPrincipal();
+//            if (principal instanceof UserLoginInfo currentUser) {
+//                long now = TimeTool.nowMilli();
+//                long expiredTime = currentUser.getExpiredTime();
+//                long ttl = Math.max(expiredTime - now, 1000L); // 至少1秒，避免0或負數
+//                try {
+//                    tokenBlacklistService.blacklist(currentUser.getSessionId(), ttl);
+//                    log.info("SessionId {} 已加入黑名單, TTL={}ms", currentUser.getSessionId(), ttl);
+//                } catch (Exception e) {
+//                    log.warn("加入黑名單失敗: {}", e.getMessage(), e);
+//                }
+//            }
+//        }
+
     @OpenLog//開啟方法執行時間紀錄
     @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
 //    @DelayDoubleDelete(prefix = "AmsArticle",key = "articles",delay = 5,timeUnit = TimeUnit.SECONDS)//AOP延遲雙刪
     @Transactional
     @Override
-    public void saveArticles(AmsSaveArticleVo amsSaveArticleVo) {
+    public void saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest,Authentication authentication) {
         AmsArticle amsArticle = new AmsArticle();
         AmsArtinfo amsArtinfo = new AmsArtinfo();
 
-        String jwtToken = amsSaveArticleVo.getJwtToken();
+        // 直接從 Spring Security 取得登入用戶（業界主流：由過濾器/Provider 驗證 JWT，這裡僅信任 SecurityContext）
+        UserLoginInfo currentUser = null;
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserLoginInfo u) {
+                currentUser = u;
+            } else if (authentication.getDetails() instanceof UserLoginInfo u2) { // 保底
+                currentUser = u2;
+            }
+        }
+        if (currentUser == null) {
+            log.warn("未取得登入用戶資訊，拒絕發佈文章");
+            throw new IllegalStateException("未登入或登入狀態已失效");
+        }
+        Long userId = currentUser.getUserId();
+        String userNameFromToken = currentUser.getNickname();
+        if (userId == null) {
+            log.warn("UserLoginInfo.userId 為空，拒絕發佈文章");
+            throw new IllegalStateException("用戶ID缺失");
+        }
 
-        String userIdFromToken = null;
-        String userNameFromToken = null;
         try {
-            // 驗證並解析 JWT Token
-            Map<String, Object> hashMap = jwtService.verifyJwt(jwtToken, HashMap.class);
-            if (hashMap == null) {
-                log.error("JWT Token 驗證失敗或已過期");
-            }
-
-            // 從 Token 中獲取用戶ID
-            userIdFromToken = (String) hashMap.get("userId");
-            if (userIdFromToken == null) {
-                log.error("Token 中未找到 userId 信息");
-            }
-            // 從 Token 中獲取用戶ID
-            userNameFromToken = (String) hashMap.get("nickname");
-            if (userNameFromToken == null) {
-                log.error("Token 中未找到 userName 信息");
-            }
-            // 使用從 Token 解析的 userId
-            Long userId = Long.parseLong(userIdFromToken);
-            log.debug("從Token解析的userId: {}", userId);
-            log.debug("從Token解析的userName: {}", userNameFromToken);
-
-            //從jwtToken中取得用戶ID及用戶名並存入artInfo中
-
-
             amsArticle.setTitle(amsSaveArticleVo.getTitle());
-
             amsArticle.setContent(amsSaveArticleVo.getContent());
             this.baseMapper.insert(amsArticle);
+
             amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
             amsArtinfo.setUserName(userNameFromToken);
             amsArtinfo.setArticleId(amsArticle.getId());
             amsArtinfo.setUserId(userId);
             amsArtinfoService.save(amsArtinfo);
-            //TODO 新增文章添加用戶ID與TAGID
-            List<AmsArtTag> amsArtTagList = amsSaveArticleVo.getTagsId().stream().map(tagsId -> {
 
-                AmsArtTag amsArtTag = new AmsArtTag();
-                amsArtTag.setTagsId(tagsId);
-                amsArtTag.setArticleId(amsArticle.getId());
-                return amsArtTag;
-            }).toList();
-            amsArtTagService.saveBatch(amsArtTagList);
+            List<Long> tagIds = amsSaveArticleVo.getTagsId();
+            if (tagIds != null && !tagIds.isEmpty()) {
+                List<AmsArtTag> amsArtTagList = tagIds.stream().map(tagsId -> {
+                    AmsArtTag amsArtTag = new AmsArtTag();
+                    amsArtTag.setTagsId(tagsId);
+                    amsArtTag.setArticleId(amsArticle.getId());
+                    return amsArtTag;
+                }).toList();
+                amsArtTagService.saveBatch(amsArtTagList);
+            } else {
+                log.debug("本次發佈未附加標籤或標籤列表為空");
+            }
 
             AmsArtStatus amsArtStatus = new AmsArtStatus();
             amsArtStatus.setArticleId(amsArticle.getId());
             amsArtStatusService.save(amsArtStatus);
-
-//        amsArticle.setUserId(1L);
-//        amsArticle.setTagId(1L);
-
-
-
-        } catch (NumberFormatException e) {
-            log.error("Token 中的 userId 格式錯誤: {}", userIdFromToken, e);
-
         } catch (Exception e) {
-            log.error("JWT Token 解析失敗", e);
-
+            log.error("保存文章過程失敗，將回滾事務", e);
+            throw e; // 讓 @Transactional 觸發回滾
         }
     }
 //    /**
@@ -179,7 +193,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         Map<Long, AmsArticle> amsArticleMap = amsArticleList.stream().collect(Collectors.toMap(AmsArticle::getId, Function.identity(), (a, b) -> a));
         Map<Long, List<AmsArtTag>> amsArtTagMap = amsArtTagList.stream().collect(Collectors.groupingBy(AmsArtTag::getArticleId));
 
-        R<List<UserBasicDTO>> usersByIds = userFeignClient.getUsersByIds(userIdList);
+        R<List<UserBasicDTO>> usersByIds = userFeignClient.selectUserBasicInfoByIds(userIdList);
         Map<Long, UserBasicDTO> userDTOMap = new HashMap<>();
         if (usersByIds != null && usersByIds.getData() != null) {
             userDTOMap = usersByIds.getData().stream().collect(Collectors.toMap(UserBasicDTO::getUserId, Function.identity(), (a, b) -> a));
@@ -228,4 +242,3 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 ////
 ////    }
 }
-

@@ -6,6 +6,8 @@ import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -17,7 +19,7 @@ import java.util.List;
 
 public interface AmsArticleService extends IService<AmsArticle> {
 
-    void saveArticles(AmsSaveArticleVo amsSaveArticleVo);
+    void saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication);
 
 //    List<AmsArticle> getListArticle();
 //
