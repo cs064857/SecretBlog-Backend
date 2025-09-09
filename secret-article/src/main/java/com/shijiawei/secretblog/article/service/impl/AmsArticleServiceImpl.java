@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo;
+import com.shijiawei.secretblog.common.utils.UserContextHolder;
 
 /**
  * @author User
@@ -95,24 +95,15 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         AmsArticle amsArticle = new AmsArticle();
         AmsArtinfo amsArtinfo = new AmsArtinfo();
 
-        // 直接從 Spring Security 取得登入用戶（業界主流：由過濾器/Provider 驗證 JWT，這裡僅信任 SecurityContext）
-        UserLoginInfo currentUser = null;
-        if (authentication != null && authentication.isAuthenticated()) {
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof UserLoginInfo u) {
-                currentUser = u;
-            } else if (authentication.getDetails() instanceof UserLoginInfo u2) { // 保底
-                currentUser = u2;
-            }
-        }
-        if (currentUser == null) {
+        // 從網關傳遞的請求標頭中取得用戶資訊
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
             log.warn("未取得登入用戶資訊，拒絕發佈文章");
             throw new IllegalStateException("未登入或登入狀態已失效");
         }
-        Long userId = currentUser.getUserId();
-        String userNameFromToken = currentUser.getNickname();
+        Long userId = UserContextHolder.getCurrentUserId();
+        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
         if (userId == null) {
-            log.warn("UserLoginInfo.userId 為空，拒絕發佈文章");
+            log.warn("用戶ID為空，拒絕發佈文章");
             throw new IllegalStateException("用戶ID缺失");
         }
 

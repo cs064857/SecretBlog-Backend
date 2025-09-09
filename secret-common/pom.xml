@@ -165,7 +165,6 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-
 				<configuration>
 					<excludes>
 						<exclude>
@@ -173,6 +172,8 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+					<!-- 跳過 repackage，作為依賴庫使用普通 JAR 格式 -->
+					<skip>true</skip>
 				</configuration>
 			</plugin>
 		</plugins>

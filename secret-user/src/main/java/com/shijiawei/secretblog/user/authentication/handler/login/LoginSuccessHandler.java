@@ -6,6 +6,7 @@ import com.shijiawei.secretblog.common.utils.JSON;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.TimeTool;
 
+import com.shijiawei.secretblog.user.authentication.service.JwtServiceActive;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -33,7 +34,7 @@ public class LoginSuccessHandler extends
   private ApplicationEventPublisher applicationEventPublisher;
 
   @Autowired
-  private JwtService jwtService;
+  private JwtServiceActive jwtService;
 
   public LoginSuccessHandler() {
     this.setRedirectStrategy(new RedirectStrategy() {

@@ -18,7 +18,8 @@ import org.springframework.security.web.server.authorization.ServerAccessDeniedH
 
 import com.shijiawei.secretblog.common.utils.JSON;
 import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.gateway.authentication.handler.login.business.ReactiveJwtAuthenticationFilter;
+import com.shijiawei.secretblog.gateway.authentication.handler.AuthorizationHelper;
+import com.shijiawei.secretblog.gateway.authentication.handler.login.business.EnhancedJwtAuthenticationFilter;
 import com.shijiawei.secretblog.gateway.config.JwtService;
 
 import reactor.core.publisher.Mono;
@@ -28,9 +29,11 @@ import reactor.core.publisher.Mono;
 public class SecurityConfig {
 
     private final JwtService jwtService;
+    private final AuthorizationHelper authorizationHelper;
 
-    public SecurityConfig(JwtService jwtService) {
+    public SecurityConfig(JwtService jwtService, AuthorizationHelper authorizationHelper) {
         this.jwtService = jwtService;
+        this.authorizationHelper = authorizationHelper;
     }
 
     @Bean
@@ -41,7 +44,7 @@ public class SecurityConfig {
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
             
-            String body = JSON.stringify(R.error("認證失敗"));
+            String body = JSON.stringify(R.error("認證失敗：請先登入"));
             DataBuffer buffer = response.bufferFactory().wrap(body.getBytes());
             return response.writeWith(Mono.just(buffer));
         };
@@ -52,7 +55,7 @@ public class SecurityConfig {
             response.setStatusCode(HttpStatus.FORBIDDEN);
             response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
             
-            String body = JSON.stringify(R.error("權限不足"));
+            String body = JSON.stringify(R.error("權限不足：您無權訪問此資源"));
             DataBuffer buffer = response.bufferFactory().wrap(body.getBytes());
             return response.writeWith(Mono.just(buffer));
         };
@@ -67,18 +70,34 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeExchange(authorizeExchange -> authorizeExchange
-                // 開放登入/註冊等匿名端點（注意：Gateway 收的是 /api/** 前綴）
+                // 開放登入/註冊等匿名端點
                 .pathMatchers(
-                    "/api/ums/user/login/business2",
-                    "/api/ums/user/login/username",
+                    "/api/ums/user/login/**",
                     "/api/ums/user/register",
-                    "/api/ums/user/email-verify-code"
+                    "/api/ums/user/email-verify-code",
+                    "/api/public/**",
+                    "/actuator/**",
+                    "/favicon.ico"
                 ).permitAll()
-                // 其餘 API 要求已登入
-                .pathMatchers("/api/ums/**", "/api/article/**", "/api/sms/**","/api/AdminVue/**","/api/AdminVue").authenticated()
+                
+                // 管理員專屬路由
+                .pathMatchers("/api/admin/**").hasRole("ADMIN")
+                .pathMatchers("/api/ums/user/delete/**").hasRole("ADMIN")
+                .pathMatchers("/api/ums/role/**").hasRole("ADMIN")
+                .pathMatchers("/api/ums/status/**").hasRole("ADMIN")
+                
+                // 需要認證的用戶路由
+                .pathMatchers("/api/ums/user/profile/**").hasAnyRole("USER", "ADMIN")
+                .pathMatchers("/api/ums/user/update/**").hasAnyRole("USER", "ADMIN")
+                .pathMatchers("/api/article/**").hasAnyRole("USER", "ADMIN")
+                .pathMatchers("/api/sms/**").hasAnyRole("USER", "ADMIN")
+                
+                // 其餘路由需要認證
+                .pathMatchers("/api/**").authenticated()
                 .anyExchange().permitAll())
-            .addFilterAt(new ReactiveJwtAuthenticationFilter(jwtService), SecurityWebFiltersOrder.AUTHENTICATION);
-
+            
+            // 使用增強型 JWT 過濾器替換原有的 ReactiveJwtAuthenticationFilter
+            .addFilterAt(new EnhancedJwtAuthenticationFilter(jwtService), SecurityWebFiltersOrder.AUTHENTICATION);
 
         return http.build();
     }
