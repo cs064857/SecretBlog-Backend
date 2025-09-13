@@ -32,12 +32,14 @@ public class AmsArtinfo implements Serializable {
      * 文章id(雪花算法,不可為空)
      */
     @TableField(value = "article_id")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long articleId;
 
     /**
      * 用戶id(雪花算法,不可為空)
      */
     @TableField(value = "user_id")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long userId;
 
 //    /**
@@ -70,6 +72,7 @@ public class AmsArtinfo implements Serializable {
      */
     @NotNull(message = "文章分類ID不可為空",groups = {Update.class, Insert.class})
     @TableField(value = "category_id")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long categoryId;
 
 //    @TableField(exist = false)

@@ -31,7 +31,7 @@ public interface UserFeignClient {
      * @param ids 用戶ID列表
      * @return 用戶信息列表
      */
-    @GetMapping("/list/byids")
+    @GetMapping("/list/basic")
     R<List<UserBasicDTO>> selectUserBasicInfoByIds(@RequestParam("ids") List<Long> ids);
 //    R<List<UserBasicDTO>> getUsersByIds(@RequestParam("ids") List<Long> ids);
 

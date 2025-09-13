@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.article.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -21,5 +22,6 @@ public class AmsArtCommentsVo {
     private LocalDateTime  updateAt;
     private AmsArtCommentsVo parentComment;
     private String avatar;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long commentId;
 }

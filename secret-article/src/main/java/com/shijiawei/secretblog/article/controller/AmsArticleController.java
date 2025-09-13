@@ -58,7 +58,7 @@ public class AmsArticleController {
 //        return R.ok(articles);
 //    }
 //
-    @GetMapping("/articles/{articleId}")
+    @GetMapping("articles/{articleId}")
     public R<AmsArticle> getArticle(@PathVariable Long articleId) {
 //        log.info("articleId:{}",articleId);
         AmsArticle article = amsArticleService.getById(articleId);

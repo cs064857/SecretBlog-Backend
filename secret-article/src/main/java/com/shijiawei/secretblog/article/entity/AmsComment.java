@@ -29,6 +29,7 @@ public class AmsComment {
 
     ///TODO 限制為空
     @TableField(value = "comment_info_id")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long commentInfoId;
     @NotNull(message = "評論內容不可為空",groups = {Insert.class,Update.class})
     @TableField(value = "comment_content")

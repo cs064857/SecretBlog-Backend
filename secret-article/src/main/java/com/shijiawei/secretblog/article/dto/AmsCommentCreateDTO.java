@@ -17,15 +17,10 @@ public class AmsCommentCreateDTO {
 
     @NotNull(message = "主鍵不可為空",groups = {Insert.class,Update.class})
     private Long articleId;
-    @NotNull(message = "主鍵不可為空",groups = {Insert.class,Update.class})
-    private Long userId;
 
     @NotNull(message = "評論內容不可為空",groups = {Insert.class,Update.class})
     private String commentContent;
 
     //可為空
     private Long parent_comment_id;
-
-    @NotNull(groups = {Insert.class})
-    private String jwtToken;
 }

@@ -15,6 +15,7 @@ import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.TimeTool;
+import com.shijiawei.secretblog.common.utils.UserContextHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
@@ -198,27 +199,34 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     @Override
     public R createComment(AmsCommentCreateDTO amsCommentCreateDTO) {
 
-        String jwtToken = amsCommentCreateDTO.getJwtToken();
+//        String jwtToken = amsCommentCreateDTO.getJwtToken();
 
         String userIdFromToken = null;
         try {
             // 驗證並解析 JWT Token
-            Map<String, Object> hashMap = jwtService.verifyJwt(jwtToken, HashMap.class);
-            if (hashMap == null) {
-                log.error("JWT Token 驗證失敗或已過期");
-                return R.error("Token 無效或已過期");
-            }
+//            Map<String, Object> hashMap = jwtService.verifyJwt(jwtToken, HashMap.class);
+//            if (hashMap == null) {
+//                log.error("JWT Token 驗證失敗或已過期");
+//                return R.error("Token 無效或已過期");
+//            }
+//
+//            // 從 Token 中獲取用戶ID
+//            userIdFromToken = (String) hashMap.get("userId");
+//            if (userIdFromToken == null) {
+//                log.error("Token 中未找到 userId 信息");
+//                return R.error("Token 中缺少用戶信息");
+//            }
+//
+//            // 使用從 Token 解析的 userId
+//            Long userId = Long.parseLong(userIdFromToken);
+//            log.debug("從Token解析的userId: {}", userId);
 
-            // 從 Token 中獲取用戶ID
-            userIdFromToken = (String) hashMap.get("userId");
-            if (userIdFromToken == null) {
-                log.error("Token 中未找到 userId 信息");
-                return R.error("Token 中缺少用戶信息");
-            }
 
-            // 使用從 Token 解析的 userId
-            Long userId = Long.parseLong(userIdFromToken);
-            log.debug("從Token解析的userId: {}", userId);
+            if(!UserContextHolder.isCurrentUserLoggedIn()){
+                log.warn("未取得登入用戶信息，拒絕新增評論");
+                throw new IllegalStateException("用戶未登入，無法新增評論");
+            }
+            Long userId = UserContextHolder.getCurrentUserId();
 
 
             if(amsCommentCreateDTO.getParent_comment_id()==null){
@@ -302,7 +310,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     public List<AmsArtCommentsVo> getArtComments(Long articleId) {
         //根據該文章的ArticleId查找所有關聯的CommentInfo
         List<AmsCommentInfo> amsCommentInfoList = amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, articleId));
-
+        if(amsCommentInfoList.isEmpty()){
+            return null;
+        }
         List<Long> amsCommentIds = amsCommentInfoList.stream()
                 .map(AmsCommentInfo::getCommentId)
                 .collect(Collectors.toList());

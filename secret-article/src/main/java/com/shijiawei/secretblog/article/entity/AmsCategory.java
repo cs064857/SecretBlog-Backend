@@ -3,6 +3,8 @@ package com.shijiawei.secretblog.article.entity;
 import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 /**
@@ -16,6 +18,7 @@ public class AmsCategory implements Serializable {
      * 自增分類ID(主鍵)
      */
     @TableId(value = "id", type = IdType.AUTO)
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long id;
 
     /**
@@ -28,6 +31,7 @@ public class AmsCategory implements Serializable {
      * 父分類ID
      */
     @TableField(value = "parent_id")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long parentId;
 
     /**

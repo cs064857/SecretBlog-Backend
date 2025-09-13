@@ -39,7 +39,7 @@ public class AmsArticleVo {
     /**
      * 作者id(雪花算法,不可為空)
      */
-
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long userId;
 
     /**

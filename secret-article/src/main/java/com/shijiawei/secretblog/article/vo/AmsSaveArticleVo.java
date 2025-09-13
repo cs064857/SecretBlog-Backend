@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.article.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.core.conditions.update.Update;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,10 +34,11 @@ public class AmsSaveArticleVo {
      * 文章分類id
      */
     @NotNull(message = "文章分類ID不可為空",groups = {Update.class,Insert.class})
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long categoryId;
 
     private String jwtToken;
-
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private List<Long> tagsId;
 
 }
