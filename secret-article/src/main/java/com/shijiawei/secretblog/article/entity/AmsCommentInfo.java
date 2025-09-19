@@ -58,4 +58,5 @@ public class AmsCommentInfo {
 
     @TableField(value = "replys_count")
     private Integer replysCount;
+
 }

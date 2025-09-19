@@ -12,6 +12,7 @@ import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
+import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.TimeTool;
@@ -20,6 +21,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RAtomicLong;
+import org.redisson.api.RBucket;
+import org.redisson.api.RSet;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -49,13 +54,23 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     @Autowired
     private AmsCommentInfoService amsCommentInfoService;
 
+    private final RedissonClient redissonClient;
+
     private final UserFeignClient userFeignClient;
 
-    public AmsCommentServiceImpl(UserFeignClient userFeignClient) {
+//    public AmsCommentServiceImpl(RedissonClient redissonClient){
+//        this.redissonClient = redissonClient;
+//    }
+//
+//
+//    public AmsCommentServiceImpl(UserFeignClient userFeignClient) {
+//        this.userFeignClient = userFeignClient;
+//    }
+
+    public AmsCommentServiceImpl(UserFeignClient userFeignClient,RedissonClient redissonClient) {
         this.userFeignClient = userFeignClient;
+        this.redissonClient = redissonClient;
     }
-
-
 
 
 //    @Transactional
@@ -358,6 +373,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
 
             amsArtCommentsVo.setLikesCount(amsCommentInfo.getLikesCount());
+
             amsArtCommentsVo.setReplysCount(amsCommentInfo.getReplysCount());
             amsArtCommentsVo.setCreateAt(amsCommentInfo.getCreateAt());
             amsArtCommentsVo.setUpdateAt(amsCommentInfo.getUpdateAt());
@@ -378,7 +394,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                 AmsArtCommentsVo artParentCommentsVo = new AmsArtCommentsVo();
                 BeanUtils.copyProperties(parentComment,artParentCommentsVo);
                 BeanUtils.copyProperties(parentCommentInfo,artParentCommentsVo);
-                amsArtCommentsVo.setParentComment(artParentCommentsVo);
+                amsArtCommentsVo.setParentCommentId(artParentCommentsVo.getCommentId());
 
                 amsArtCommentsVo.setUsername("test");
                 log.info("留言ID:{},父留言包裝後Vo對象:{}", amsCommentInfo.getCommentId(), artParentCommentsVo);
@@ -389,5 +405,80 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
         log.info("amsArtCommentsVos:{}",amsArtCommentsVos);
         return amsArtCommentsVos;
+    }
+
+    @Transactional(rollbackFor = RuntimeException.class)
+    @Override
+    public R<Long> likeComment(Long commentId) {
+
+        /*
+          檢查用戶是否登入
+        */
+
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            log.warn("未取得登入用戶資訊，拒絕對評論按讚");
+            throw new CustomBaseException("未登入或登入狀態已失效");
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
+        if (userId == null) {
+            log.warn("用戶ID為空，拒絕對評論按讚");
+            throw new CustomBaseException("用戶ID缺失");
+        }
+
+        String BucketName = "AmsComments:CommentId_" + commentId + ":LikesCount";
+        log.debug("BucketName:{}",BucketName);
+        /*
+          判斷該評論是否存在
+        */
+        //獲取桶對象, 名稱為 "AmsComments:CommentId_{commentId}:LikesCount" , 注意原子性因此採用RAtomicLong
+        RAtomicLong atomicLong = redissonClient.getAtomicLong(BucketName);
+        //先嘗試從Redis中讀取是否存在該評論的緩存
+        boolean atomicLongExists = atomicLong.isExists();
+
+
+
+        if(!atomicLongExists){
+            //若不存在則根據commentId從資料庫中讀取該評論是否存在
+            if(!this.existsCommentId(commentId)){
+                //假設從Reids緩存以及從資料庫中讀取該評論皆表明該評論不存在
+                throw new CustomBaseException("該評論不存在或已被刪除");
+            }
+
+
+        }
+
+
+        /*
+        判斷用戶是否已對該評論按讚,若已按讚則不能重複讚按
+         */
+        String userLikeKey = String.format("AmsComments:CommentId_%d:UserLikes", commentId);
+        RSet<Long> userLikeSet = redissonClient.getSet(userLikeKey);
+
+
+
+        //成功點讚紀錄用戶已點讚
+        boolean add = userLikeSet.add(userId);
+        if(!add){
+            //若用戶已存在於點讚集合中,表示用戶已點讚過
+            log.warn("用戶ID:{}，用戶名稱:{}，重複對評論ID:{}按讚",userId,userNameFromToken,commentId);
+            throw new CustomBaseException("您已對該評論按讚過，請勿重複按讚");
+        }
+        //設置點讚值為++ , 注意原子性
+        long newLikes = atomicLong.incrementAndGet();
+        log.debug("newLikes:{}",newLikes);
+        return R.ok(newLikes);
+    }
+
+    @Override
+    public Boolean existsCommentId(Long commentId) {
+        Long count = this.baseMapper.selectCount((new LambdaQueryWrapper<AmsComment>().eq(AmsComment::getId, commentId)));
+        if(count!=1){
+            log.warn("該評論ID:{}不存在或已被刪除",commentId);
+            return false;
+        }
+
+        return true;
+
     }
 }

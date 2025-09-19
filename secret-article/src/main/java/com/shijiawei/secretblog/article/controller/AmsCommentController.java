@@ -5,6 +5,7 @@ import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -25,13 +26,37 @@ public class AmsCommentController {
 
     @Autowired
     AmsCommentService amsCommentService;
-
+    /**
+     * 創建評論
+     * @param amsCommentCreateDTO
+     * @return
+     */
     @PostMapping("/comment/create")
     public R createComment (@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
         R r = amsCommentService.createComment(amsCommentCreateDTO);
 
         return r;
     }
+
+//    /**
+//     * 檢查評論是否存在
+//     * @param commentId
+//     * @return
+//     */
+//    @GetMapping("/{commentId}")
+//    public R<Boolean> getComment(@PathVariable Long commentId){
+//
+//        log.debug("commentId:{}",commentId);
+//        boolean isExistsCommentId = amsCommentService.existsCommentId(commentId);
+//        return R.ok(isExistsCommentId);
+//
+//    }
+
+    /**
+     * 取得文章中的所有評論
+     * @param articleId
+     * @return
+     */
     @GetMapping("/{articleId}/comments")
     public R<List<AmsArtCommentsVo>> getArtComments(@PathVariable Long articleId){
 
@@ -39,5 +64,17 @@ public class AmsCommentController {
         List<AmsArtCommentsVo> amsArtCommentsVo = amsCommentService.getArtComments(articleId);
         return R.ok(amsArtCommentsVo);
 
+    }
+    /**
+     * 點讚評論
+     * @param commentId
+     * @return
+     */
+    @PostMapping("/comment/{commentId}/like")
+    public R<Long> likeComment(@NotNull @PathVariable(value = "commentId") Long commentId){
+        log.debug("commentId:{}",commentId);
+        R<Long> newLikes = amsCommentService.likeComment(commentId);
+
+        return newLikes;
     }
 }

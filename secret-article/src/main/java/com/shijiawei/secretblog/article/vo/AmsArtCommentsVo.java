@@ -18,9 +18,13 @@ public class AmsArtCommentsVo {
     private String commentContent;
     private Integer likesCount;
     private Integer replysCount;
+
     private LocalDateTime createAt;
     private LocalDateTime  updateAt;
-    private AmsArtCommentsVo parentComment;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    private Long parentCommentId;
+
     private String avatar;
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long commentId;

@@ -20,4 +20,8 @@ public interface AmsCommentService extends IService<AmsComment> {
     R createComment(AmsCommentCreateDTO amsCommentCreateDTO);
 
     List<AmsArtCommentsVo> getArtComments(Long articleId);
+
+    R<Long> likeComment(Long commentId);
+
+    Boolean existsCommentId(Long commentId);
 }
