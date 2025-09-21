@@ -21,7 +21,7 @@ public interface AmsCommentService extends IService<AmsComment> {
 
     List<AmsArtCommentsVo> getArtComments(Long articleId);
 
-    R<Long> likeComment(Long commentId);
+    Long likeComment(Long commentId);
 
     Boolean existsCommentId(Long commentId);
 }

@@ -371,8 +371,11 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                 amsArtCommentsVo.setAvatar(userBasicDTO.getAvatar());
             }
 
+            Long commentLikeCountFromRedis = getCommentLikeCountFromRedis(amsCommentInfo.getCommentId());
+            log.debug("commentLikeCountFromRedis:{}",commentLikeCountFromRedis);
+//            amsArtCommentsVo.setLikesCount(commentLikeCountFromRedis.size());
 
-            amsArtCommentsVo.setLikesCount(amsCommentInfo.getLikesCount());
+            amsArtCommentsVo.setLikesCount(commentLikeCountFromRedis.intValue());
 
             amsArtCommentsVo.setReplysCount(amsCommentInfo.getReplysCount());
             amsArtCommentsVo.setCreateAt(amsCommentInfo.getCreateAt());
@@ -409,7 +412,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     @Transactional(rollbackFor = RuntimeException.class)
     @Override
-    public R<Long> likeComment(Long commentId) {
+    public Long likeComment(Long commentId) {
+        /// TODO同步點讚數從Redis到資料庫中
+
 
         /*
           檢查用戶是否登入
@@ -467,7 +472,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         //設置點讚值為++ , 注意原子性
         long newLikes = atomicLong.incrementAndGet();
         log.debug("newLikes:{}",newLikes);
-        return R.ok(newLikes);
+        return newLikes;
     }
 
     @Override
@@ -481,4 +486,30 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         return true;
 
     }
+
+//    @Override
+    public Long getCommentLikeCountFromRedis(Long commentId){
+        String BucketName = "AmsComments:CommentId_" + commentId + ":LikesCount";
+        RAtomicLong atomicLong = redissonClient.getAtomicLong(BucketName);
+        if(!atomicLong.isExists()){
+            return 0L;
+        }
+        Long LikeCount = atomicLong.get();
+
+//
+//        RSet<Long> set = redissonClient.getSet(BucketName);
+//        if(!set.isExists()){
+//            return null;
+//        }
+//        set.
+        log.debug("LikeCount:{}",LikeCount);
+        return LikeCount;
+    }
+
+
+
+
+
+
 }
+
