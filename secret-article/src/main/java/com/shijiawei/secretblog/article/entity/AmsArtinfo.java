@@ -24,7 +24,7 @@ public class AmsArtinfo implements Serializable {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @TableId(value = "id")
     private Long id;
-
+    /// TODO 移除userName
     @TableField(value = "user_name")
     private String userName;
     
@@ -70,6 +70,7 @@ public class AmsArtinfo implements Serializable {
     /**
      * 文章分類id
      */
+
     @NotNull(message = "文章分類ID不可為空",groups = {Update.class, Insert.class})
     @TableField(value = "category_id")
     @JsonFormat(shape = JsonFormat.Shape.STRING)

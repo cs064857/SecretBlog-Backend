@@ -12,4 +12,96 @@
         FROM ams_article AS ams_article
         INNER JOIN ams_artInfo as ams_artInfo AND a
     </sql>
+
+
+
+
+
+
+    <resultMap id="ArticleTagVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArticleTagsVo">
+        <id property="id" column="tag_id"/>
+        <result property="name" column="tag_name"/>
+    </resultMap>
+
+    <resultMap id="AmsArticleVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArticleVo">
+        <result property="id"/>
+        <result property="title"/>
+        <result property="content"/>
+        <!-- AmsArtinfo 的欄位 -->
+
+        <result property="createTime"/>
+        <result property="updateTime" />
+        <result property="userId" />
+        <!-- AmsArtStatus 的欄位 -->
+        <result property="viewsCount"/>
+        <result property="likesCount"/>
+        <result property="bookmarksCount"/>
+        <!-- AmsCategory 的欄位 -->
+        <result property="categoryId"/>
+        <result property="categoryName"/>
+        <!-- 子查詢計算出的評論數 -->
+        <result property="commentsCount"/>
+        <!--
+          一對多關係映射 (文章對標籤)
+          - property: VO 中集合屬性的名稱 (amsArticleTagsVoList)
+          - ofType: 集合中元素的類型 (AmsArticleTagsVo)
+          - resultMap: 使用上面定義的 ArticleTagVoResultMap 來映射每個標籤物件
+        -->
+        <collection property="amsArticleTagsVoList" select="getArticleTagVoList" column="id" ofType="com.shijiawei.secretblog.article.vo.AmsArticleTagsVo" resultMap="ArticleTagVoResultMap" fetchType="lazy"/>
+    </resultMap>
+    <!--
+      ======================================================================
+      3. 實現單次 SQL 查詢，獲取所有資料
+      ======================================================================
+    -->
+    <!--
+      ======================================================================
+      3. 實現單次 SQL 查詢，獲取所有資料
+      ======================================================================
+    -->
+    <select id="getArticleVo" resultMap="AmsArticleVoResultMap" parameterType="Long">
+        SELECT
+        ams_article.id AS id,
+        ams_article.title AS title,
+        ams_article.content AS content,
+        ams_artInfo.user_id AS userId,
+        ams_artInfo.create_time AS createTime,
+        ams_artInfo.update_time AS updateTime,
+        ams_art_status.views_count AS viewsCount,
+        ams_art_status.likes_count AS likesCount,
+        ams_art_status.bookmarks_count AS bookmarksCount,
+        ams_category.id AS categoryId,
+        ams_category.category_name AS categoryName,
+
+        (
+            SELECT COUNT(1)
+            FROM ams_comment_info
+            WHERE ams_comment_info.article_id = ams_article.id
+
+        )   AS commentsCount
+
+        FROM ams_article
+        INNER JOIN ams_artInfo ON ams_article.id = ams_artInfo.article_id
+        INNER JOIN ams_art_status ON ams_art_status.article_id = ams_article.id
+        INNER JOIN ams_category ON ams_category.id = ams_artInfo.category_id
+        WHERE ams_article.id=#{articleId}
+        AND ams_artInfo.deleted =0 AND ams_category.deleted = 0
+
+    </select>
+
+    <select id="getArticleTagVoList" parameterType="Long" resultMap="ArticleTagVoResultMap">
+
+        SELECT
+            ams_tags.id AS tag_id,
+            ams_tags.name AS tag_name
+        FROM ams_art_tag
+
+        INNER JOIN ams_tags ON ams_art_tag.tags_id = ams_tags.id
+        WHERE ams_art_tag.article_id = #{articleId}
+        ORDER BY ams_art_tag.id
+
+
+    </select>
+
+
 </mapper>

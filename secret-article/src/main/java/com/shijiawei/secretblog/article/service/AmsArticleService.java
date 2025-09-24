@@ -1,15 +1,13 @@
 package com.shijiawei.secretblog.article.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
+import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
-
-import java.util.List;
 
 /**
 * @author User
@@ -24,6 +22,8 @@ public interface AmsArticleService extends IService<AmsArticle> {
 //    List<AmsArticle> getListArticle();
 //
     Page<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage);
+
+    AmsArticleVo getArticle(Long articleId);
 //
 //
 ////    Page<AmsArticle> getLatestArticles();

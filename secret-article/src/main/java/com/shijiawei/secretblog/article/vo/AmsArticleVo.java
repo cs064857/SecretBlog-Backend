@@ -1,13 +1,10 @@
 package com.shijiawei.secretblog.article.vo;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.shijiawei.secretblog.article.entity.AmsArticle;
+import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * ClassName: AmsArticleVo
@@ -15,73 +12,138 @@ import java.time.LocalDateTime;
  *
  * @Create 2025/7/16 上午12:56
  */
+@Data
 public class AmsArticleVo {
 
     /**
-     * 文章ID 主鍵(雪花算法)
+     * 主鍵(雪花算法)
      */
-
     @JsonFormat(shape= JsonFormat.Shape.STRING)
     private Long id;
-
     /**
      * 文章標題(不可為空,最多64字符)
      */
-
     private String title;
-
     /**
      * 文章內容(不可為空)
      */
-
     private String content;
-
     /**
-     * 作者id(雪花算法,不可為空)
+     * 作者名稱
+     */
+    private String userName;
+    /**
+     * 作者名稱
      */
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long userId;
-
     /**
-     * 文章父評論的id(可為空)
+     * 文章創建時間
      */
-
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private Long parent_comment_id;
+    private LocalDateTime createTime;
+    /**
+     * 文章更新時間
+     */
+    private LocalDateTime updateTime;
     /**
      * 文章分類id
      */
-
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long categoryId;
-
     /**
-     * 文章標籤id
+     * 文章分類名稱
      */
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private Long tagId;
-
+    private String categoryName;
     /**
-     * 文章是否可顯示(0不顯示,1顯示)
+     * 瀏覽量
      */
-
-    private Integer deleted;
-
+    private Integer viewsCount;
     /**
-     * 創建時間
+     * 喜歡量
      */
-    private LocalDateTime createTime;
-
+    private Integer likesCount;
     /**
-     * 更新時間
+     * 收藏量
      */
-    private LocalDateTime updateTime;
+    private Integer bookmarksCount;
+    /**
+     * 評論量
+     */
+    private Integer commentsCount;
 
+    private List<AmsArticleTagsVo> amsArticleTagsVoList;
 
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
+    //    @JsonFormat(shape = JsonFormat.Shape.STRING)
+//    private Long tagsId;
+//
+//    private String tagsName;
+
+    //
+//    /**
+//     * 文章ID 主鍵(雪花算法)
+//     */
+//
+//    @JsonFormat(shape= JsonFormat.Shape.STRING)
+//    private Long id;
+//
+//    /**
+//     * 文章標題(不可為空,最多64字符)
+//     */
+//
+//    private String title;
+//
+//    /**
+//     * 文章內容(不可為空)
+//     */
+//
+//    private String content;
+//
+//    /**
+//     * 作者id(雪花算法,不可為空)
+//     */
+//    @JsonFormat(shape = JsonFormat.Shape.STRING)
+//    private Long userId;
+//
+//    /**
+//     * 文章父評論的id(可為空)
+//     */
+//
+//
+//    @JsonFormat(shape = JsonFormat.Shape.STRING)
+//    private Long parent_comment_id;
+//    /**
+//     * 文章分類id
+//     */
+//
+//    @JsonFormat(shape = JsonFormat.Shape.STRING)
+//    private Long categoryId;
+//
+//    /**
+//     * 文章標籤id
+//     */
+//
+//    @JsonFormat(shape = JsonFormat.Shape.STRING)
+//    private Long tagId;
+//
+//    /**
+//     * 文章是否可顯示(0不顯示,1顯示)
+//     */
+//
+//    private Integer deleted;
+//
+//    /**
+//     * 創建時間
+//     */
+//    private LocalDateTime createTime;
+//
+//    /**
+//     * 更新時間
+//     */
+//    private LocalDateTime updateTime;
+//
+//
+//    @TableField(exist = false)
+//    private static final long serialVersionUID = 1L;
 
 
 }

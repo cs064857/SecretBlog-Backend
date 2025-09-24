@@ -2,6 +2,9 @@ package com.shijiawei.secretblog.article.mapper;
 
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.shijiawei.secretblog.article.vo.AmsArticleTagsVo;
+import com.shijiawei.secretblog.article.vo.AmsArticleVo;
+import io.lettuce.core.dynamic.annotation.Param;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -13,6 +16,8 @@ import org.apache.ibatis.annotations.Mapper;
 
 public interface AmsArticleMapper extends BaseMapper<AmsArticle> {
 
+    AmsArticleTagsVo getArticleTagVoList(@Param("articleId") Long articleId);
+    AmsArticleVo getArticleVo(@Param("articleId") Long articleId);
 }
 
 

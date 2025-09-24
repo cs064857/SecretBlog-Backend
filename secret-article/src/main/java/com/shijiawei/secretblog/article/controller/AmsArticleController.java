@@ -58,13 +58,20 @@ public class AmsArticleController {
 //        return R.ok(articles);
 //    }
 //
+
+    /**
+     * 根據articleId獲取文章內容以及資訊
+     * @param articleId
+     * @return
+     */
     @GetMapping("articles/{articleId}")
-    public R<AmsArticle> getArticle(@PathVariable Long articleId) {
+    public R<AmsArticleVo> getArticle(@PathVariable Long articleId) {
 //        log.info("articleId:{}",articleId);
-        AmsArticle article = amsArticleService.getById(articleId);
+//        AmsArticle article = amsArticleService.getById(articleId);
+        AmsArticleVo article = amsArticleService.getArticle(articleId);
 //        AmsArticleVo article = amsArticleService.getArticle(articleId);
 //        log.info("article:{}",article);
-        R<AmsArticle> ok = R.ok(article);
+        R<AmsArticleVo> ok = R.ok(article);
 //        log.info("ok:{}",ok);
         return ok;
     }

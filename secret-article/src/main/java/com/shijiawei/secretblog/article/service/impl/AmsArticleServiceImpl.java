@@ -9,13 +9,14 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 
 import com.shijiawei.secretblog.article.service.*;
+import com.shijiawei.secretblog.article.vo.AmsArticleTagsVo;
+import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.common.utils.TimeTool;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
@@ -26,10 +27,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
@@ -55,10 +53,16 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     private AmsArtTagService amsArtTagService;
 
     @Autowired
+    private AmsTagsService amsTagsService;
+
+    @Autowired
     private AmsArtStatusService amsArtStatusService;
 
     @Autowired
     private AmsCategoryService amsCategoryService;
+
+    @Autowired
+    private AmsCommentInfoService amsCommentInfoService;
 
     ////    public R logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
 //
@@ -154,7 +158,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 
     //    @OpenLog
-//    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//正確SpEL語法,變數使用#{#變數名}
+//    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//姝ｇ?SpEL瑾炴■,璁婃暩浣跨敤#{#璁婃暩鍚峿
     @Override
     public Page<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
         // 根據categoryId分類查詢
@@ -223,6 +227,72 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         Page<AmsArticlePreviewVo> resultPage = new Page<>(amsArtinfoPage.getCurrent(), amsArtinfoPage.getSize(), amsArtinfoPage.getTotal());
         resultPage.setRecords(amsArticlePreviewVoList);
         return resultPage;
+    }
+
+    @Override
+    public AmsArticleVo getArticle(Long articleId) {
+
+        AmsArticleVo amsArticleVo1 = this.baseMapper.getArticleVo(articleId);
+
+        AmsArticle amsArticle = this.baseMapper.selectById(articleId);
+        AmsArtinfo amsArtinfo = amsArtinfoService.getOne(new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleId));
+        AmsCategory amsCategory = amsCategoryService.getById(amsArtinfo.getCategoryId());
+        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(new LambdaQueryWrapper<AmsArtStatus>().eq(AmsArtStatus::getArticleId, amsArticle.getId()));
+        long commentsCount = amsCommentInfoService.count(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, amsArticle.getId()));
+        List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().eq(AmsArtTag::getArticleId, amsArticle.getId()));
+        /*
+        設置文章標籤
+         */
+            /*
+            搜集文章標籤對象的所有標籤ID
+             */
+            List<Long> amsArtTagsIdList = amsArtTagList.stream().map(AmsArtTag::getTagsId).toList();
+
+            /*
+            透過標籤ID列表獲取標籤對象列表
+             */
+            List<AmsTags> amsTagsList = amsTagsService.listByIds(amsArtTagsIdList);
+
+
+
+
+        AmsArticleVo amsArticleVo = new AmsArticleVo();
+        /*
+        設置文章內容、文章標題、文章ID
+         */
+        BeanUtils.copyProperties(amsArticle, amsArticleVo);
+        /*
+        設置文章資訊
+         */
+        ///  TODO缺少userName
+        BeanUtils.copyProperties(amsArtinfo, amsArticleVo,"id","articleId");
+        /*
+        設置分類資訊
+         */
+        amsArticleVo.setCategoryId(amsCategory.getId());
+        amsArticleVo.setCategoryName(amsCategory.getCategoryName());
+        /*
+        設置文章狀態
+         */
+        BeanUtils.copyProperties(amsArtStatus, amsArticleVo,"id","articleId");
+        /*
+        設置評論數量
+         */
+        amsArticleVo.setCommentsCount((int) commentsCount);
+
+
+
+        /*
+        包裝標籤對象列表到文章VO中
+         */
+        List<AmsArticleTagsVo> amsArticleTagsVo = amsTagsList.stream().map(amsTags -> {
+            AmsArticleTagsVo tagsVo = new AmsArticleTagsVo();
+            BeanUtils.copyProperties(amsTags, tagsVo);
+            return tagsVo;
+        }).toList();
+
+        amsArticleVo.setAmsArticleTagsVoList(amsArticleTagsVo);
+        return amsArticleVo;
     }
 //
 //
