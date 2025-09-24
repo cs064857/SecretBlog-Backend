@@ -1,4 +1,3 @@
-
 spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -67,6 +66,9 @@ mybatis-plus:
       logic-not-delete-value: 0
   configuration:
     map-underscore-to-camel-case: true
+
+
+  mapper-locations: classpath*:/mapperXml/**/*.xml
 # springdoc-openapi
 springdoc:
   swagger-ui:
