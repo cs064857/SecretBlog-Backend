@@ -11,11 +11,13 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.vo.AmsArticleTagsVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
+import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
+import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import com.shijiawei.secretblog.common.utils.R;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -229,69 +232,76 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         return resultPage;
     }
 
+    @OpenCache(prefix = "AmsArticle",key = "ArticleVo_#{#articleId}",time = 30,chronoUnit = ChronoUnit.MINUTES)
     @Override
-    public AmsArticleVo getArticle(Long articleId) {
+    public AmsArticleVo AmsArticleVo(Long articleId) {
 
-        AmsArticleVo amsArticleVo1 = this.baseMapper.getArticleVo(articleId);
+        AmsArticleVo amsArticleVo = this.baseMapper.getArticleVo(articleId);
+        R<UserBasicDTO> user = userFeignClient.getUserById(amsArticleVo.getUserId());
+        if(user == null || user.getData() == null){
+            log.warn("未能通過用戶ID獲取用戶資訊，UserId={}", amsArticleVo.getUserId());
+            throw new CustomBaseException("未能獲取用戶資訊");
+        }
+        amsArticleVo.setUserName(user.getData().getNickName());
 
-        AmsArticle amsArticle = this.baseMapper.selectById(articleId);
-        AmsArtinfo amsArtinfo = amsArtinfoService.getOne(new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleId));
-        AmsCategory amsCategory = amsCategoryService.getById(amsArtinfo.getCategoryId());
-        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(new LambdaQueryWrapper<AmsArtStatus>().eq(AmsArtStatus::getArticleId, amsArticle.getId()));
-        long commentsCount = amsCommentInfoService.count(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, amsArticle.getId()));
-        List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().eq(AmsArtTag::getArticleId, amsArticle.getId()));
-        /*
-        設置文章標籤
-         */
-            /*
-            搜集文章標籤對象的所有標籤ID
-             */
-            List<Long> amsArtTagsIdList = amsArtTagList.stream().map(AmsArtTag::getTagsId).toList();
-
-            /*
-            透過標籤ID列表獲取標籤對象列表
-             */
-            List<AmsTags> amsTagsList = amsTagsService.listByIds(amsArtTagsIdList);
-
-
-
-
-        AmsArticleVo amsArticleVo = new AmsArticleVo();
-        /*
-        設置文章內容、文章標題、文章ID
-         */
-        BeanUtils.copyProperties(amsArticle, amsArticleVo);
-        /*
-        設置文章資訊
-         */
-        ///  TODO缺少userName
-        BeanUtils.copyProperties(amsArtinfo, amsArticleVo,"id","articleId");
-        /*
-        設置分類資訊
-         */
-        amsArticleVo.setCategoryId(amsCategory.getId());
-        amsArticleVo.setCategoryName(amsCategory.getCategoryName());
-        /*
-        設置文章狀態
-         */
-        BeanUtils.copyProperties(amsArtStatus, amsArticleVo,"id","articleId");
-        /*
-        設置評論數量
-         */
-        amsArticleVo.setCommentsCount((int) commentsCount);
-
-
-
-        /*
-        包裝標籤對象列表到文章VO中
-         */
-        List<AmsArticleTagsVo> amsArticleTagsVo = amsTagsList.stream().map(amsTags -> {
-            AmsArticleTagsVo tagsVo = new AmsArticleTagsVo();
-            BeanUtils.copyProperties(amsTags, tagsVo);
-            return tagsVo;
-        }).toList();
-
-        amsArticleVo.setAmsArticleTagsVoList(amsArticleTagsVo);
+//        AmsArticle amsArticle = this.baseMapper.selectById(articleId);
+//        AmsArtinfo amsArtinfo = amsArtinfoService.getOne(new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleId));
+//        AmsCategory amsCategory = amsCategoryService.getById(amsArtinfo.getCategoryId());
+//        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(new LambdaQueryWrapper<AmsArtStatus>().eq(AmsArtStatus::getArticleId, amsArticle.getId()));
+//        long commentsCount = amsCommentInfoService.count(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, amsArticle.getId()));
+//        List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().eq(AmsArtTag::getArticleId, amsArticle.getId()));
+//        /*
+//        設置文章標籤
+//         */
+//            /*
+//            搜集文章標籤對象的所有標籤ID
+//             */
+//            List<Long> amsArtTagsIdList = amsArtTagList.stream().map(AmsArtTag::getTagsId).toList();
+//
+//            /*
+//            透過標籤ID列表獲取標籤對象列表
+//             */
+//            List<AmsTags> amsTagsList = amsTagsService.listByIds(amsArtTagsIdList);
+//
+//
+//
+//
+//        AmsArticleVo amsArticleVo = new AmsArticleVo();
+//        /*
+//        設置文章內容、文章標題、文章ID
+//         */
+//        BeanUtils.copyProperties(amsArticle, amsArticleVo);
+//        /*
+//        設置文章資訊
+//         */
+//        ///  TODO缺少userName
+//        BeanUtils.copyProperties(amsArtinfo, amsArticleVo,"id","articleId");
+//        /*
+//        設置分類資訊
+//         */
+//        amsArticleVo.setCategoryId(amsCategory.getId());
+//        amsArticleVo.setCategoryName(amsCategory.getCategoryName());
+//        /*
+//        設置文章狀態
+//         */
+//        BeanUtils.copyProperties(amsArtStatus, amsArticleVo,"id","articleId");
+//        /*
+//        設置評論數量
+//         */
+//        amsArticleVo.setCommentsCount((int) commentsCount);
+//
+//
+//
+//        /*
+//        包裝標籤對象列表到文章VO中
+//         */
+//        List<AmsArticleTagsVo> amsArticleTagsVo = amsTagsList.stream().map(amsTags -> {
+//            AmsArticleTagsVo tagsVo = new AmsArticleTagsVo();
+//            BeanUtils.copyProperties(amsTags, tagsVo);
+//            return tagsVo;
+//        }).toList();
+//
+//        amsArticleVo.setAmsArticleTagsVoList(amsArticleTagsVo);
         return amsArticleVo;
     }
 //

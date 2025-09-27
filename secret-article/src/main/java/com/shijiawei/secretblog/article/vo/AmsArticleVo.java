@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.article.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.util.List;
  *
  * @Create 2025/7/16 上午12:56
  */
+@JsonIgnoreProperties({"handler"})
 @Data
 public class AmsArticleVo {
 
@@ -32,6 +34,7 @@ public class AmsArticleVo {
      * 作者名稱
      */
     private String userName;
+
     /**
      * 作者名稱
      */
