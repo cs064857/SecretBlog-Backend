@@ -210,7 +210,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //    }
 
 
-    @Transactional
+    @Transactional(rollbackFor = RuntimeException.class)
     @Override
     public R createComment(AmsCommentCreateDTO amsCommentCreateDTO) {
 
@@ -218,24 +218,6 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
         String userIdFromToken = null;
         try {
-            // 驗證並解析 JWT Token
-//            Map<String, Object> hashMap = jwtService.verifyJwt(jwtToken, HashMap.class);
-//            if (hashMap == null) {
-//                log.error("JWT Token 驗證失敗或已過期");
-//                return R.error("Token 無效或已過期");
-//            }
-//
-//            // 從 Token 中獲取用戶ID
-//            userIdFromToken = (String) hashMap.get("userId");
-//            if (userIdFromToken == null) {
-//                log.error("Token 中未找到 userId 信息");
-//                return R.error("Token 中缺少用戶信息");
-//            }
-//
-//            // 使用從 Token 解析的 userId
-//            Long userId = Long.parseLong(userIdFromToken);
-//            log.debug("從Token解析的userId: {}", userId);
-
 
             if(!UserContextHolder.isCurrentUserLoggedIn()){
                 log.warn("未取得登入用戶信息，拒絕新增評論");
@@ -310,7 +292,6 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             return R.error("評論內容不能為空");
                         });
             }
-
 
         } catch (NumberFormatException e) {
             log.error("Token 中的 userId 格式錯誤: {}", userIdFromToken, e);

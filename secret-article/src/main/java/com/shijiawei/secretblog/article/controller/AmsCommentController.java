@@ -31,7 +31,7 @@ public class AmsCommentController {
      * @param amsCommentCreateDTO
      * @return
      */
-    @PostMapping("/comment/create")
+    @PostMapping("/comment/createtestsetseetsset")
     public R createComment (@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
         R r = amsCommentService.createComment(amsCommentCreateDTO);
 
@@ -57,7 +57,9 @@ public class AmsCommentController {
      * @param articleId
      * @return
      */
+
     @GetMapping("/{articleId}/comments")
+//    @GetMapping("/{articleId}/comments")
     public R<List<AmsArtCommentsVo>> getArtComments(@PathVariable Long articleId){
 
         log.debug("articleId:{}",articleId);
@@ -70,6 +72,7 @@ public class AmsCommentController {
      * @param commentId
      * @return
      */
+
     @PostMapping("/comment/{commentId}/like")
     public R<Long> likeComment(@NotNull @PathVariable(value = "commentId") Long commentId){
         log.debug("commentId:{}",commentId);
