@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.common.utils;
 
+import com.shijiawei.secretblog.common.feign.RateLimitKey;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RRateLimiter;
 import org.redisson.api.RateIntervalUnit;
@@ -44,6 +45,8 @@ public class RedisRateLimiterUtils {
         }
         return rateLimiter;
     }
+
+
     public boolean tryAcquire(RRateLimiter rateLimiter){
         boolean isTryAcquire = rateLimiter.tryAcquire();
         if(!isTryAcquire){

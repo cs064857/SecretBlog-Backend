@@ -1,10 +1,6 @@
 package com.shijiawei.secretblog.article.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.shijiawei.secretblog.article.annotation.OpenLog;
-import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
@@ -12,13 +8,15 @@ import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * ClassName: AmsArticleController
@@ -60,15 +58,26 @@ public class AmsArticleController {
 //
 
     /**
+     * 文章點讚數+1
+     */
+    @GetMapping("/articles/{articleId}/like")
+    public R <Long> incrementArticleLikes(@PathVariable Long articleId) {
+        Long likes = amsArticleService.incrementArticleLikes(articleId);
+        return R.ok(likes);
+    }
+
+
+    /**
      * 根據articleId獲取文章內容以及資訊
      * @param articleId
      * @return
      */
+    @Validated
     @GetMapping("articles/{articleId}")
-    public R<AmsArticleVo> AmsArticleVo(@PathVariable Long articleId) {
+    public R<AmsArticleVo> getAmsArticleVo( @Positive @NotNull @PathVariable Long articleId) {
 //        log.info("articleId:{}",articleId);
 //        AmsArticle article = amsArticleService.getById(articleId);
-        AmsArticleVo article = amsArticleService.AmsArticleVo(articleId);
+        AmsArticleVo article = amsArticleService.getAmsArticleVoWithStatus(articleId);
 //        AmsArticleVo article = amsArticleService.getArticle(articleId);
 //        log.info("article:{}",article);
         R<AmsArticleVo> ok = R.ok(article);

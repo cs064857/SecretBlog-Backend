@@ -31,7 +31,7 @@ public class AmsCommentController {
      * @param amsCommentCreateDTO
      * @return
      */
-    @PostMapping("/comment/createtestsetseetsset")
+    @PostMapping("/comment/create")
     public R createComment (@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
         R r = amsCommentService.createComment(amsCommentCreateDTO);
 

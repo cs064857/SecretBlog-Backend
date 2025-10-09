@@ -47,9 +47,9 @@
         ams_artInfo.user_id AS userId,
         ams_artInfo.create_time AS createTime,
         ams_artInfo.update_time AS updateTime,
-        ams_art_status.views_count AS viewsCount,
-        ams_art_status.likes_count AS likesCount,
-        ams_art_status.bookmarks_count AS bookmarksCount,
+<!--        ams_art_status.views_count AS viewsCount,-->
+<!--        ams_art_status.likes_count AS likesCount,-->
+<!--        ams_art_status.bookmarks_count AS bookmarksCount,-->
         ams_category.id AS categoryId,
         ams_category.category_name AS categoryName,
         (
@@ -59,7 +59,7 @@
         )   AS commentsCount
         FROM ams_article
         INNER JOIN ams_artInfo ON ams_article.id = ams_artInfo.article_id
-        INNER JOIN ams_art_status ON ams_art_status.article_id = ams_article.id
+<!--        INNER JOIN ams_art_status ON ams_art_status.article_id = ams_article.id-->
         INNER JOIN ams_category ON ams_category.id = ams_artInfo.category_id
         WHERE ams_article.id=#{articleId}
         AND ams_artInfo.deleted =0 AND ams_category.deleted = 0
