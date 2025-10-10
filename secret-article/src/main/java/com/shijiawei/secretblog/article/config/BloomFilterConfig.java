@@ -22,6 +22,10 @@ public class BloomFilterConfig {
     @Bean
     public RBloomFilter<Long> articleBloomFilter(){
         RBloomFilter<Long> articleBloomFilter = redissonClient.getBloomFilter(RedisBloomFilterEnum.ARTICLE_BLOOM_FILTER.getPattern());
+
+
+
+
         boolean tryInit = articleBloomFilter.tryInit(1_000_000L, 0.01);
 
         return articleBloomFilter;
