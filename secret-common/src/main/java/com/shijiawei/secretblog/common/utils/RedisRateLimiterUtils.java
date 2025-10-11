@@ -1,6 +1,5 @@
 package com.shijiawei.secretblog.common.utils;
 
-import com.shijiawei.secretblog.common.feign.RateLimitKey;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RRateLimiter;
 import org.redisson.api.RateIntervalUnit;

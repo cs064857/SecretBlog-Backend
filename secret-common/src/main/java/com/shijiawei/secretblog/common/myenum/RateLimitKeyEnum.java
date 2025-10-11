@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.common.feign;
+package com.shijiawei.secretblog.common.myenum;
 
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import lombok.AllArgsConstructor;
@@ -10,14 +10,14 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * ClassName: RateLimitKey
+ * ClassName: RateLimitKeyEnum
  * Description:
  *
  * @Create 2025/10/8 上午1:31
  */
 @AllArgsConstructor
 
-public enum RateLimitKey {
+public enum RateLimitKeyEnum {
 
     /**
      * 限流

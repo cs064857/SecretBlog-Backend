@@ -1,6 +1,6 @@
 //package com.shijiawei.secretblog.common.annotation;
 //
-//import com.shijiawei.secretblog.common.feign.RateLimitKey;
+//import com.shijiawei.secretblog.common.myenum.RateLimitKeyEnum;
 //
 //import java.lang.annotation.ElementType;
 //import java.lang.annotation.Retention;
@@ -16,7 +16,7 @@
 //@Target({ElementType.METHOD})
 //@Retention(RetentionPolicy.RUNTIME)
 //public @interface RedissonRateLimit {
-//    RateLimitKey rateLimitKey();
+//    RateLimitKeyEnum rateLimitKey();
 //    String value();
 //    String messages() default "操作過於頻繁，請稍後再試";
 //}

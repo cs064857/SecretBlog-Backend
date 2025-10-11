@@ -12,8 +12,8 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 
-import com.shijiawei.secretblog.common.feign.RedisBloomFilterEnum;
-import com.shijiawei.secretblog.common.feign.RedisKeyEnum;
+import com.shijiawei.secretblog.common.myenum.RedisBloomFilterEnum;
+import com.shijiawei.secretblog.common.myenum.RedisKeyEnum;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
@@ -513,11 +513,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         /**
          * 點讚限流
          */
-//        String userLikeRateLimit = RateLimitKey.RATE_LIMIT_USER_LIKE.format(userId);
-//        RateType rateType = RateLimitKey.RATE_LIMIT_USER_LIKE.getRateType();
-//        Long rate = RateLimitKey.RATE_LIMIT_USER_LIKE.getRate();
-//        RateIntervalUnit rateIntervalUnit = RateLimitKey.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
-//        Long rateInterval = RateLimitKey.RATE_LIMIT_USER_LIKE.getRateInterval();
+//        String userLikeRateLimit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.format(userId);
+//        RateType rateType = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateType();
+//        Long rate = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRate();
+//        RateIntervalUnit rateIntervalUnit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
+//        Long rateInterval = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateInterval();
 //
 //        redisRateLimiterUtils.setRedisRateLimiter(userLikeRateLimit,rateType,rate,rateInterval,rateIntervalUnit);
 
@@ -627,11 +627,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         /**
          * 點讚限流
          */
-//        String userLikeRateLimit = RateLimitKey.RATE_LIMIT_USER_LIKE.format(userId);
-//        RateType rateType = RateLimitKey.RATE_LIMIT_USER_LIKE.getRateType();
-//        Long rate = RateLimitKey.RATE_LIMIT_USER_LIKE.getRate();
-//        RateIntervalUnit rateIntervalUnit = RateLimitKey.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
-//        Long rateInterval = RateLimitKey.RATE_LIMIT_USER_LIKE.getRateInterval();
+//        String userLikeRateLimit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.format(userId);
+//        RateType rateType = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateType();
+//        Long rate = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRate();
+//        RateIntervalUnit rateIntervalUnit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
+//        Long rateInterval = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateInterval();
 //
 //        redisRateLimiterUtils.setRedisRateLimiter(userLikeRateLimit,rateType,rate,rateInterval,rateIntervalUnit);
 

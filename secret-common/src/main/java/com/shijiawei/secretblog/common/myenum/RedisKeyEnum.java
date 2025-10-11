@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.common.feign;
+package com.shijiawei.secretblog.common.myenum;
 
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import lombok.Getter;

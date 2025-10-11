@@ -1,7 +1,7 @@
 //package com.shijiawei.secretblog.article.AOP;
 //
 //import com.shijiawei.secretblog.common.annotation.RedissonRateLimit;
-//import com.shijiawei.secretblog.common.feign.RateLimitKey;
+//import com.shijiawei.secretblog.common.myenum.RateLimitKeyEnum;
 //import lombok.extern.slf4j.Slf4j;
 //import org.aspectj.lang.ProceedingJoinPoint;
 //import org.aspectj.lang.Signature;
@@ -33,10 +33,10 @@
 //
 //    @Around("@annotation(redissonRateLimit)")
 //    public Object redissonRateLimitAspect(ProceedingJoinPoint proceedingJoinPoint, RedissonRateLimit redissonRateLimit) {
-//        RateLimitKey rateLimitKey = redissonRateLimit.rateLimitKey();
+//        RateLimitKeyEnum rateLimitKey = redissonRateLimit.rateLimitKey();
 //        String value = redissonRateLimit.value();
 //        String messages = redissonRateLimit.messages();
-//        log.debug("RateLimitKey: {}", rateLimitKey);
+//        log.debug("RateLimitKeyEnum: {}", rateLimitKey);
 //        log.debug("Value: {}", value);
 //        log.debug("Messages: {}", messages);
 //

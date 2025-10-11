@@ -39,6 +39,9 @@ public class RedissonClientConfig {
 //                .setAddress("redis://4.240.82.138:56379");
 
 
+
+        config.setLockWatchdogTimeout(120);
+
         config.setCodec(StringCodec.INSTANCE);// 設置Redisson使用String進行序列化和反序列化
 //        config.setCodec(new JsonJacksonCodec());// 設置Redisson使用JsonJacksonCodec進行序列化和反序列化
 
