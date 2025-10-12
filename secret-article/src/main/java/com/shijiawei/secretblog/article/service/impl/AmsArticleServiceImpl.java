@@ -12,8 +12,8 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 
-import com.shijiawei.secretblog.common.myenum.RedisBloomFilterEnum;
-import com.shijiawei.secretblog.common.myenum.RedisKeyEnum;
+import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
+import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
@@ -21,6 +21,7 @@ import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.RedisRateLimiterUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
@@ -254,8 +256,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public AmsArticleVo getAmsArticleVoWithStatus(Long articleId){
 
         if(!isExistsArticle(articleId)){
-            log.info("透過布隆過濾器判斷該文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("透過布隆過濾器判斷該文章不存在");
+            log.info("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
         }
 
 
@@ -267,18 +269,18 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
 
-        try {
-            Long views = incrementArticleViewsCount(amsArticleVoId);
-            amsArticleVo.setViewsCount(Math.toIntExact(views));
-        }catch(Exception e){
-
-            /// TODO查詢資料庫中的瀏覽人數
-            AmsArtStatus amsArtStatusServiceOne = amsArtStatusService.getOne(new LambdaQueryWrapper<AmsArtStatus>().eq(AmsArtStatus::getArticleId, amsArticleVoId));
-
-            //防止無法獲取瀏覽人數時能正常顯示文章，缺點是會導致瀏覽人數為顯示0以及無法正確統計瀏覽人數
-//            amsArticleVo.setViewsCount(1);
-            log.warn("無法獲取文章瀏覽人數，可能是Redis服務");
-        }
+//        try {
+//            Long views = incrementArticleViewsCount(amsArticleVoId);
+//            amsArticleVo.setViewsCount(Math.toIntExact(views));
+//        }catch(Exception e){
+//
+//            /// TODO查詢資料庫中的瀏覽人數
+//            AmsArtStatus amsArtStatusServiceOne = amsArtStatusService.getOne(new LambdaQueryWrapper<AmsArtStatus>().eq(AmsArtStatus::getArticleId, amsArticleVoId));
+//
+//            //防止無法獲取瀏覽人數時能正常顯示文章，缺點是會導致瀏覽人數為顯示0以及無法正確統計瀏覽人數
+////            amsArticleVo.setViewsCount(1);
+//            log.warn("無法獲取文章瀏覽人數，可能是Redis服務");
+//        }
 
         try {
             long views = incrementArticleViewsCount(amsArticleVoId);
@@ -318,8 +320,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public AmsArticleVo getAmsArticleVo(Long articleId) {
 
         if(!isExistsArticle(articleId)){
-            log.info("透過布隆過濾器判斷該文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("透過布隆過濾器判斷該文章不存在");
+            log.info("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
         }
 
 
@@ -433,8 +435,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public Long incrementArticleViewsCount(Long articleId) {
 
         if(!isExistsArticle(articleId)){
-            log.info("透過布隆過濾器判斷該文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("透過布隆過濾器判斷該文章不存在");
+            log.info("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
         }
 
 
@@ -470,7 +472,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * 同步點讚數從Redis到資料庫中
          */
         //例如：ams:article:views:1965494783750287361
-        final String redisKey = RedisKeyEnum.ARTICLE_VIEWS.format(articleId);
+        final String redisKey = RedisCacheKey.ARTICLE_VIEWS.format(articleId);
         //獲取桶對象, 注意原子性因此採用RAtomicLong
 
 
@@ -497,8 +499,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
         if(!isExistsArticle(articleId)){
-            log.info("透過布隆過濾器判斷該文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("透過布隆過濾器判斷該文章不存在");
+            log.info("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
         }
 
         /*
@@ -513,11 +515,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         /**
          * 點讚限流
          */
-//        String userLikeRateLimit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.format(userId);
-//        RateType rateType = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateType();
-//        Long rate = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRate();
-//        RateIntervalUnit rateIntervalUnit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
-//        Long rateInterval = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateInterval();
+//        String userLikeRateLimit = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.format(userId);
+//        RateType rateType = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRateType();
+//        Long rate = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRate();
+//        RateIntervalUnit rateIntervalUnit = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
+//        Long rateInterval = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRateInterval();
 //
 //        redisRateLimiterUtils.setRedisRateLimiter(userLikeRateLimit,rateType,rate,rateInterval,rateIntervalUnit);
 
@@ -535,8 +537,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * 檢查該用戶是否已經點讚過該文章，若未點過則修改紀錄成已經點過，防止重複點讚
          */
 
-        final String userLikeKey = RedisKeyEnum.ARTICLE_LIKED_USERS.format(articleId);
-        final String likesCountKey = RedisKeyEnum.ARTICLE_LIKES.format(articleId);
+        final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
+        final String likesCountKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
 
         // Lua 腳本保證原子性
         String luaScript =
@@ -564,7 +566,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
 
-//        final String userLikeKey = RedisKeyEnum.ARTICLE_LIKED_USERS.format(articleId);
+//        final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
 //
 //        RSet<Long> set = redissonClient.getSet(userLikeKey);
 //        boolean add = set.add(userId);
@@ -576,7 +578,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //         * 同步點讚數從Redis到資料庫中
 //         */
 //        //例如：ams:article:likes:1965494783750287361
-//        final String redisKey = RedisKeyEnum.ARTICLE_LIKES.format(articleId);
+//        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
 //        //獲取桶對象, 注意原子性因此採用RAtomicLong
 //
 //
@@ -610,8 +612,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
         if(!isExistsArticle(articleId)){
-            log.info("透過布隆過濾器判斷該文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("透過布隆過濾器判斷該文章不存在");
+            log.info("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
         }
 
 
@@ -627,11 +629,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         /**
          * 點讚限流
          */
-//        String userLikeRateLimit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.format(userId);
-//        RateType rateType = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateType();
-//        Long rate = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRate();
-//        RateIntervalUnit rateIntervalUnit = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
-//        Long rateInterval = RateLimitKeyEnum.RATE_LIMIT_USER_LIKE.getRateInterval();
+//        String userLikeRateLimit = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.format(userId);
+//        RateType rateType = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRateType();
+//        Long rate = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRate();
+//        RateIntervalUnit rateIntervalUnit = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRateIntervalUnit();
+//        Long rateInterval = RedisRateLimitKey.RATE_LIMIT_USER_LIKE.getRateInterval();
 //
 //        redisRateLimiterUtils.setRedisRateLimiter(userLikeRateLimit,rateType,rate,rateInterval,rateIntervalUnit);
 
@@ -644,8 +646,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * 檢查該用戶是否已經點讚過該文章，若未點過則修改紀錄成已經點過，防止重複點讚
          */
 
-        final String userBookMarksKey = RedisKeyEnum.ARTICLE_MARKED_USERS.format(articleId);
-        final String likesCountKey = RedisKeyEnum.ARTICLE_BOOKMARKS.format(articleId);
+        final String userBookMarksKey = RedisCacheKey.ARTICLE_MARKED_USERS.format(articleId);
+        final String likesCountKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
 
         // Lua 腳本保證原子性
         String luaScript =
@@ -704,7 +706,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //         * 同步點讚數從Redis到資料庫中
 //         */
 //        //例如：ams:article:likes:1965494783750287361
-//        final String redisKey = RedisKeyEnum.ARTICLE_LIKES.format(articleId);
+//        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
 //        //獲取桶對象, 注意原子性因此採用RAtomicLong
 //
 //
@@ -731,7 +733,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //    }
 
     public Long getArticleLikes(long articleId) {
-        final String redisKey = RedisKeyEnum.ARTICLE_LIKES.format(articleId);
+        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
         RAtomicLong likesCounter = redissonClient.getAtomicLong(redisKey);
 
         // 先嘗試從 Redis 讀
@@ -777,7 +779,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
     public Long getArticleBookmarks(long articleId) {
-        final String redisKey = RedisKeyEnum.ARTICLE_BOOKMARKS.format(articleId);
+        final String redisKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
         RAtomicLong bookmarksCounter = redissonClient.getAtomicLong(redisKey);
 
         // 先嘗試從 Redis 讀
@@ -855,7 +857,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
 
-    public Boolean isExistsArticle(Long articleId) {
+    public boolean isExistsArticle(Long articleId){
 
         if(articleId == null || articleId <= 0){
             log.warn("文章ID不能小於等於0或為空");
@@ -865,7 +867,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         /**
          * 透過布隆過濾器初步判斷該文章是否存在
          */
-        String articleBloomFilterPattern = RedisBloomFilterEnum.ARTICLE_BLOOM_FILTER.getPattern();
+        String articleBloomFilterPattern = RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey();
         RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(articleBloomFilterPattern);
         boolean contains = bloomFilter.contains(articleId);
         if(contains){
@@ -874,14 +876,69 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
         log.warn("該文章ID:{}不存在於布隆過濾器中，進一步從資料庫中確認",articleId);
         //不存在於布隆過濾器中，表示該文章不存在或已被刪除，進一步從資料庫中確認
-        Long count = this.baseMapper.selectCount((new LambdaQueryWrapper<AmsArticle>().eq(AmsArticle::getId, articleId)));
 
-        if(count!=1){
-            log.warn("該文章ID:{}不存在或已被刪除",articleId);
-            return false;
+        RLock lock = redissonClient.getLock(RedisLockKey.ARTICLE_EXISTS_LOCK.getFormat(articleId));
+        try {
+        boolean tryLock = lock.tryLock(10,0,TimeUnit.SECONDS);
+
+            if(!tryLock){
+                long waitTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+                while(System.nanoTime() < waitTime){
+
+                    contains = bloomFilter.contains(articleId);
+                    if(contains){
+                        log.info("文章ID:{}在等待期間被其他線程確認存在於資料庫中",articleId);
+                        return true;
+                    }
+
+                    TimeUnit.MILLISECONDS.sleep(300);
+                }
+                throw new CustomBaseException("系統繁忙，請稍後再試");
+            }
+                //        Long artcileId =this.baseMapper.selectById((new LambdaQueryWrapper<AmsArticle>()
+//                .select(AmsArticle::getId)
+//                .eq(AmsArticle::getId, articleId)));
+
+                //查詢資料庫前再次確認布隆過濾器中是否存在該文章ID，防止併發情況下重複查詢資料庫
+                contains = bloomFilter.contains(articleId);
+                if(contains){
+                    //存在於布隆過濾器中，表示該文章存在
+                    return true;
+                }
+
+                AmsArticle amsArticle = this.baseMapper.selectById(articleId);
+                if(amsArticle == null){
+                    //資料庫中不存在該文章
+                    log.warn("該文章ID:{}不存在於資料庫中",articleId);
+                    return false;
+                }
+
+                Long amsArticleId = amsArticle.getId();
+
+
+                if(amsArticleId==null){
+                    log.warn("該文章ID:{}不存在或已被刪除",articleId);
+                    return false;
+                }
+                bloomFilter.add(articleId);
+                return true;
+
+
+
+
+
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("文章存在性檢查被中斷，articleId={}", articleId);
+            throw new CustomBaseException("系統繁忙，請稍後再試");
+        }
+        finally {
+            if(lock.isHeldByCurrentThread()){
+                lock.unlock();
+            }
         }
 
-        return true;
 
     }
 
@@ -907,7 +964,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //         */
 ////        String BucketName = String.format("AmsArticles:ArticleId_%d:ViewsCount", articleId);
 //
-//        String BucketName = RedisKeyEnum.ARTICLE_VIEWS.format(articleId);
+//        String BucketName = RedisCacheKey.ARTICLE_VIEWS.format(articleId);
 //            /*
 //              判斷該文章是否存在
 //            */
@@ -934,7 +991,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //             */
 ////        String userLikeKey = String.format("AmsComments:CommentId_%d:UserLikes", articleId);
 //
-//        String userLikeKey = RedisKeyEnum.ARTICLE_USER_LIKED.format(articleId, userId);
+//        String userLikeKey = RedisCacheKey.ARTICLE_USER_LIKED.format(articleId, userId);
 //
 //        RSet<Long> userLikeSet = redissonClient.getSet(userLikeKey);
 //

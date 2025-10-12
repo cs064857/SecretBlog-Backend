@@ -8,13 +8,13 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * ClassName: RedisKeyEnum
+ * ClassName: RedisCacheKey
  * Description:
  *
  * @Create 2025/10/3 上午1:37
  */
 
-public enum RedisKeyEnum {
+public enum RedisCacheKey {
 
 
 
@@ -56,7 +56,7 @@ public enum RedisKeyEnum {
     @Getter
     private final Duration ttl;
 
-    RedisKeyEnum(String pattern, String description, Duration ttl) {
+    RedisCacheKey(String pattern, String description, Duration ttl) {
         this.pattern = pattern;
         this.description = description;
         this.ttl = ttl;
@@ -76,7 +76,7 @@ public enum RedisKeyEnum {
 
 
 
-//public enum RedisKeyEnum {
+//public enum RedisCacheKey {
 //
 //    ARTICLE_VIEWS("arams:article:views", Duration.ofDays(30), "文章查看數緩存"),
 //    ARTICLE_LIKES("ams:article:likes", Duration.ofDays(30), "文章點讚數緩存"),
@@ -87,7 +87,7 @@ public enum RedisKeyEnum {
 //    private final Duration ttl;
 //    private final String description;
 //
-//    RedisKeyEnum(String prefix, Duration ttl, String description) {
+//    RedisCacheKey(String prefix, Duration ttl, String description) {
 //        this.prefix = prefix;
 //        this.ttl = ttl;
 //        this.description = description;

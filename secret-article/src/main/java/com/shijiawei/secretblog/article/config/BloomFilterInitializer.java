@@ -6,16 +6,9 @@ import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
-import com.shijiawei.secretblog.common.myenum.RedisBloomFilterEnum;
-import com.shijiawei.secretblog.common.myenum.RedisLockKey;
-import io.swagger.v3.core.util.Json;
+import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
-import lombok.Builder;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomUtils;
-import org.redisson.RedissonBloomFilter;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
@@ -23,11 +16,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import java.io.Serializable;
-import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -78,8 +67,8 @@ public class BloomFilterInitializer {
     @PostConstruct
     public void initBloomFilterOnStartup() {
         //順序執行，避免同時初始化導致Redis壓力過大
-        setrBloomFilter(RedisBloomFilterEnum.READY_BLOOM_ARTICLE.getPattern(),RedisLockKey.BLOOM_INIT_ARTICLE_LOCK.getKey(), articleRBloomFilter,this::fetchArticleIdsBatch);
-        setrBloomFilter(RedisBloomFilterEnum.READY_BLOOM_COMMENT.getPattern(),RedisLockKey.BLOOM_INIT_COMMENT_LOCK.getKey(),commentRBloomFilter,this::fetchCommentIdsBatch);
+        setrBloomFilter(RedisBloomFilterKey.READY_BLOOM_ARTICLE.getKey(),RedisBloomFilterKey.BLOOM_INIT_ARTICLE_LOCK.getKey(), articleRBloomFilter,this::fetchArticleIdsBatch);
+        setrBloomFilter(RedisBloomFilterKey.READY_BLOOM_COMMENT.getKey(),RedisBloomFilterKey.BLOOM_INIT_COMMENT_LOCK.getKey(),commentRBloomFilter,this::fetchCommentIdsBatch);
     }
 
     // 在應用啟動時初始化布隆過濾器

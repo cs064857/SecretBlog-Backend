@@ -2,6 +2,8 @@ package com.shijiawei.secretblog.common.exception;
 
 import org.springframework.http.HttpStatus;
 
+import java.util.IllegalFormatException;
+
 /**
  * ClassName: CustomBaseException
  * Description:
@@ -41,6 +43,12 @@ public class CustomBaseException extends RuntimeException{
 
     public CustomBaseException(String code) {
         this.code = code;
+    }
+
+    public CustomBaseException(String message, Throwable e) {
+        this.message=message;
+        this.e=e;
+
     }
 //    public CustomBaseException(String Message) {
 //        super(Message);

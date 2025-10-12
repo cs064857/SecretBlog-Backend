@@ -10,14 +10,14 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * ClassName: RateLimitKeyEnum
+ * ClassName: RedisRateLimitKey
  * Description:
  *
  * @Create 2025/10/8 上午1:31
  */
 @AllArgsConstructor
 
-public enum RateLimitKeyEnum {
+public enum RedisRateLimitKey {
 
     /**
      * 限流

@@ -1,6 +1,6 @@
 package com.shijiawei.secretblog.article.config;
 
-import com.shijiawei.secretblog.common.myenum.RedisBloomFilterEnum;
+import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import jakarta.annotation.Resource;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RedissonClient;
@@ -21,14 +21,14 @@ public class BloomFilterConfig {
 
     @Bean(name = "articleBloomFilter")
     public RBloomFilter<Long> articleBloomFilter(){
-        RBloomFilter<Long> articleBloomFilter = redissonClient.getBloomFilter(RedisBloomFilterEnum.ARTICLE_BLOOM_FILTER.getPattern());
+        RBloomFilter<Long> articleBloomFilter = redissonClient.getBloomFilter(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey());
         boolean tryInit = articleBloomFilter.tryInit(1_000_000L, 0.01);
         return articleBloomFilter;
     }
 
     @Bean(name = "commentBloomFilter")
     public RBloomFilter<Long> commentBloomFilter(){
-        RBloomFilter<Long> commentBloomFilter = redissonClient.getBloomFilter(RedisBloomFilterEnum.COMMENT_BLOOM_FILTER.getPattern());
+        RBloomFilter<Long> commentBloomFilter = redissonClient.getBloomFilter(RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey());
         boolean tryInit = commentBloomFilter.tryInit(1_000_000L, 0.01);
         return commentBloomFilter;
     }
