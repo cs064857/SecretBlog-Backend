@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * @author User
@@ -161,10 +163,33 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             AmsArtStatus amsArtStatus = new AmsArtStatus();
             amsArtStatus.setArticleId(amsArticle.getId());
             amsArtStatusService.save(amsArtStatus);
+
+
         } catch (Exception e) {
             log.error("保存文章過程失敗，將回滾事務", e);
             throw e; // 讓 @Transactional 觸發回滾
         }
+
+        // 在事務方法的最後（確保提交前執行）
+        // 使用 final 變量以便在後續使用
+        final AmsArticle savedArticle = amsArticle;
+
+        // 註冊事務同步回調，在事務提交後執行
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        saveArticleIdToBloomFilter(savedArticle);
+                    }
+                }
+        );
+    }
+
+    private void saveArticleIdToBloomFilter(AmsArticle amsArticle) {
+        //將新的文章ID新增至布隆過濾器中
+        //不管是否成功加入布隆過濾器都不影響文章發佈, 不進行回滾
+        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey());
+        bloomFilter.add(amsArticle.getId());
     }
 //    /**
 //     * 獲取文章列表數據
@@ -255,13 +280,17 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Override
     public AmsArticleVo getAmsArticleVoWithStatus(Long articleId){
 
-        if(!isExistsArticle(articleId)){
+        if(isArticleNotExists(articleId)){
             log.info("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
 
 
         AmsArticleVo amsArticleVo = getAmsArticleVo(articleId);
+        if(amsArticleVo==null){
+            log.warn("無法成功獲取文章資訊，該文章可能已被刪除");
+            throw new CustomBaseException("無法成功獲取文章資訊，該文章可能已被刪除");
+        }
         Long amsArticleVoId = amsArticleVo.getId();
         if (amsArticleVoId == null) {
             log.warn("文章ID為空，無法獲取文章資訊");
@@ -284,6 +313,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         try {
             long views = incrementArticleViewsCount(amsArticleVoId);
+
             // 建議 VO 改為 long，避免溢位
             amsArticleVo.setViewsCount(Math.toIntExact(views));
         } catch (RedisConnectionException | RedisTimeoutException e) {
@@ -319,7 +349,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Override
     public AmsArticleVo getAmsArticleVo(Long articleId) {
 
-        if(!isExistsArticle(articleId)){
+        if(isArticleNotExists(articleId)){
             log.info("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
@@ -434,7 +464,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     public Long incrementArticleViewsCount(Long articleId) {
 
-        if(!isExistsArticle(articleId)){
+        if(isArticleNotExists(articleId)){
             log.info("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
@@ -498,7 +528,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public Long incrementArticleLikes(Long articleId) {
 
 
-        if(!isExistsArticle(articleId)){
+        if(isArticleNotExists(articleId)){
             log.info("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
@@ -611,7 +641,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public Long incrementArticleBooksMarket(Long articleId) {
 
 
-        if(!isExistsArticle(articleId)){
+        if(isArticleNotExists(articleId)){
             log.info("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
@@ -854,93 +884,247 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
 
+    /**
+     * 判斷文章是否不存在，透過布隆過濾器以及資料庫雙重確認，非分佈式鎖版本
+     * @param articleId
+     * @return
+     */
+    public boolean isArticleNotExists(Long articleId) {
 
-
-
-    public boolean isExistsArticle(Long articleId){
-
-        if(articleId == null || articleId <= 0){
-            log.warn("文章ID不能小於等於0或為空");
-            throw new CustomBaseException("文章ID不能小於等於0或為空");
+        if (articleId == null || articleId <= 0) {
+            log.warn("非法文章ID: {}", articleId);
+            return true;
         }
 
         /**
          * 透過布隆過濾器初步判斷該文章是否存在
          */
-        String articleBloomFilterPattern = RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey();
-        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(articleBloomFilterPattern);
-        boolean contains = bloomFilter.contains(articleId);
-        if(contains){
-            //存在於布隆過濾器中，表示該文章存在
-            return true;
-        }
-        log.warn("該文章ID:{}不存在於布隆過濾器中，進一步從資料庫中確認",articleId);
-        //不存在於布隆過濾器中，表示該文章不存在或已被刪除，進一步從資料庫中確認
 
-        RLock lock = redissonClient.getLock(RedisLockKey.ARTICLE_EXISTS_LOCK.getFormat(articleId));
         try {
-        boolean tryLock = lock.tryLock(10,0,TimeUnit.SECONDS);
+            /// TODO增加 Bloom 就緒旗標，透過旗標判斷是否需要檢查布隆過濾器，避免Redis服務異常導致無法使用布隆過濾器
+            String articleBloomFilterPattern = RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey();
+            RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(articleBloomFilterPattern);
 
-            if(!tryLock){
-                long waitTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
-                while(System.nanoTime() < waitTime){
-
-                    contains = bloomFilter.contains(articleId);
-                    if(contains){
-                        log.info("文章ID:{}在等待期間被其他線程確認存在於資料庫中",articleId);
-                        return true;
-                    }
-
-                    TimeUnit.MILLISECONDS.sleep(300);
-                }
-                throw new CustomBaseException("系統繁忙，請稍後再試");
-            }
-                //        Long artcileId =this.baseMapper.selectById((new LambdaQueryWrapper<AmsArticle>()
-//                .select(AmsArticle::getId)
-//                .eq(AmsArticle::getId, articleId)));
-
-                //查詢資料庫前再次確認布隆過濾器中是否存在該文章ID，防止併發情況下重複查詢資料庫
-                contains = bloomFilter.contains(articleId);
-                if(contains){
-                    //存在於布隆過濾器中，表示該文章存在
-                    return true;
-                }
-
-                AmsArticle amsArticle = this.baseMapper.selectById(articleId);
-                if(amsArticle == null){
-                    //資料庫中不存在該文章
-                    log.warn("該文章ID:{}不存在於資料庫中",articleId);
-                    return false;
-                }
-
-                Long amsArticleId = amsArticle.getId();
-
-
-                if(amsArticleId==null){
-                    log.warn("該文章ID:{}不存在或已被刪除",articleId);
-                    return false;
-                }
-                bloomFilter.add(articleId);
+            if(!bloomFilter.contains(articleId)){
+                //若果布隆過濾器中不存在該文章ID，表示該文章一定不存在
+                log.info("該文章ID:{}不存在或已被刪除", articleId);
                 return true;
-
-
-
-
-
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("文章存在性檢查被中斷，articleId={}", articleId);
-            throw new CustomBaseException("系統繁忙，請稍後再試");
-        }
-        finally {
-            if(lock.isHeldByCurrentThread()){
-                lock.unlock();
             }
+        } catch (RedisConnectionException e) {
+            log.debug("Redis 連線異常，跳過布隆過濾器檢查，articleId={}", articleId, e);
+            return isArticleNotExistsFromDB(articleId);
+
         }
 
+
+        return false;
 
     }
+
+    private boolean isArticleNotExistsFromDB(Long articleId) {
+        if (articleId == null || articleId <= 0) {
+            log.warn("非法文章ID: {}", articleId);
+            return true;
+        }
+
+        AmsArticle amsArticle = this.baseMapper.selectById(articleId);
+        if(amsArticle == null){
+            //資料庫中不存在該文章
+            log.info("該文章ID:{}不存在或已被刪除", articleId);
+            return true;
+        }
+
+        Long amsArticleId = amsArticle.getId();
+
+
+        if(amsArticleId==null){
+            //表示該文章一定不存在
+            log.info("該文章ID:{}不存在或已被刪除", articleId);
+            return true;
+        }
+        return false;
+    }
+
+
+//    /**
+//     * 判斷文章是否不存在，透過布隆過濾器以及資料庫雙重確認，使用分佈式鎖版本
+//     * @param articleId
+//     * @return
+//     */
+//    public boolean isArticleDefinitelyNotExists(Long articleId) {
+//
+//        if (articleId == null || articleId <= 0) {
+//            log.warn("文章ID不能小於等於0或為空");
+//            throw new CustomBaseException("文章ID不能小於等於0或為空");
+//        }
+//
+//        /**
+//         * 透過布隆過濾器初步判斷該文章是否存在
+//         */
+//        String articleBloomFilterPattern = RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey();
+//        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(articleBloomFilterPattern);
+//        boolean contains = bloomFilter.contains(articleId);
+//        //判斷布隆過濾器中是否存在該文章ID
+//        if (!contains) {
+//            //不存在於布隆過濾器中，表示該文章不存在
+//            log.warn("該文章ID:{}不存在於布隆過濾器中", articleId);
+//            return true;
+//        }
+//
+//        //存在於布隆過濾器中，表示該文章存在
+////        return false;
+//
+//        RLock lock = redissonClient.getLock(RedisLockKey.ARTICLE_EXISTS_LOCK.getFormat(articleId));
+//        try {
+//            boolean tryLock = lock.tryLock(10,0,TimeUnit.SECONDS);
+//
+//            if(!tryLock){
+//                long waitTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+//                while(System.nanoTime() < waitTime){
+//
+//                    contains = bloomFilter.contains(articleId);
+//                    if(!contains){
+//                        //不存在於布隆過濾器中，表示該文章不存在
+//                        log.warn("該文章ID:{}不存在於布隆過濾器中", articleId);
+//                        return true;
+//                    }
+//
+//                    TimeUnit.MILLISECONDS.sleep(300);
+//                }
+//                throw new CustomBaseException("系統繁忙，請稍後再試");
+//            }
+//            //        Long artcileId =this.baseMapper.selectById((new LambdaQueryWrapper<AmsArticle>()
+////                .select(AmsArticle::getId)
+////                .eq(AmsArticle::getId, articleId)));
+//
+//            //查詢資料庫前再次確認布隆過濾器中是否不存在該文章ID，防止併發情況下重複查詢資料庫
+//            contains = bloomFilter.contains(articleId);
+//            if(!contains){
+//                //不存在於布隆過濾器中，表示該文章不存在
+//                log.warn("該文章ID:{}不存在於布隆過濾器中", articleId);
+//                return true;
+//            }
+//
+//            AmsArticle amsArticle = this.baseMapper.selectById(articleId);
+//            if(amsArticle == null){
+//                //資料庫中不存在該文章
+//                log.warn("該文章ID:{}不存在於資料庫中",articleId);
+//                return true;
+//            }
+//
+//            Long amsArticleId = amsArticle.getId();
+//
+//
+//            if(amsArticleId==null){
+//                log.warn("該文章ID:{}不存在或已被刪除",articleId);
+//                return true;
+//            }
+////                bloomFilter.add(articleId);
+//            return false;
+//
+//        }
+//        catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            log.warn("文章存在性檢查被中斷，articleId={}", articleId);
+//            throw new CustomBaseException("系統繁忙，請稍後再試");
+//        }
+//        finally {
+//            if(lock.isHeldByCurrentThread()){
+//                lock.unlock();
+//            }
+//        }
+//
+//
+//    }
+
+
+    /**
+     * 判斷文章是否存在，透過布隆過濾器以及資料庫雙重確認
+     */
+//    public boolean isExistsArticle(Long articleId){
+//
+//        if(articleId == null || articleId <= 0){
+//            log.warn("文章ID不能小於等於0或為空");
+//            throw new CustomBaseException("文章ID不能小於等於0或為空");
+//        }
+//
+//        /**
+//         * 透過布隆過濾器初步判斷該文章是否存在
+//         */
+//        String articleBloomFilterPattern = RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey();
+//        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(articleBloomFilterPattern);
+//        boolean contains = bloomFilter.contains(articleId);
+//        if(contains){
+//            //存在於布隆過濾器中，表示該文章存在
+//            return true;
+//        }
+//        log.warn("該文章ID:{}不存在於布隆過濾器中，進一步從資料庫中確認",articleId);
+//        //不存在於布隆過濾器中，表示該文章不存在或已被刪除，進一步從資料庫中確認
+//
+//        RLock lock = redissonClient.getLock(RedisLockKey.ARTICLE_EXISTS_LOCK.getFormat(articleId));
+//        try {
+//        boolean tryLock = lock.tryLock(10,0,TimeUnit.SECONDS);
+//
+//            if(!tryLock){
+//                long waitTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+//                while(System.nanoTime() < waitTime){
+//
+//                    contains = bloomFilter.contains(articleId);
+//                    if(contains){
+//                        log.info("文章ID:{}在等待期間被其他線程確認存在於資料庫中",articleId);
+//                        return true;
+//                    }
+//
+//                    TimeUnit.MILLISECONDS.sleep(300);
+//                }
+//                throw new CustomBaseException("系統繁忙，請稍後再試");
+//            }
+//                //        Long artcileId =this.baseMapper.selectById((new LambdaQueryWrapper<AmsArticle>()
+////                .select(AmsArticle::getId)
+////                .eq(AmsArticle::getId, articleId)));
+//
+//                //查詢資料庫前再次確認布隆過濾器中是否存在該文章ID，防止併發情況下重複查詢資料庫
+//                contains = bloomFilter.contains(articleId);
+//                if(contains){
+//                    //存在於布隆過濾器中，表示該文章存在
+//                    return true;
+//                }
+//
+//                AmsArticle amsArticle = this.baseMapper.selectById(articleId);
+//                if(amsArticle == null){
+//                    //資料庫中不存在該文章
+//                    log.warn("該文章ID:{}不存在於資料庫中",articleId);
+//                    return false;
+//                }
+//
+//                Long amsArticleId = amsArticle.getId();
+//
+//
+//                if(amsArticleId==null){
+//                    log.warn("該文章ID:{}不存在或已被刪除",articleId);
+//                    return false;
+//                }
+//                bloomFilter.add(articleId);
+//                return true;
+//
+//
+//
+//
+//
+//        }
+//        catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            log.warn("文章存在性檢查被中斷，articleId={}", articleId);
+//            throw new CustomBaseException("系統繁忙，請稍後再試");
+//        }
+//        finally {
+//            if(lock.isHeldByCurrentThread()){
+//                lock.unlock();
+//            }
+//        }
+//
+//
+//    }
 
 //    public Long incrementArticleLikesCount(Long articleId) {
 //
