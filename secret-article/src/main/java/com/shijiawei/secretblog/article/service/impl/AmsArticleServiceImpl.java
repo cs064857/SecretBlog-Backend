@@ -23,6 +23,7 @@ import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.common.utils.RedisBloomFilterUtils;
 import com.shijiawei.secretblog.common.utils.RedisRateLimiterUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +79,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Autowired
     private AmsCommentInfoService amsCommentInfoService;
 
+    @Autowired
+    private RedisBloomFilterUtils redisBloomFilterUtils;
 
     private final RedisRateLimiterUtils redisRateLimiterUtils;
 
@@ -171,26 +174,40 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         // 在事務方法的最後（確保提交前執行）
-        // 使用 final 變量以便在後續使用
-        final AmsArticle savedArticle = amsArticle;
-
-        // 註冊事務同步回調，在事務提交後執行
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        saveArticleIdToBloomFilter(savedArticle);
-                    }
-                }
+        // 使用封裝好的方法，在事務提交後添加到布隆過濾器
+        redisBloomFilterUtils.saveToBloomFilterAfterCommit(
+                amsArticle.getId(),
+                RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey()
         );
+
+
+//        // 使用 final 變量以便在後續使用
+//        final AmsArticle savedArticle = amsArticle;
+//
+//        // 註冊事務同步回調，在事務提交後執行
+//        TransactionSynchronizationManager.registerSynchronization(
+//                new TransactionSynchronization() {
+//                    @Override
+//                    public void afterCommit() {
+//                        try {
+//                            redisBloomFilterUtils.saveArticleIdToBloomFilter(savedArticle.getId(),RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey());
+//                        } catch (Exception e) {
+//                            //布隆過濾器出現異常,但不拋出異常，避免影響主流程
+//                            log.error("布隆過濾器添加失敗，文章ID: {}", savedArticle.getId(), e);
+//                        }
+//                    }
+//                }
+//        );
     }
 
-    private void saveArticleIdToBloomFilter(AmsArticle amsArticle) {
-        //將新的文章ID新增至布隆過濾器中
-        //不管是否成功加入布隆過濾器都不影響文章發佈, 不進行回滾
-        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey());
-        bloomFilter.add(amsArticle.getId());
-    }
+//    private void saveArticleIdToBloomFilter(AmsArticle amsArticle) {
+//        //將新的文章ID新增至布隆過濾器中
+//        //不管是否成功加入布隆過濾器都不影響文章發佈, 不進行回滾
+//        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey());
+//        bloomFilter.add(amsArticle.getId());
+//    }
+
+
 //    /**
 //     * 獲取文章列表數據
 //     * @return

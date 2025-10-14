@@ -85,3 +85,7 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+bloom-filter:
+  article:
+    expected-insertions: 10000  # 預期1萬篇文章
+    false-probability: 0.01       # 1% 誤判率
