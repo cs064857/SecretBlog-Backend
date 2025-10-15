@@ -21,7 +21,6 @@ import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
-import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.RedisBloomFilterUtils;
 import com.shijiawei.secretblog.common.utils.RedisRateLimiterUtils;
@@ -40,12 +39,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * @author User
@@ -906,6 +902,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
      * @param articleId
      * @return
      */
+    @Override
     public boolean isArticleNotExists(Long articleId) {
 
         if (articleId == null || articleId <= 0) {

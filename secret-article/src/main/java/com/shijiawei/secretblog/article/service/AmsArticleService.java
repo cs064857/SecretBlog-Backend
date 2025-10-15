@@ -30,6 +30,8 @@ public interface AmsArticleService extends IService<AmsArticle> {
     Long incrementArticleLikes(Long articleId);
 
     Long incrementArticleBooksMarket(Long articleId);
+
+    boolean isArticleNotExists(Long articleId);
 //
 //
 ////    Page<AmsArticle> getLatestArticles();

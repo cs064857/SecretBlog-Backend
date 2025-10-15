@@ -3,28 +3,26 @@ package com.shijiawei.secretblog.article.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.entity.AmsCommentInfo;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
 import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
+import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.service.AmsCommentInfoService;
 import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
-import com.shijiawei.secretblog.common.utils.JwtService;
-import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.common.utils.TimeTool;
-import com.shijiawei.secretblog.common.utils.UserContextHolder;
+import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
+import com.shijiawei.secretblog.common.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RAtomicLong;
-import org.redisson.api.RBucket;
-import org.redisson.api.RSet;
-import org.redisson.api.RedissonClient;
+import org.redisson.api.*;
+import org.redisson.client.RedisConnectionException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -57,6 +55,12 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     private final RedissonClient redissonClient;
 
     private final UserFeignClient userFeignClient;
+
+    @Autowired
+    private RedisBloomFilterUtils redisBloomFilterUtils;
+
+    @Autowired
+    private AmsArticleService amsArticleService;
 
 //    public AmsCommentServiceImpl(RedissonClient redissonClient){
 //        this.redissonClient = redissonClient;
@@ -217,6 +221,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //        String jwtToken = amsCommentCreateDTO.getJwtToken();
 
         String userIdFromToken = null;
+
         try {
 
             if(!UserContextHolder.isCurrentUserLoggedIn()){
@@ -252,7 +257,11 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
                             amsCommentInfoService.save(amsCommentInfo);
 
-
+                            // 新增：在事務提交後將 commentInfoId 放入布隆過濾器
+                            redisBloomFilterUtils.saveToBloomFilterAfterCommit(
+                                    commentId,
+                                    RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
+                            );
 
                             log.info("評論創建成功，用戶ID: {}, 文章ID: {}", userId, amsCommentCreateDTO.getArticleId());
                             return R.ok("評論發布成功");
@@ -268,6 +277,13 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                         .map(cmt -> {
                             AmsComment amsComment = new AmsComment();
                             AmsCommentInfo amsCommentInfo = new AmsCommentInfo();
+
+                            long commentId = IdWorker.getId();
+                            long commentInfoId = IdWorker.getId();
+
+                            amsComment.setId(commentId);
+                            amsComment.setCommentInfoId(commentInfoId);
+                            amsCommentInfo.setId(commentInfoId);
                             amsCommentInfo.setUserId(userId); // 使用從 Token 解析的 userId
                             amsCommentInfo.setArticleId(amsCommentCreateDTO.getArticleId());
                             amsComment.setCommentContent(amsCommentCreateDTO.getCommentContent());
@@ -284,6 +300,13 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             amsCommentInfoService.save(amsCommentInfo);
                             //更新父評論
                             amsCommentInfoService.updateById(parentAmsCommentInfo);
+
+                            // 新增：在事務提交後將 commentInfoId 放入布隆過濾器
+                            redisBloomFilterUtils.saveToBloomFilterAfterCommit(
+                                    commentId,
+                                    RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
+                            );
+
                             log.info("評論創建成功，用戶ID: {}, 文章ID: {}", userId, amsCommentCreateDTO.getArticleId());
                             return R.ok("評論發布成功");
                         })
@@ -304,6 +327,14 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     @Override
     public List<AmsArtCommentsVo> getArtComments(Long articleId) {
+
+
+        //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
+        if(amsArticleService.isArticleNotExists(articleId)){
+            log.info("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
+        }
+
         //根據該文章的ArticleId查找所有關聯的CommentInfo
         List<AmsCommentInfo> amsCommentInfoList = amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, articleId));
         if(amsCommentInfoList.isEmpty()){
@@ -312,6 +343,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         List<Long> amsCommentIds = amsCommentInfoList.stream()
                 .map(AmsCommentInfo::getCommentId)
                 .collect(Collectors.toList());
+
+
 
 
         log.info("所有留言的Ids:{}",amsCommentIds);
@@ -391,11 +424,83 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         return amsArtCommentsVos;
     }
 
+
+    /**
+     * 判斷文章是否不存在，透過布隆過濾器以及資料庫雙重確認，非分佈式鎖版本
+     * @param commentId
+     * @return
+     */
+    public boolean isCommentNotExists(Long commentId) {
+
+        if (commentId == null || commentId <= 0) {
+            log.warn("非法評論ID: {}", commentId);
+            return true;
+        }
+
+        /**
+         * 透過布隆過濾器初步判斷該評論是否存在
+         */
+
+        try {
+            /// TODO增加 Bloom 就緒旗標，透過旗標判斷是否需要檢查布隆過濾器，避免Redis服務異常導致無法使用布隆過濾器
+            String commentBloomFilterPattern = RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey();
+            RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(commentBloomFilterPattern);
+
+            if(!bloomFilter.contains(commentId)){
+                //若果布隆過濾器中不存在該評論ID，表示該評論一定不存在
+                log.info("該評論ID:{}不存在或已被刪除", commentId);
+                return true;
+            }
+        } catch (RedisConnectionException e) {
+            log.debug("Redis 連線異常，跳過布隆過濾器檢查，commentId={}", commentId, e);
+            return isCommentNotExistsFromDB(commentId);
+
+        }
+
+
+        return false;
+
+    }
+
+    private boolean isCommentNotExistsFromDB(Long commentId) {
+        if (commentId == null || commentId <= 0) {
+            log.warn("非法評論ID: {}", commentId);
+            return true;
+        }
+
+        AmsComment amsComment = this.baseMapper.selectById(commentId);
+        if(amsComment == null){
+            //資料庫中不存在該評論
+            log.info("該評論ID:{}不存在或已被刪除", commentId);
+            return true;
+        }
+
+        Long amsCommentId = amsComment.getId();
+
+
+        if(amsCommentId==null){
+            //表示該評論一定不存在
+            log.info("該評論ID:{}不存在或已被刪除", commentId);
+            return true;
+        }
+        return false;
+    }
+
+
+
+
+
     @Transactional(rollbackFor = RuntimeException.class)
     @Override
     public Long likeComment(Long commentId) {
         /// TODO同步點讚數從Redis到資料庫中
 
+
+        //透過布隆過濾器判斷該評論是否不存在, 若不存在則拋出異常
+        if(this.isCommentNotExists(commentId)){
+            log.info("評論不存在，commentId={}",commentId);
+            throw new CustomBaseException("評論不存在");
+        }
 
         /*
           檢查用戶是否登入
