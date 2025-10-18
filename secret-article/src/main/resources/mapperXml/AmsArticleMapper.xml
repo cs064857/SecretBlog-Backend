@@ -24,6 +24,7 @@
         <result property="content" column="content"/>
         <!-- AmsArtinfo 的欄位 -->
         <result property="userId" column="userId"/>
+<!--        <result property="userName" column="userName"/>-->
         <result property="createTime" column="createTime"/>
         <result property="updateTime" column="updateTime"/>
         <!-- AmsArtStatus 的欄位 -->
@@ -45,6 +46,7 @@
         ams_article.title AS title,
         ams_article.content AS content,
         ams_artInfo.user_id AS userId,
+<!--        ams_artInfo.user_name AS userName,-->
         ams_artInfo.create_time AS createTime,
         ams_artInfo.update_time AS updateTime,
 <!--        ams_art_status.views_count AS viewsCount,-->

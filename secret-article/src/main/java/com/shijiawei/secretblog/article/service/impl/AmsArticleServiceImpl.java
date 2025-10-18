@@ -391,19 +391,25 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             throw new CustomBaseException("無法成功獲取文章資訊，該文章可能已被刪除");
         }
 
+        // 優先通過用戶服務獲取最新用戶暱稱；失敗時保留DB中的備援 userName
+        try {
+            Long uid = amsArticleVo.getUserId();
+            if (uid != null) {
+                amsArticleVo.setUserId(uid);
+                R<UserBasicDTO> userResp = userFeignClient.getUserById(uid);
+                if (userResp != null && userResp.getData() != null) {
+                    String nick = userResp.getData().getNickName();
 
+                    if (nick != null && !nick.isEmpty()) {
+                        amsArticleVo.setUserName(nick);
 
-
-
-
-//        R<UserBasicDTO> user = userFeignClient.getUserById(amsArticleVo.getUserId());
-//        if(user == null || user.getData() == null){
-//            log.warn("未能通過用戶ID獲取用戶資訊，UserId={}", amsArticleVo.getUserId());
-//            throw new CustomBaseException("未能獲取用戶資訊");
-//        }
-//        amsArticleVo.setUserName(user.getData().getNickName());
-
-
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 遠端失敗不影響主流程，採用本地 userName 作為退化顯示
+            log.warn("透過用戶服務獲取暱稱失敗，articleId={}, userId={}, err={}", articleId, amsArticleVo.getUserId(), e.getMessage());
+        }
 
 
 //        AmsArticle amsArticle = this.baseMapper.selectById(articleId);
@@ -738,9 +744,6 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 ////        Long userId = UserContextHolder.getCurrentUserId();
 ////        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
 ////        if (userId == null) {
-////            log.warn("用戶ID為空，拒絕對文章按讚");
-////            throw new CustomBaseException("用戶ID缺失");
-////        }
 //
 //        /// TODO(可選)根據IP、UA、Cookie等資訊限制同一用戶在短時間內多次刷新導致瀏覽數異常增長
 //
@@ -774,6 +777,9 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        // 同時更新資料庫（省略...）
 //        return newLikes;
 //    }
+////        // 同時更新資料庫（省略...）
+////        return newLikes;
+////    }
 
     public Long getArticleLikes(long articleId) {
         final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
