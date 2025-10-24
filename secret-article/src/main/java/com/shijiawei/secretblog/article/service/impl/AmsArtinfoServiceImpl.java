@@ -23,6 +23,13 @@ public class AmsArtinfoServiceImpl extends ServiceImpl<AmsArtinfoMapper, AmsArti
         BeanUtils.copyProperties(amsSaveArtInfoVo,amsArtinfo);
         this.baseMapper.insert(amsArtinfo);
     }
+
+    @Override
+    public int isArticleOwner(Long articleId, Long userId) {
+
+        return this.baseMapper.isArticleOwner(articleId, userId);
+
+    }
 }
 
 

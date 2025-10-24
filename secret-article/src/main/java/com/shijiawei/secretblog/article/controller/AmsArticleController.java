@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.article.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
@@ -8,8 +9,6 @@ import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +38,22 @@ public class AmsArticleController {
         //log.info("完成");
         return R.ok();
     }
+
+    /**
+     * 編輯文章
+     *
+     * @return
+     *
+     */
+    @PutMapping("/update/{articleId}")
+    public R updateArticle(@PathVariable(value = "articleId",required = true) Long articleId,@RequestBody AmsArticleUpdateDTO amsArticleUpdateDTO){
+
+        amsArticleService.updateArticleContent(articleId,amsArticleUpdateDTO);
+
+        return R.ok();
+    }
+
+
 ////    @GetMapping("/list")
 ////    public R<List<AmsArticle>> listArticle() {
 ////        List<AmsArticle> amsArticles = amsArticleService

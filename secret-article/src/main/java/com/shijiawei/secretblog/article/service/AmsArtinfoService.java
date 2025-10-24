@@ -12,4 +12,6 @@ import com.shijiawei.secretblog.article.vo.AmsSaveArtInfoVo;
 public interface AmsArtinfoService extends IService<AmsArtinfo> {
 
     void saveArticleInfo(AmsSaveArtInfoVo amsSaveArtInfoVo);
+
+    int isArticleOwner(Long articleId, Long userId);
 }

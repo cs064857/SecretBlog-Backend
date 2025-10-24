@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.article.mapper;
 
 import com.shijiawei.secretblog.article.entity.AmsArtinfo;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * @author User
@@ -11,6 +12,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 */
 public interface AmsArtinfoMapper extends BaseMapper<AmsArtinfo> {
 
+    int isArticleOwner(@Param(value = "articleId") Long articleId, @Param(value = "userId") Long userId);
 }
 
 

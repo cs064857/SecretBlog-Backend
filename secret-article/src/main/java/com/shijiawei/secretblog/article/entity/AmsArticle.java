@@ -19,6 +19,7 @@ import lombok.Data;
  */
 @TableName(value ="ams_article")
 @Data
+
 public class AmsArticle implements Serializable {
     /**
      * 主鍵(雪花算法)
@@ -32,6 +33,7 @@ public class AmsArticle implements Serializable {
     /**
      * 文章標題(不可為空,最多64字符)
      */
+
     @NotBlank(message = "新增時文章標題不可為空",groups = {Insert.class})
     @TableField(value = "title")
     private String title;

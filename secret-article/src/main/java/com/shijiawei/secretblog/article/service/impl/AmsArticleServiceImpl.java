@@ -1,15 +1,19 @@
 package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
+import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.entity.*;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 
 import com.shijiawei.secretblog.article.service.*;
+import com.shijiawei.secretblog.article.vo.AmsArticleTagsVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
@@ -120,7 +124,6 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public void saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest,Authentication authentication) {
         AmsArticle amsArticle = new AmsArticle();
         AmsArtinfo amsArtinfo = new AmsArtinfo();
-
         // 從網關傳遞的請求標頭中取得用戶資訊
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
             log.warn("未取得登入用戶資訊，拒絕發佈文章");
@@ -939,6 +942,158 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         return false;
 
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+
+    public void updateArticleContent(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO) {
+
+        /**
+         * 透過布隆過濾器判斷文章id是否絕對不存在, 若不存在則拋出異常
+         */
+        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey());
+
+        boolean contains = bloomFilter.contains(articleId);
+        if(!contains){
+            log.warn("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
+        }
+
+
+
+        /**
+         * 判斷更新資料是否為空
+         */
+        if(amsArticleUpdateDTO==null){
+            log.warn("更新資料不存在，articleId={}",articleId);
+            throw new CustomBaseException("更新資料不存在");
+        }
+
+        /**
+         * 判斷用戶是否登入, 是否為文章的作者或者管理員權限
+         */
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            log.warn("未取得登入用戶資訊，拒絕編輯文章");
+            throw new CustomBaseException("未登入或登入狀態已失效");
+        }
+
+
+        /**
+         * 判斷用戶是否登入, 是否為文章的作者或者管理員權限或者足夠的權限
+         */
+
+        Long userId = UserContextHolder.getCurrentUserId();
+
+//        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
+        if (userId == null) {
+            log.warn("用戶ID為空，拒絕編輯文章");
+            throw new CustomBaseException("用戶ID缺失");
+        }
+
+        //判斷該用戶使否為文章的作者
+        int isArtOwner= amsArtinfoService.isArticleOwner(articleId, userId);
+        //假設isArtOwner為0表示不是文章的作者,否則是文章的作者
+        if(isArtOwner == 0){
+            //並非文章的作者,因此需要判斷是否為管理員或者足夠的權限
+            //進一步判斷是否為管理員或者足夠的權限
+            /// TODO測試管理員權限是否成功實施
+            boolean currentUserAdmin = UserContextHolder.isCurrentUserAdmin();
+            //判斷是否為管理員或者足夠的權限
+            if(!currentUserAdmin){
+                //不是文章的作者也不是管理員
+                log.warn("權限不足，您無權編輯該文章.UserId:{},ArticleId:{}",userId,articleId);
+                throw new CustomBaseException("權限不足，您無權編輯該文章");
+            }
+
+        }
+
+
+
+
+        /**
+         * 更新文章內容
+         */
+        //若某個屬性為null，不會進行更新,可以透過 TableField 方法設置策略
+        LambdaUpdateWrapper<AmsArticle> articleUpdateWrapper = Wrappers.lambdaUpdate();
+        articleUpdateWrapper.eq(AmsArticle::getId, articleId);
+        articleUpdateWrapper.set(AmsArticle::getTitle,amsArticleUpdateDTO.getTitle());
+        articleUpdateWrapper.set(AmsArticle::getContent,amsArticleUpdateDTO.getContent());
+        this.baseMapper.update(articleUpdateWrapper);
+
+
+
+        /**
+         * 更新文章info內容
+         */
+        //若某個屬性為null，不會進行更新
+        LambdaUpdateWrapper<AmsArtinfo> artInfoUpdateWrapper = Wrappers.lambdaUpdate();
+        artInfoUpdateWrapper.eq(AmsArtinfo::getArticleId, articleId);
+        artInfoUpdateWrapper.set(AmsArtinfo::getCategoryId,amsArticleUpdateDTO.getCategoryId());
+        amsArtinfoService.update(artInfoUpdateWrapper);
+        /**
+         * 判斷文章是否存在舊標籤, 無論是否有新標籤都需要刪除舊標籤
+         * 因為假設情況：
+         * 1、有新標籤, 代表要新增標籤, 需要刪除舊標籤再增加新標籤
+         * 2、沒有新標籤, 代表不設置標籤, 需要刪除舊標籤
+         */
+        //取得文章的舊標籤ID
+        List<AmsArtTag> oldTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().eq(AmsArtTag::getArticleId, articleId));
+        //判斷該文章是否存在舊標籤
+        if(oldTagList!=null && !oldTagList.isEmpty()){
+            //刪除該文章原本的所有標籤
+            boolean removed = amsArtTagService.removeByIds(oldTagList.stream().map(AmsArtTag::getId).toList());
+            if(removed){
+                log.info("文章ID:{},刪除舊標籤成功",articleId);
+            }else {
+                log.error("文章ID:{},刪除舊標籤失敗",articleId);
+                throw new CustomBaseException("文章ID:"+articleId+",刪除舊標籤失敗");
+            }
+        }
+
+
+
+        /**
+         * 更新文章標籤
+         */
+
+            /**
+             * 先判斷要修改的標籤是否存在
+             */
+
+//            List<AmsArticleTagsVo> newArtTagVoList = amsArticleUpdateDTO.getAmsArticleTagsVoList();
+//            //假設存在要修改的標籤
+//            if (newArtTagVoList!=null && !newArtTagVoList.isEmpty()) {
+//                List<Long> newTageIds = newArtTagVoList.stream().map(AmsArticleTagsVo::getId).toList();
+//                /**
+//                 * 判斷新的標籤是否存在, 避免新增了一個不存在的標籤
+//                 */
+//
+//                List<AmsTags> newTagList = amsTagsService.listByIds(newTageIds);
+//                //要修改的標籤存在於資料庫中
+//                if(newTagList !=null&& !newTagList.isEmpty()){
+//
+//                    /**
+//                     * 增加新的標籤
+//                     */
+//
+//                    List<AmsArtTag> amsArtTags = newArtTagVoList.stream().map(amsArtTagVo -> {
+//                        AmsArtTag amsArtTag = new AmsArtTag();
+//                        amsArtTag.setTagsId(amsArtTagVo.getId());
+//                        amsArtTag.setArticleId(articleId);
+//                        return amsArtTag;
+//                    }).toList();
+//
+//
+//                    boolean saveBatch = amsArtTagService.saveBatch(amsArtTags);
+//                    if(!saveBatch){
+//                        log.error("文章ID:{},增加新標籤失敗",articleId);
+//                        throw new CustomBaseException("文章ID:"+articleId+",增加新標籤失敗");
+//                    }
+//
+//                }
+//
+//            }
     }
 
     private boolean isArticleNotExistsFromDB(Long articleId) {

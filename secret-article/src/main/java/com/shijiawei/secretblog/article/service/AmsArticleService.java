@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.article.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
@@ -32,6 +33,9 @@ public interface AmsArticleService extends IService<AmsArticle> {
     Long incrementArticleBooksMarket(Long articleId);
 
     boolean isArticleNotExists(Long articleId);
+
+    void updateArticleContent(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO);
+
 //
 //
 ////    Page<AmsArticle> getLatestArticles();
