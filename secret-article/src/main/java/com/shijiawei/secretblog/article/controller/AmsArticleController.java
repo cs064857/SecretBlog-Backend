@@ -48,7 +48,7 @@ public class AmsArticleController {
     @PutMapping("/update/{articleId}")
     public R updateArticle(@PathVariable(value = "articleId",required = true) Long articleId,@RequestBody AmsArticleUpdateDTO amsArticleUpdateDTO){
 
-        amsArticleService.updateArticleContent(articleId,amsArticleUpdateDTO);
+        amsArticleService.updateArticle(articleId,amsArticleUpdateDTO);
 
         return R.ok();
     }

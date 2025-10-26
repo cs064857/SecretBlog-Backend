@@ -34,7 +34,7 @@ public interface AmsArticleService extends IService<AmsArticle> {
 
     boolean isArticleNotExists(Long articleId);
 
-    void updateArticleContent(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO);
+    void updateArticle(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO);
 
 //
 //

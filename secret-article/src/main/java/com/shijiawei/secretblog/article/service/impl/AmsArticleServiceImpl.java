@@ -13,6 +13,7 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 
 import com.shijiawei.secretblog.article.service.*;
+import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 import com.shijiawei.secretblog.article.vo.AmsArticleTagsVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 
@@ -119,7 +120,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
 //    @DelayDoubleDelete(prefix = "AmsArticle",key = "articles",delay = 5,timeUnit = TimeUnit.SECONDS)//AOP延遲雙刪
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest,Authentication authentication) {
         AmsArticle amsArticle = new AmsArticle();
@@ -139,8 +140,18 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         try {
+            //設置文章標題
             amsArticle.setTitle(amsSaveArticleVo.getTitle());
-            amsArticle.setContent(amsSaveArticleVo.getContent());
+
+            /// TODO保存原始文章內容用於安全方面, 避免從原始文章內容從Markdown格式轉換HTML時遺漏某些字等(編輯文章時要更新兩者、讀取時只讀取轉換後的文章)
+
+            // 將原始文章內容從Markdown轉為HTML格式
+            String html = CommonmarkUtils.parseMdToHTML(amsSaveArticleVo.getContent());
+
+            log.info("html:{}",html);
+            //將Markdown格式的文章保存至資料庫中
+            amsArticle.setContent(html);
+
             this.baseMapper.insert(amsArticle);
 
             amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
@@ -946,8 +957,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-
-    public void updateArticleContent(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO) {
+    public void updateArticle(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO) {
 
         /**
          * 透過布隆過濾器判斷文章id是否絕對不存在, 若不存在則拋出異常
@@ -1018,7 +1028,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         LambdaUpdateWrapper<AmsArticle> articleUpdateWrapper = Wrappers.lambdaUpdate();
         articleUpdateWrapper.eq(AmsArticle::getId, articleId);
         articleUpdateWrapper.set(AmsArticle::getTitle,amsArticleUpdateDTO.getTitle());
-        articleUpdateWrapper.set(AmsArticle::getContent,amsArticleUpdateDTO.getContent());
+
+        // 將原始文章內容從Markdown轉為HTML格式
+        String articleMd = CommonmarkUtils.parseMdToHTML(amsArticleUpdateDTO.getContent());
+
+        articleUpdateWrapper.set(AmsArticle::getContent,articleMd);
         this.baseMapper.update(articleUpdateWrapper);
 
 
@@ -1061,39 +1075,36 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
              * 先判斷要修改的標籤是否存在
              */
 
-//            List<AmsArticleTagsVo> newArtTagVoList = amsArticleUpdateDTO.getAmsArticleTagsVoList();
-//            //假設存在要修改的標籤
-//            if (newArtTagVoList!=null && !newArtTagVoList.isEmpty()) {
-//                List<Long> newTageIds = newArtTagVoList.stream().map(AmsArticleTagsVo::getId).toList();
-//                /**
-//                 * 判斷新的標籤是否存在, 避免新增了一個不存在的標籤
-//                 */
-//
-//                List<AmsTags> newTagList = amsTagsService.listByIds(newTageIds);
-//                //要修改的標籤存在於資料庫中
-//                if(newTagList !=null&& !newTagList.isEmpty()){
-//
-//                    /**
-//                     * 增加新的標籤
-//                     */
-//
-//                    List<AmsArtTag> amsArtTags = newArtTagVoList.stream().map(amsArtTagVo -> {
-//                        AmsArtTag amsArtTag = new AmsArtTag();
-//                        amsArtTag.setTagsId(amsArtTagVo.getId());
-//                        amsArtTag.setArticleId(articleId);
-//                        return amsArtTag;
-//                    }).toList();
-//
-//
-//                    boolean saveBatch = amsArtTagService.saveBatch(amsArtTags);
-//                    if(!saveBatch){
-//                        log.error("文章ID:{},增加新標籤失敗",articleId);
-//                        throw new CustomBaseException("文章ID:"+articleId+",增加新標籤失敗");
-//                    }
-//
-//                }
-//
-//            }
+            List<Long> newArtTagsIdList = amsArticleUpdateDTO.getTagsId();
+            //假設存在要修改的標籤
+            if (newArtTagsIdList!=null && !newArtTagsIdList.isEmpty()) {
+                /**
+                 * 判斷新的標籤是否存在, 避免新增了一個不存在的標籤
+                 */
+
+                List<AmsTags> newTagList = amsTagsService.listByIds(newArtTagsIdList);
+                //要修改的標籤存在於資料庫中
+                if(newTagList !=null&& !newTagList.isEmpty()){
+
+                    /**
+                     * 增加新的標籤
+                     */
+                    List<AmsArtTag> amsArtTags = newArtTagsIdList.stream().map(tagsId -> {
+                        AmsArtTag amsArtTag = new AmsArtTag();
+                        amsArtTag.setTagsId(tagsId);
+                        amsArtTag.setArticleId(articleId);
+                        return amsArtTag;
+                    }).toList();//包裝成amsArtTag對象(tagsId以及articleId)
+
+                    boolean saveBatch = amsArtTagService.saveBatch(amsArtTags);
+                    if(!saveBatch){
+                        log.error("文章ID:{},增加新標籤失敗",articleId);
+                        throw new CustomBaseException("文章ID:"+articleId+",增加新標籤失敗");
+                    }
+
+                }
+
+            }
     }
 
     private boolean isArticleNotExistsFromDB(Long articleId) {

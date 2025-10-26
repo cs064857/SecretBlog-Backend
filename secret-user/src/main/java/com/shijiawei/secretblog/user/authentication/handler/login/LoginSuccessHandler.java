@@ -87,7 +87,9 @@ public class LoginSuccessHandler extends
   }
 
   public String generateToken(UserLoginInfo currentUser) {
-    long expiredTime = TimeTool.nowMilli() + TimeUnit.MINUTES.toMillis(10); // 10分鐘後過期
+    //TODO 更改帳號過期時間
+    // Token 過期時間(帳號過期、登入過期、jwt時間)，單位為分鐘
+    long expiredTime = TimeTool.nowMilli() + TimeUnit.MINUTES.toMillis(30); // 30分鐘後過期
     currentUser.setExpiredTime(expiredTime);
     String jwt = jwtService.createJwt(currentUser, expiredTime);
     Map<String,Object> hashMap = jwtService.verifyJwt(jwt, HashMap.class);
