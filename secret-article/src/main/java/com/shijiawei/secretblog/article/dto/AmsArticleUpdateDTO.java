@@ -1,7 +1,6 @@
 package com.shijiawei.secretblog.article.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.shijiawei.secretblog.article.vo.AmsArticleTagsVo;
 import com.shijiawei.secretblog.common.vaildation.ValidationGroups;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

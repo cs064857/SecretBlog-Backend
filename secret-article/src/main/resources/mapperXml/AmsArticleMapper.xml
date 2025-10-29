@@ -13,7 +13,7 @@
         INNER JOIN ams_artInfo as ams_artInfo AND a
     </sql>
 
-    <resultMap id="ArticleTagVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArticleTagsVo">
+    <resultMap id="ArticleTagVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArtTagsVo">
         <id property="id" column="tag_id"/>
         <result property="name" column="tag_name"/>
     </resultMap>
@@ -37,7 +37,7 @@
         <!-- 子查詢計算出的評論數 -->
         <result property="commentsCount" column="commentsCount"/>
         <!-- 文章對標籤 一對多關係映射 (僅使用 nested select，不可同時指定 resultMap) -->
-        <collection property="amsArticleTagsVoList" select="getArticleTagVoList" column="{articleId=id}" fetchType="lazy"/>
+        <collection property="amsArtTagsVoList" select="getArticleTagVoList" column="{articleId=id}" fetchType="lazy"/>
     </resultMap>
 
     <select id="getArticleVo" resultMap="AmsArticleVoResultMap" parameterType="Long">

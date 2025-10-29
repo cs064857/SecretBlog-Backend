@@ -74,7 +74,7 @@ public class AmsArticleVo {
      */
     private Integer commentsCount;
 
-    private List<AmsArticleTagsVo> amsArticleTagsVoList;
+    private List<AmsArtTagsVo> amsArtTagsVoList;
 
     //    @JsonFormat(shape = JsonFormat.Shape.STRING)
 //    private Long tagsId;

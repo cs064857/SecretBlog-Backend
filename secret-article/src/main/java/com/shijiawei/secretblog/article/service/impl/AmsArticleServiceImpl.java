@@ -2,7 +2,6 @@ package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -14,7 +13,6 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
-import com.shijiawei.secretblog.article.vo.AmsArticleTagsVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
@@ -477,13 +475,13 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        /*
 //        包裝標籤對象列表到文章VO中
 //         */
-//        List<AmsArticleTagsVo> amsArticleTagsVo = amsTagsList.stream().map(amsTags -> {
-//            AmsArticleTagsVo tagsVo = new AmsArticleTagsVo();
+//        List<AmsArtTagsVo> amsArtTagsVo = amsTagsList.stream().map(amsTags -> {
+//            AmsArtTagsVo tagsVo = new AmsArtTagsVo();
 //            BeanUtils.copyProperties(amsTags, tagsVo);
 //            return tagsVo;
 //        }).toList();
 //
-//        amsArticleVo.setAmsArticleTagsVoList(amsArticleTagsVo);
+//        amsArticleVo.setAmsArtTagsVoList(amsArtTagsVo);
         return amsArticleVo;
     }
 //
