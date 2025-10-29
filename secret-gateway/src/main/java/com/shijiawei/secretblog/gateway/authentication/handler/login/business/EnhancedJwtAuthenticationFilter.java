@@ -4,6 +4,8 @@ import com.shijiawei.secretblog.common.exception.ExceptionTool;
 import com.shijiawei.secretblog.gateway.authentication.handler.login.UserLoginInfo;
 import com.shijiawei.secretblog.gateway.config.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
+import lombok.extern.slf4j.Slf4j;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpCookie;
@@ -27,11 +29,12 @@ import java.util.List;
  * 支持多種 Token 來源：Authorization Header 和 Cookie
  * 提供用戶資訊標頭傳遞和角色權限控制
  */
+@Slf4j
 @Component
 public class EnhancedJwtAuthenticationFilter implements WebFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(EnhancedJwtAuthenticationFilter.class);
-    
+
     private final JwtService jwtService;
 
     public EnhancedJwtAuthenticationFilter(JwtService jwtService) {
@@ -41,40 +44,40 @@ public class EnhancedJwtAuthenticationFilter implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         logger.debug("Enhanced JWT Authentication Filter processing request");
-        
+
         ServerHttpRequest request = exchange.getRequest();
         String jwtToken = extractJwtToken(request);
-        
+
         if (!StringUtils.hasText(jwtToken)) {
             logger.debug("No JWT token found in request");
             return chain.filter(exchange);
         }
-        
+
         try {
             // 驗證並解析 JWT Token
             UserLoginInfo userLoginInfo = jwtService.verifyJwt(jwtToken, UserLoginInfo.class);
-            
+
             if (userLoginInfo == null) {
                 logger.debug("JWT token verification failed - null user info");
                 return chain.filter(exchange);
             }
-            
-            logger.debug("JWT token verified successfully for user: {}, role: {}", 
+
+            logger.debug("JWT token verified successfully for user: {}, role: {}",
                     userLoginInfo.getUserId(), userLoginInfo.getRoleId());
-            
+
             // 創建認證對象，包含角色資訊
             List<SimpleGrantedAuthority> authorities = createAuthorities(userLoginInfo.getRoleId());
-            UsernamePasswordAuthenticationToken authentication = 
-                new UsernamePasswordAuthenticationToken(userLoginInfo, null, authorities);
-            
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userLoginInfo, null, authorities);
+
             // 添加用戶資訊到請求標頭
             ServerHttpRequest mutatedRequest = addUserHeadersToRequest(request, userLoginInfo);
             ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
-            
+
             // 設置安全上下文並繼續過濾鏈
             return chain.filter(mutatedExchange)
                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
-            
+
         } catch (ExpiredJwtException e) {
             logger.debug("JWT token expired: {}", e.getMessage());
             // 過期的 Token 讓請求繼續，但不設置認證上下文，讓後續權限檢查處理
@@ -98,14 +101,14 @@ public class EnhancedJwtAuthenticationFilter implements WebFilter {
             logger.debug("JWT token extracted from Authorization header");
             return token;
         }
-        
+
         // 2. 嘗試從 Cookie 獲取
         HttpCookie cookie = request.getCookies().getFirst("jwtToken");
         if (cookie != null && StringUtils.hasText(cookie.getValue())) {
             logger.debug("JWT token extracted from Cookie");
             return cookie.getValue();
         }
-        
+
         return null;
     }
 
@@ -116,13 +119,13 @@ public class EnhancedJwtAuthenticationFilter implements WebFilter {
         if (roleId == null) {
             return Collections.emptyList();
         }
-        
+
         // 根據 Role 枚舉映射權限
         switch (roleId) {
             case "ADMIN":  // ADMIN
                 return List.of(
-                    new SimpleGrantedAuthority("ROLE_ADMIN"),
-                    new SimpleGrantedAuthority("ROLE_USER")
+                        new SimpleGrantedAuthority("ROLE_ADMIN"),
+                        new SimpleGrantedAuthority("ROLE_USER")
                 );
             case "NORMALUSER":  // NORMALUSER
                 return List.of(new SimpleGrantedAuthority("ROLE_USER"));
@@ -136,6 +139,7 @@ public class EnhancedJwtAuthenticationFilter implements WebFilter {
      * 添加用戶資訊到請求標頭，供下游微服務使用
      */
     private ServerHttpRequest addUserHeadersToRequest(ServerHttpRequest request, UserLoginInfo userInfo) {
+        log.info("添加用戶標頭:{}", userInfo);
         return request.mutate()
                 .header("X-User-Id", String.valueOf(userInfo.getUserId()))
                 .header("X-User-Role", mapRoleIdToName(userInfo.getRoleId()))
@@ -147,18 +151,27 @@ public class EnhancedJwtAuthenticationFilter implements WebFilter {
 
     /**
      * 將角色 ID 轉換為可讀的角色名稱
+     * 支援多種來源格式：數字("0"/"1") 或 枚舉字串("ADMIN"/"NORMALUSER"/"USER")
      */
     private String mapRoleIdToName(String roleId) {
-        if (roleId == null) {
+        if (!StringUtils.hasText(roleId)) {
             return "UNKNOWN";
         }
         switch (roleId) {
+            // 數字ID對應
             case "0":
                 return "ADMIN";
             case "1":
+                return "USER";
+            // 枚舉字串對應
+            case "ADMIN":
+                return "ADMIN";
+            case "NORMALUSER":
+            case "USER":
                 return "USER";
             default:
                 return "UNKNOWN";
         }
     }
+
 }

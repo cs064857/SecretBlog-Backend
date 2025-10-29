@@ -46,6 +46,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
 
+
 /**
  * @author User
  * @description 針對表【ams_article(文章內容)】的數據庫操作Service實現
@@ -1006,6 +1007,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             //並非文章的作者,因此需要判斷是否為管理員或者足夠的權限
             //進一步判斷是否為管理員或者足夠的權限
             /// TODO測試管理員權限是否成功實施
+//            getHeader(HEADER_USER_ROLE);
             boolean currentUserAdmin = UserContextHolder.isCurrentUserAdmin();
             //判斷是否為管理員或者足夠的權限
             if(!currentUserAdmin){
