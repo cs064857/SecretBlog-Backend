@@ -20,7 +20,7 @@ public enum RedisLockKey {
 
 
     ARTICLE_EXISTS_LOCK("lock:article:exists:%s"),
-    COMMENT_EXISTS_LOCK("lock:comment:exists:%s");
+    ARTICLE_COMMENTS_EXISTS_LOCK("lock:article:comments:exists:%s");
 
 
 

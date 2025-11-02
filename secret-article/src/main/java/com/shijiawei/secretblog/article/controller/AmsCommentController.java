@@ -31,9 +31,10 @@ public class AmsCommentController {
      * @param amsCommentCreateDTO
      * @return
      */
-    @PostMapping("/comment/create")
-    public R createComment (@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
-        R r = amsCommentService.createComment(amsCommentCreateDTO);
+//    @PostMapping("/comment/create")
+    @PostMapping("/{articleId}/comments")
+    public R createComment (@PathVariable("articleId") Long articleId,@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
+        R r = amsCommentService.createComment(articleId,amsCommentCreateDTO);
 
         return r;
     }
@@ -73,10 +74,10 @@ public class AmsCommentController {
      * @return
      */
 
-    @PostMapping("/comment/{commentId}/like")
-    public R<Long> likeComment(@NotNull @PathVariable(value = "commentId") Long commentId){
+    @PostMapping("/{articleId}/comment/{commentId}/like")
+    public R<Long> likeComment(@NotNull @PathVariable(value = "articleId")  Long articleId,@NotNull @PathVariable(value = "commentId") Long commentId){
         log.debug("commentId:{}",commentId);
-        Long newLikes = amsCommentService.likeComment(commentId);
+        Long newLikes = amsCommentService.likeComment(articleId,commentId);
 
         return R.ok(newLikes);
     }

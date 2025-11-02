@@ -88,7 +88,15 @@ public class OpenCacheAspect {
 
                 log.info("查詢資料庫中...");
                 // 執行原方法
-                Object proceed = joinPoint.proceed();
+                Object proceed = null;
+                try {
+                    proceed = joinPoint.proceed();
+                    log.debug("原方法返回 proceed = {}", proceed);
+                } catch (Throwable t) {
+                    log.error("proceed 發生錯誤", t);
+                    throw t;
+                }
+
                 if (proceed != null) {
 
                     //從方法上的註解獲取緩存時間資訊,默認為24,ChronoUnit.HOURS

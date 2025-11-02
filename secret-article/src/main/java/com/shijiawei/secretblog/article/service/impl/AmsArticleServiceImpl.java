@@ -1338,7 +1338,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            /*
 //              判斷該文章是否存在
 //            */
-//        //獲取桶對象, 名稱為 "AmsComments:CommentId_{commentId}:LikesCount" , 注意原子性因此採用RAtomicLong
+//        //獲取桶對象, 注意原子性因此採用RAtomicLong
 //        RAtomicLong atomicLong = redissonClient.getAtomicLong(BucketName);
 //        //先嘗試從Redis中讀取是否存在該文章的緩存
 //        boolean atomicLongExists = atomicLong.isExists();
@@ -1359,7 +1359,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            /*
 //            判斷用戶是否已對該文章按讚,若已按讚則不能重複讚按
 //             */
-////        String userLikeKey = String.format("AmsComments:CommentId_%d:UserLikes", articleId);
+////        String BucketName = RedisCacheKey.ARTICLE_COMMENTS_LIKES.format(commentId);
 //
 //        String userLikeKey = RedisCacheKey.ARTICLE_USER_LIKED.format(articleId, userId);
 //

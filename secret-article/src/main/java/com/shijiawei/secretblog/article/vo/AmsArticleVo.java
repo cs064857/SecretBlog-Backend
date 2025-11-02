@@ -113,7 +113,7 @@ public class AmsArticleVo {
 //
 //
 //    @JsonFormat(shape = JsonFormat.Shape.STRING)
-//    private Long parent_comment_id;
+//    private Long parentCommentId;
 //    /**
 //     * 文章分類id
 //     */

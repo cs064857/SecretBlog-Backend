@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.common.utils;
 
+import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
@@ -28,6 +29,44 @@ public class RedisBloomFilterUtils {
 
     public RedisBloomFilterUtils(RedissonClient redissonClient){
         this.redissonClient=redissonClient;
+    }
+
+    /**
+     * 判斷布隆過濾器中是否存在該值，用於篩選百分百不存在的值
+     * 若該值百分百不存在於布隆過濾器中則返回true , 若該值可能存在於布隆過濾器中則返回false
+     * @param key
+     * @param value
+     * @return
+     * @param <T>
+     */
+    public <T> boolean isDefinitelyNotExists(String key, T value) {
+        RBloomFilter<T> filter = redissonClient.getBloomFilter(key);
+
+        if (!filter.contains(value)) {
+            //值絕對不存在於布隆過濾器中的情況下，拋出異常
+            log.warn("布隆過濾器確認該值不存在: key={}, value={}", key, value);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 判斷布隆過濾器中是否存在該值，用於篩選百分百不存在的值
+     * 若該值不存在於布隆過濾器中則直接拋出異常
+     * @param key
+     * @param value
+     * @param errorMessage
+     * @param <T>
+     */
+    public <T>  void  requireExists(String key, T value , String errorMessage) {
+        RBloomFilter<T> filter = redissonClient.getBloomFilter(key);
+        //判斷值是否存在於布隆過濾器中
+        if (!filter.contains(value)) {
+            //值絕對不存在於布隆過濾器中的情況下，拋出異常
+            log.warn("布隆過濾器確認該值不存在: key={}, value={} , errorMessage:{}", key, value ,errorMessage);
+            throw new CustomBaseException(errorMessage);
+        }
     }
 
     public <T> boolean saveArticleIdToBloomFilter(T obj,String key) {

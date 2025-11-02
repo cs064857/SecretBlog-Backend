@@ -159,10 +159,10 @@ public class EnhancedJwtAuthenticationFilter implements WebFilter {
         }
         switch (roleId) {
             // 數字ID對應
-            case "0":
-                return "ADMIN";
-            case "1":
-                return "USER";
+//            case "0":
+//                return "ADMIN";
+//            case "1":
+//                return "USER";
             // 枚舉字串對應
             case "ADMIN":
                 return "ADMIN";

@@ -41,7 +41,39 @@ public enum RedisCacheKey {
      */
     USER_LIKED_ARTICLES("ams:user:%s:liked:articles", "用戶點讚文章集合", null),
     USER_VIEWED_ARTICLES("ams:user:%s:viewed:articles", "用戶瀏覽文章集合", null),
-    USER_BOOKMARKED_ARTICLES("ams:user:%s:bookmarked:articles", "用戶收藏文章集合", null);
+    USER_BOOKMARKED_ARTICLES("ams:user:%s:bookmarked:articles", "用戶收藏文章集合", null),
+
+    /**
+     * 留言計數
+     */
+//    ARTICLE_COMMENTS_LIKES("ams:article:comment:%s:likes_count", "文章留言點讚數（計數用）", null),
+    ARTICLE_COMMENTS_BOOKMARKS("ams:article:comment:%s:bookmarks_count", "文章留言書籤數（計數用）", null),
+    //紀錄用戶是否以及點讚過該評論
+//    COMMENT_LIKED_USERS("ams:comment:%s:liked", "評論點讚用戶集合", null),
+//    COMMENT_MARKED_USERS("ams:comment:%s:marked", "評論書籤用戶集合", null),
+
+
+    /**
+     * ===== 評論相關（方案 B：Hash 聚合）=====
+     */
+
+    // 文章的評論列表索引（ZSet，按時間排序）
+//    ARTICLE_COMMENT_IDS("ams:article:comments:%s:comment_ids", "文章評論ID集合(ZSet)", null),
+
+    // 文章評論的點讚數聚合（Hash: field=commentId, value=likesCount）已使用
+    ARTICLE_COMMENT_LIKES_HASH("ams:article:comment:%s:comment_likes", "文章評論點讚數Hash", null),
+
+    // 文章評論的書籤數聚合（Hash: field=commentId, value=bookmarksCount）
+    ARTICLE_COMMENT_BOOKMARKS_HASH("ams:article:comment:%s:comment_bookmarks", "文章評論書籤數Hash", null),
+
+    // 評論被哪些用戶點讚（Set: 用戶ID集合）
+    COMMENT_LIKED_USERS("ams:comment:%s:liked_users", "評論點讚用戶集合", null),
+
+    // 評論被哪些用戶書籤（Set: 用戶ID集合）
+    COMMENT_MARKED_USERS("ams:comment:%s:marked_users", "評論書籤用戶集合", null);
+
+
+
 
 //    ARTICLE_USER_COMMENTED("ams:article:comments:user:%s:%s", "文章留言用戶記錄（防止重複計數用）", null),
 
@@ -70,6 +102,9 @@ public enum RedisCacheKey {
         return String.format(pattern, args);
     }
 
+    public String getPattern(){
+        return this.pattern;
+    }
 
 
 }
