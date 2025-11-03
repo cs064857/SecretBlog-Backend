@@ -29,5 +29,5 @@ public interface AmsCommentService extends IService<AmsComment> {
 
     Long likeComment(Long articleId, Long commentId);
 
-    Boolean existsCommentId(Long commentId);
+    Boolean existsCommentIdFromDB(Long commentId);
 }

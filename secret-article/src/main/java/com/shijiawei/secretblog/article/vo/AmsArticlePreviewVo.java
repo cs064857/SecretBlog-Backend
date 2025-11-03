@@ -53,5 +53,6 @@ public class AmsArticlePreviewVo {
 
     private Integer bookmarksCount;
 
+    private Integer commentsCount;
 
 }

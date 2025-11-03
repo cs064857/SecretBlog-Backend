@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.article.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
@@ -13,6 +14,7 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
+import com.shijiawei.secretblog.article.vo.AmsArticleStatusVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
@@ -31,6 +33,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
 import org.redisson.client.RedisConnectionException;
+import org.redisson.client.RedisException;
 import org.redisson.client.RedisTimeoutException;
 import org.redisson.client.codec.StringCodec;
 import org.springframework.beans.BeanUtils;
@@ -40,8 +43,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
@@ -337,35 +343,42 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            log.warn("無法獲取文章瀏覽人數，可能是Redis服務");
 //        }
 
+
         try {
             long views = incrementArticleViewsCount(amsArticleVoId);
 
             // 建議 VO 改為 long，避免溢位
-            amsArticleVo.setViewsCount(Math.toIntExact(views));
+//            amsArticleVo.setViewsCount(Math.toIntExact(views));
         } catch (RedisConnectionException | RedisTimeoutException e) {
             log.warn("Redis 計數失敗，改用 DB 回填 viewsCount，articleId={}, err={}", amsArticleVoId, e.getMessage());
         // 僅查所需欄位 + 保證唯一
-            AmsArtStatus status = amsArtStatusService.getOne(
-                    Wrappers.<AmsArtStatus>lambdaQuery()
-                            .select(AmsArtStatus::getViewsCount)
-                            .eq(AmsArtStatus::getArticleId, amsArticleVoId),
-                    false // 若多筆不丟例外
-            );
-            int fallbackViews = status != null && status.getViewsCount() != null ? status.getViewsCount() : 0;
-            amsArticleVo.setViewsCount(fallbackViews);
+//            AmsArtStatus status = amsArtStatusService.getOne(
+//                    Wrappers.<AmsArtStatus>lambdaQuery()
+//                            .select(AmsArtStatus::getViewsCount)
+//                            .eq(AmsArtStatus::getArticleId, amsArticleVoId),
+//                    false // 若多筆不丟例外
+//            );
+//            int fallbackViews = status != null && status.getViewsCount() != null ? status.getViewsCount() : 0;
+//            amsArticleVo.setViewsCount(fallbackViews);
         } catch (Exception e) {
         // 其他未知例外：不要默默吞，應該明確告警
             log.error("計數發生非預期錯誤，articleId={}", amsArticleVoId, e);
         // 可選：最後一道防線，顯示 DB 值或 0
-            amsArticleVo.setViewsCount(0);
+//            amsArticleVo.setViewsCount(0);
         }
 
+        AmsArticleStatusVo articleStatus = getArticleStatus(articleId);
+        BeanUtils.copyProperties(articleStatus, amsArticleVo);
 
         ///TODO注意安全性
-        Long articleLikes = getArticleLikes(articleId);
-        Long articleBookmarks = getArticleBookmarks(articleId);
-        amsArticleVo.setLikesCount(articleLikes.intValue());
-        amsArticleVo.setBookmarksCount(articleBookmarks.intValue());
+
+
+
+
+//        Long articleLikes = getArticleLikes(articleId);
+//        Long articleBookmarks = getArticleBookmarks(articleId);
+//        amsArticleVo.setLikesCount(articleLikes.intValue());
+//        amsArticleVo.setBookmarksCount(articleBookmarks.intValue());
 
 
         return amsArticleVo;
@@ -794,126 +807,334 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 ////        return newLikes;
 ////    }
 
-    public Long getArticleLikes(long articleId) {
-        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
-        RAtomicLong likesCounter = redissonClient.getAtomicLong(redisKey);
+//    public Long getArticleLikes(long articleId) {
+//        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
+//        RAtomicLong likesCounter = redissonClient.getAtomicLong(redisKey);
+//
+//        // 先嘗試從 Redis 讀
+//        try {
+//            if (likesCounter.isExists()) {
+//                long likes = likesCounter.get();
+//                log.debug("likes:{}", likes);
+//                return likes;
+//            }
+//        } catch (RedisConnectionException | RedisTimeoutException e) {
+//            // 連線/逾時 -> 降級讀庫（此時通常無法回填）
+//            log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
+//            return readLikesFromDb(articleId);
+//        } catch (Exception e) {
+//            // 非預期錯誤 -> 告警
+//            log.error("獲取文章點讚數發生非預期錯誤，articleId={}", articleId, e);
+//            return 0L;
+//        }
+//
+//        // 冷啟動：Redis鍵不存在 -> 讀DB並回填（避免穿透）
+//        Long likesFromDb = readLikesFromDb(articleId);
+//
+//        // 回填：用 CAS 避免覆蓋併發新值
+//        try {
+//            boolean casOk = likesCounter.compareAndSet(0L, likesFromDb);
+//            if (!casOk) {
+//                // 可能已有併發寫入，取最新值返回
+//                long current = likesCounter.get();
+//                log.debug("回填CAS失敗，返回當前Redis值={}，articleId={}", current, articleId);
+//                return current;
+//            }
+//            // 對 0 值設短TTL作為負快取，降低穿透；正值可不設或設長TTL
+//            if (likesFromDb == 0L) {
+//                likesCounter.expire(5, java.util.concurrent.TimeUnit.MINUTES);
+//            }
+//        } catch (Exception e) {
+//            // 回填失敗不影響主流程
+//            log.warn("Redis回填失敗，articleId={}", articleId, e);
+//        }
+//
+//        return likesFromDb;
+//    }
 
-        // 先嘗試從 Redis 讀
+
+
+
+
+
+
+
+    public AmsArticleStatusVo getArticleStatus(long articleId) {
+
         try {
-            if (likesCounter.isExists()) {
-                long likes = likesCounter.get();
-                log.debug("likes:{}", likes);
-                return likes;
+            // 先嘗試從 Redis 讀
+            String viewsKey = RedisCacheKey.ARTICLE_VIEWS.format(articleId);
+            String bookmarksKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
+            String commentsKey = RedisCacheKey.ARTICLE_COMMENTS.format(articleId);
+            String likesKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
+
+            RBatch batchGet = redissonClient.createBatch();
+
+            // 檢查 key 是否存在
+            RKeysAsync keys = batchGet.getKeys();
+            RFuture<Long> existsFuture = keys.countExistsAsync(viewsKey, bookmarksKey, commentsKey, likesKey);
+
+
+            RAtomicLongAsync viewsCounter = batchGet.getAtomicLong(viewsKey);
+            RAtomicLongAsync bookmarksCounter = batchGet.getAtomicLong(bookmarksKey);
+            RAtomicLongAsync commentsCounter = batchGet.getAtomicLong(commentsKey);
+            RAtomicLongAsync likesCounter = batchGet.getAtomicLong(likesKey);
+
+            RFuture<Long> viewsFuture = viewsCounter.getAsync();
+            RFuture<Long> bookmarksFuture = bookmarksCounter.getAsync();
+            RFuture<Long> commentsFuture = commentsCounter.getAsync();
+            RFuture<Long> likesFuture = likesCounter.getAsync();
+
+            BatchResult<?> batchResult = batchGet.execute();
+
+            //假設Redis中同時存在所有key的鍵值則直接取得值並進行包裝後回傳
+            if(existsFuture.get() == 4){
+                Long views = viewsFuture.get();
+                Long bookmarks = bookmarksFuture.get();
+                Long comments = commentsFuture.get();
+                Long likes = likesFuture.get();
+
+
+
+
+                AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
+                        .likesCount(Math.toIntExact(likes))
+                        .bookmarksCount(Math.toIntExact(bookmarks))
+                        .commentsCount(Math.toIntExact(comments))
+                        .viewsCount(Math.toIntExact(views))
+                        .build();
+
+                return articleStatusVo;
             }
-        } catch (RedisConnectionException | RedisTimeoutException e) {
+
+            //假設Redis中不存在某個鍵值則直接調用DB資料庫查詢
+            AmsArtStatus amsArtStatus = getArticleStatusFromDB(articleId);
+            //無論查詢結果如何都必須建立快取鍵值, 避免緩存穿透
+
+            RBatch batchSet = redissonClient.createBatch();
+
+            RAtomicLongAsync viewsSetCounter = batchSet.getAtomicLong(viewsKey);
+            RAtomicLongAsync bookmarksSetCounter = batchSet.getAtomicLong(bookmarksKey);
+            RAtomicLongAsync commentsSetCounter = batchSet.getAtomicLong(commentsKey);
+            RAtomicLongAsync likesSetCounter = batchSet.getAtomicLong(likesKey);
+
+            /*
+             * 設置快取鍵值的失效時間
+             */
+
+            //統一設置為5分鐘 ,避免過期時間不一致
+            long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
+
+            viewsSetCounter.setAsync(amsArtStatus.getViewsCount());
+            viewsSetCounter.expireAsync(Duration.ofMillis(expireAt));
+
+            bookmarksSetCounter.setAsync(amsArtStatus.getBookmarksCount());
+            bookmarksSetCounter.expireAsync(Duration.ofMillis(expireAt));
+
+            commentsSetCounter.setAsync(amsArtStatus.getCommentsCount());
+            commentsSetCounter.expireAsync(Duration.ofMillis(expireAt));
+
+            likesSetCounter.setAsync(amsArtStatus.getLikesCount());
+            likesSetCounter.expireAsync(Duration.ofMillis(expireAt));
+
+            batchSet.execute();
+
+
+            return AmsArticleStatusVo.builder()
+                    .likesCount(Math.toIntExact(amsArtStatus.getLikesCount()))
+                    .bookmarksCount(Math.toIntExact(amsArtStatus.getBookmarksCount()))
+                    .commentsCount(Math.toIntExact(amsArtStatus.getCommentsCount()))
+                    .viewsCount(Math.toIntExact(amsArtStatus.getViewsCount()))
+                    .build();
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CustomBaseException("系統異常");
+        } catch (RedisException | ExecutionException e) {
+            // 可能是 Redis 服務暫時不可用，或是其他異常
             // 連線/逾時 -> 降級讀庫（此時通常無法回填）
             log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
-            return readLikesFromDb(articleId);
-        } catch (Exception e) {
+            AmsArtStatus amsArtStatus = getArticleStatusFromDB(articleId);
+
+//            if(amsArtStatus == null){
+//                throw new CustomBaseException("文章統計資料不存在");
+//            }
+
+            AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
+                    .likesCount(amsArtStatus.getLikesCount())
+                    .bookmarksCount(amsArtStatus.getBookmarksCount())
+                    .commentsCount(amsArtStatus.getCommentsCount())
+                    .viewsCount(amsArtStatus.getViewsCount())
+                    .build();
+
+
+            return articleStatusVo;
+
+
+        }catch (Exception e) {
             // 非預期錯誤 -> 告警
             log.error("獲取文章點讚數發生非預期錯誤，articleId={}", articleId, e);
-            return 0L;
+
+            AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
+                    .likesCount(0)
+                    .bookmarksCount(0)
+                    .commentsCount(0)
+                    .viewsCount(0)
+                    .build();
+
+            return articleStatusVo;
         }
 
-        // 冷啟動：Redis鍵不存在 -> 讀DB並回填（避免穿透）
-        Long likesFromDb = readLikesFromDb(articleId);
 
-        // 回填：用 CAS 避免覆蓋併發新值
-        try {
-            boolean casOk = likesCounter.compareAndSet(0L, likesFromDb);
-            if (!casOk) {
-                // 可能已有併發寫入，取最新值返回
-                long current = likesCounter.get();
-                log.debug("回填CAS失敗，返回當前Redis值={}，articleId={}", current, articleId);
-                return current;
-            }
-            // 對 0 值設短TTL作為負快取，降低穿透；正值可不設或設長TTL
-            if (likesFromDb == 0L) {
-                likesCounter.expire(5, java.util.concurrent.TimeUnit.MINUTES);
-            }
-        } catch (Exception e) {
-            // 回填失敗不影響主流程
-            log.warn("Redis回填失敗，articleId={}", articleId, e);
-        }
+    }
 
-        return likesFromDb;
+    private AmsArtStatus getArticleStatusFromDB(long articleId) {
+
+
+
+            AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
+                    new LambdaQueryWrapper<AmsArtStatus>()
+                            .select(AmsArtStatus::getViewsCount,AmsArtStatus::getBookmarksCount,AmsArtStatus::getCommentsCount,AmsArtStatus::getLikesCount)
+                            .eq(AmsArtStatus::getArticleId, articleId)
+                    ,false
+            );
+
+            return amsArtStatus;
     }
 
 
-    public Long getArticleBookmarks(long articleId) {
-        final String redisKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
-        RAtomicLong bookmarksCounter = redissonClient.getAtomicLong(redisKey);
+//
+//    public Long getArticleBookmarks(long articleId) {
+//        final String redisKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
+//        RAtomicLong bookmarksCounter = redissonClient.getAtomicLong(redisKey);
+//
+//        // 先嘗試從 Redis 讀
+//        try {
+//            if (bookmarksCounter.isExists()) {
+//                long bookmarks = bookmarksCounter.get();
+//                log.debug("bookmarks:{}", bookmarks);
+//                return bookmarks;
+//            }
+//        } catch (RedisConnectionException | RedisTimeoutException e) {
+//            // 連線/逾時 -> 降級讀庫（此時通常無法回填）
+//            log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
+//            return readbookmarksFromDb(articleId);
+//        } catch (Exception e) {
+//            // 非預期錯誤 -> 告警
+//            log.error("獲取文章點讚數發生非預期錯誤，articleId={}", articleId, e);
+//            return 0L;
+//        }
+//
+//        // 冷啟動：Redis鍵不存在 -> 讀DB並回填（避免穿透）
+//        Long bookmarksFromDb = readbookmarksFromDb(articleId);
+//
+//        // 回填：用 CAS 避免覆蓋併發新值
+//        try {
+//            boolean casOk = bookmarksCounter.compareAndSet(0L, bookmarksFromDb);
+//            if (!casOk) {
+//                // 可能已有併發寫入，取最新值返回
+//                long current = bookmarksCounter.get();
+//                log.debug("回填CAS失敗，返回當前Redis值={}，articleId={}", current, articleId);
+//                return current;
+//            }
+//            // 對 0 值設短TTL作為負快取，降低穿透；正值可不設或設長TTL
+//            if (bookmarksFromDb == 0L) {
+//                bookmarksCounter.expire(5, java.util.concurrent.TimeUnit.MINUTES);
+//            }
+//        } catch (Exception e) {
+//            // 回填失敗不影響主流程
+//            log.warn("Redis回填失敗，articleId={}", articleId, e);
+//        }
+//
+//        return bookmarksFromDb;
+//    }
 
-        // 先嘗試從 Redis 讀
-        try {
-            if (bookmarksCounter.isExists()) {
-                long bookmarks = bookmarksCounter.get();
-                log.debug("bookmarks:{}", bookmarks);
-                return bookmarks;
-            }
-        } catch (RedisConnectionException | RedisTimeoutException e) {
-            // 連線/逾時 -> 降級讀庫（此時通常無法回填）
-            log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
-            return readbookmarksFromDb(articleId);
-        } catch (Exception e) {
-            // 非預期錯誤 -> 告警
-            log.error("獲取文章點讚數發生非預期錯誤，articleId={}", articleId, e);
-            return 0L;
-        }
-
-        // 冷啟動：Redis鍵不存在 -> 讀DB並回填（避免穿透）
-        Long bookmarksFromDb = readbookmarksFromDb(articleId);
-
-        // 回填：用 CAS 避免覆蓋併發新值
-        try {
-            boolean casOk = bookmarksCounter.compareAndSet(0L, bookmarksFromDb);
-            if (!casOk) {
-                // 可能已有併發寫入，取最新值返回
-                long current = bookmarksCounter.get();
-                log.debug("回填CAS失敗，返回當前Redis值={}，articleId={}", current, articleId);
-                return current;
-            }
-            // 對 0 值設短TTL作為負快取，降低穿透；正值可不設或設長TTL
-            if (bookmarksFromDb == 0L) {
-                bookmarksCounter.expire(5, java.util.concurrent.TimeUnit.MINUTES);
-            }
-        } catch (Exception e) {
-            // 回填失敗不影響主流程
-            log.warn("Redis回填失敗，articleId={}", articleId, e);
-        }
-
-        return bookmarksFromDb;
-    }
-
-    private Long readbookmarksFromDb(long articleId) {
-        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
-                new LambdaQueryWrapper<AmsArtStatus>()
-                        .select(AmsArtStatus::getBookmarksCount)
-                        .eq(AmsArtStatus::getArticleId, articleId)
-                ,false
-        );
-        return Optional.ofNullable(amsArtStatus)
-                .map(AmsArtStatus::getBookmarksCount)
-                .map(Integer::longValue)
-                .orElse(0L);
-    }
-
-    private Long readLikesFromDb(long articleId) {
-        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
-                new LambdaQueryWrapper<AmsArtStatus>()
-                        .select(AmsArtStatus::getLikesCount)
-                        .eq(AmsArtStatus::getArticleId, articleId)
-                        ,false
-        );
-        return Optional.ofNullable(amsArtStatus)
-                .map(AmsArtStatus::getLikesCount)
-                .map(Integer::longValue)
-                .orElse(0L);
-    }
+//
+//    private Long readbookmarksFromDb(long articleId) {
+//        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
+//                new LambdaQueryWrapper<AmsArtStatus>()
+//                        .select(AmsArtStatus::getBookmarksCount)
+//                        .eq(AmsArtStatus::getArticleId, articleId)
+//                ,false
+//        );
+//        return Optional.ofNullable(amsArtStatus)
+//                .map(AmsArtStatus::getBookmarksCount)
+//                .map(Integer::longValue)
+//                .orElse(0L);
+//    }
+//
+//    private Long readLikesFromDb(long articleId) {
+//        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
+//                new LambdaQueryWrapper<AmsArtStatus>()
+//                        .select(AmsArtStatus::getLikesCount)
+//                        .eq(AmsArtStatus::getArticleId, articleId)
+//                        ,false
+//        );
+//        return Optional.ofNullable(amsArtStatus)
+//                .map(AmsArtStatus::getLikesCount)
+//                .map(Integer::longValue)
+//                .orElse(0L);
+//    }
 
 
-
-
+//
+//    public Long getArticleCommentsCount(long articleId) {
+//        final String redisKey = RedisCacheKey.ARTICLE_COMMENTS.format(articleId);
+//        RAtomicLong commentsCount = redissonClient.getAtomicLong(redisKey);
+//
+//        // 先嘗試從 Redis 讀
+//        try {
+//            if (commentsCount.isExists()) {
+//                long comments = commentsCount.get();
+//                log.debug("comments:{}", comments);
+//                return comments;
+//            }
+//        } catch (RedisConnectionException | RedisTimeoutException e) {
+//            // 連線/逾時 -> 降級讀庫（此時通常無法回填）
+//            log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
+//            return readCommentsFromDb(articleId);
+//        } catch (Exception e) {
+//            // 非預期錯誤 -> 告警
+//            log.error("獲取文章評論數發生非預期錯誤，articleId={}", articleId, e);
+//            return 0L;
+//        }
+//
+//        // 冷啟動：Redis鍵不存在 -> 讀DB並回填（避免穿透）
+//        Long commentsFromDbFromDb = readCommentsFromDb(articleId);
+//
+//        // 回填：用 CAS 避免覆蓋併發新值
+//        try {
+//            boolean casOk = commentsCount.compareAndSet(0L, commentsFromDbFromDb);
+//            if (!casOk) {
+//                // 可能已有併發寫入，取最新值返回
+//                long current = commentsCount.get();
+//                log.debug("回填CAS失敗，返回當前Redis值={}，articleId={}", current, articleId);
+//                return current;
+//            }
+//            // 對 0 值設短TTL作為負快取，降低穿透；正值可不設或設長TTL
+//            if (commentsFromDbFromDb == 0L) {
+//                commentsCount.expire(5, java.util.concurrent.TimeUnit.MINUTES);
+//            }
+//        } catch (Exception e) {
+//            // 回填失敗不影響主流程
+//            log.warn("Redis回填失敗，articleId={}", articleId, e);
+//        }
+//
+//        return commentsFromDbFromDb;
+//    }
+//
+//    private Long readCommentsFromDb(long articleId) {
+//        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
+//                new LambdaQueryWrapper<AmsArtStatus>()
+//                        .select(AmsArtStatus::getBookmarksCount)
+//                        .eq(AmsArtStatus::getArticleId, articleId)
+//                ,false
+//        );
+//        return Optional.ofNullable(amsArtStatus)
+//                .map(AmsArtStatus::getBookmarksCount)
+//                .map(Integer::longValue)
+//                .orElse(0L);
+//    }
 
 
     /**

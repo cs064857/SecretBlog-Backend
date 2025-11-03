@@ -21,10 +21,13 @@ public enum RedisCacheKey {
     /**
      * 文章計數
      */
-
+    //已使用
     ARTICLE_LIKES("ams:article:likes:%s", "文章點讚數（計數用）", null),
+    //已使用
     ARTICLE_VIEWS("ams:article:views:%s", "文章瀏覽數（計數用）", null),
+    //已使用
     ARTICLE_COMMENTS("ams:article:comments:%s", "文章留言數（計數用）", null),
+    //已使用
     ARTICLE_BOOKMARKS("ams:article:bookmarks:%s", "文章書籤數（計數用）", null),
 
 
@@ -32,8 +35,9 @@ public enum RedisCacheKey {
 
 
 
-    //紀錄用戶是否以及點讚過該文章
+    //紀錄用戶是否以及點讚過該文章 已使用
     ARTICLE_LIKED_USERS("ams:article:%s:liked", "文章點讚用戶集合", null),
+    //紀錄用戶是否以及書籤過該文章 已使用
     ARTICLE_MARKED_USERS("ams:article:%s:marked", "文章書籤用戶集合", null),
 
     /**
@@ -48,10 +52,6 @@ public enum RedisCacheKey {
      */
 //    ARTICLE_COMMENTS_LIKES("ams:article:comment:%s:likes_count", "文章留言點讚數（計數用）", null),
     ARTICLE_COMMENTS_BOOKMARKS("ams:article:comment:%s:bookmarks_count", "文章留言書籤數（計數用）", null),
-    //紀錄用戶是否以及點讚過該評論
-//    COMMENT_LIKED_USERS("ams:comment:%s:liked", "評論點讚用戶集合", null),
-//    COMMENT_MARKED_USERS("ams:comment:%s:marked", "評論書籤用戶集合", null),
-
 
     /**
      * ===== 評論相關（方案 B：Hash 聚合）=====
@@ -66,7 +66,7 @@ public enum RedisCacheKey {
     // 文章評論的書籤數聚合（Hash: field=commentId, value=bookmarksCount）
     ARTICLE_COMMENT_BOOKMARKS_HASH("ams:article:comment:%s:comment_bookmarks", "文章評論書籤數Hash", null),
 
-    // 評論被哪些用戶點讚（Set: 用戶ID集合）
+    // 評論被哪些用戶點讚（Set: 用戶ID集合）已使用
     COMMENT_LIKED_USERS("ams:comment:%s:liked_users", "評論點讚用戶集合", null),
 
     // 評論被哪些用戶書籤（Set: 用戶ID集合）
