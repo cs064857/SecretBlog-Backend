@@ -3,7 +3,6 @@ package com.shijiawei.secretblog.article.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
@@ -26,16 +25,15 @@ import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
-import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.common.utils.RedisBloomFilterUtils;
-import com.shijiawei.secretblog.common.utils.RedisRateLimiterUtils;
+import com.shijiawei.secretblog.common.myenum.RedisLockKey;
+import com.shijiawei.secretblog.common.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
 import org.redisson.client.RedisConnectionException;
-import org.redisson.client.RedisException;
 import org.redisson.client.RedisTimeoutException;
 import org.redisson.client.codec.StringCodec;
+import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -43,14 +41,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import com.shijiawei.secretblog.common.utils.UserContextHolder;
 
 
 /**
@@ -87,6 +82,9 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     @Autowired
     private RedisBloomFilterUtils redisBloomFilterUtils;
+
+    @Autowired
+    private RedisCacheLoaderUtils redisCacheLoaderUtils;
 
     private final RedisRateLimiterUtils redisRateLimiterUtils;
 
@@ -367,7 +365,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            amsArticleVo.setViewsCount(0);
         }
 
-        AmsArticleStatusVo articleStatus = getArticleStatus(articleId);
+        AmsArticleStatusVo articleStatus = getArticleStatusVo(articleId);
         BeanUtils.copyProperties(articleStatus, amsArticleVo);
 
         ///TODO注意安全性
@@ -852,289 +850,142 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        return likesFromDb;
 //    }
 
+    private AmsArticleStatusVo loadArticleStatusVo(long articleId) {
+        log.info("開始執行 loadArticleStatus - articleId: {}", articleId);
+        AmsArtStatus articleStatusFromDB = QueryArticleStatus(articleId);
 
+        log.info("articleStatusFromDB:{}", articleStatusFromDB);
 
+        if(articleStatusFromDB ==null){
+            log.warn("文章狀態資訊不存在，不拋出異常，回傳-1");
 
-
-
-
-
-    public AmsArticleStatusVo getArticleStatus(long articleId) {
-
-        try {
-            // 先嘗試從 Redis 讀
-            String viewsKey = RedisCacheKey.ARTICLE_VIEWS.format(articleId);
-            String bookmarksKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
-            String commentsKey = RedisCacheKey.ARTICLE_COMMENTS.format(articleId);
-            String likesKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
-
-            RBatch batchGet = redissonClient.createBatch();
-
-            // 檢查 key 是否存在
-            RKeysAsync keys = batchGet.getKeys();
-            RFuture<Long> existsFuture = keys.countExistsAsync(viewsKey, bookmarksKey, commentsKey, likesKey);
-
-
-            RAtomicLongAsync viewsCounter = batchGet.getAtomicLong(viewsKey);
-            RAtomicLongAsync bookmarksCounter = batchGet.getAtomicLong(bookmarksKey);
-            RAtomicLongAsync commentsCounter = batchGet.getAtomicLong(commentsKey);
-            RAtomicLongAsync likesCounter = batchGet.getAtomicLong(likesKey);
-
-            RFuture<Long> viewsFuture = viewsCounter.getAsync();
-            RFuture<Long> bookmarksFuture = bookmarksCounter.getAsync();
-            RFuture<Long> commentsFuture = commentsCounter.getAsync();
-            RFuture<Long> likesFuture = likesCounter.getAsync();
-
-            BatchResult<?> batchResult = batchGet.execute();
-
-            //假設Redis中同時存在所有key的鍵值則直接取得值並進行包裝後回傳
-            if(existsFuture.get() == 4){
-                Long views = viewsFuture.get();
-                Long bookmarks = bookmarksFuture.get();
-                Long comments = commentsFuture.get();
-                Long likes = likesFuture.get();
-
-
-
-
-                AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
-                        .likesCount(Math.toIntExact(likes))
-                        .bookmarksCount(Math.toIntExact(bookmarks))
-                        .commentsCount(Math.toIntExact(comments))
-                        .viewsCount(Math.toIntExact(views))
-                        .build();
-
-                return articleStatusVo;
-            }
-
-            //假設Redis中不存在某個鍵值則直接調用DB資料庫查詢
-            AmsArtStatus amsArtStatus = getArticleStatusFromDB(articleId);
-            //無論查詢結果如何都必須建立快取鍵值, 避免緩存穿透
-
-            RBatch batchSet = redissonClient.createBatch();
-
-            RAtomicLongAsync viewsSetCounter = batchSet.getAtomicLong(viewsKey);
-            RAtomicLongAsync bookmarksSetCounter = batchSet.getAtomicLong(bookmarksKey);
-            RAtomicLongAsync commentsSetCounter = batchSet.getAtomicLong(commentsKey);
-            RAtomicLongAsync likesSetCounter = batchSet.getAtomicLong(likesKey);
-
-            /*
-             * 設置快取鍵值的失效時間
-             */
-
-            //統一設置為5分鐘 ,避免過期時間不一致
-            long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
-
-            viewsSetCounter.setAsync(amsArtStatus.getViewsCount());
-            viewsSetCounter.expireAsync(Duration.ofMillis(expireAt));
-
-            bookmarksSetCounter.setAsync(amsArtStatus.getBookmarksCount());
-            bookmarksSetCounter.expireAsync(Duration.ofMillis(expireAt));
-
-            commentsSetCounter.setAsync(amsArtStatus.getCommentsCount());
-            commentsSetCounter.expireAsync(Duration.ofMillis(expireAt));
-
-            likesSetCounter.setAsync(amsArtStatus.getLikesCount());
-            likesSetCounter.expireAsync(Duration.ofMillis(expireAt));
-
-            batchSet.execute();
-
-
-            return AmsArticleStatusVo.builder()
-                    .likesCount(Math.toIntExact(amsArtStatus.getLikesCount()))
-                    .bookmarksCount(Math.toIntExact(amsArtStatus.getBookmarksCount()))
-                    .commentsCount(Math.toIntExact(amsArtStatus.getCommentsCount()))
-                    .viewsCount(Math.toIntExact(amsArtStatus.getViewsCount()))
-                    .build();
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new CustomBaseException("系統異常");
-        } catch (RedisException | ExecutionException e) {
-            // 可能是 Redis 服務暫時不可用，或是其他異常
-            // 連線/逾時 -> 降級讀庫（此時通常無法回填）
-            log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
-            AmsArtStatus amsArtStatus = getArticleStatusFromDB(articleId);
-
-//            if(amsArtStatus == null){
-//                throw new CustomBaseException("文章統計資料不存在");
-//            }
-
-            AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
-                    .likesCount(amsArtStatus.getLikesCount())
-                    .bookmarksCount(amsArtStatus.getBookmarksCount())
-                    .commentsCount(amsArtStatus.getCommentsCount())
-                    .viewsCount(amsArtStatus.getViewsCount())
-                    .build();
-
-
-            return articleStatusVo;
-
-
-        }catch (Exception e) {
-            // 非預期錯誤 -> 告警
-            log.error("獲取文章點讚數發生非預期錯誤，articleId={}", articleId, e);
-
-            AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
-                    .likesCount(0)
-                    .bookmarksCount(0)
-                    .commentsCount(0)
-                    .viewsCount(0)
-                    .build();
-
-            return articleStatusVo;
         }
 
+        /*
+        無論如何都必須將資料寫入Redis快取中, 主要目的是為了防止快取穿透
+         */
+        int views = (articleStatusFromDB == null)? -1 : articleStatusFromDB.getViewsCount();
+        int likes = (articleStatusFromDB == null)? -1 : articleStatusFromDB.getLikesCount();
+        int bookmarks = (articleStatusFromDB == null)? -1 : articleStatusFromDB.getBookmarksCount();
+        int comments = (articleStatusFromDB == null)? -1 : articleStatusFromDB.getCommentsCount();
 
+        String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        RMap<String, Integer> statusMap = redissonClient.getMap(redisKey, new TypedJsonJacksonCodec(String.class, Integer.class));
+        statusMap.put("viewsCount", views);
+        statusMap.put("likesCount", likes);
+        statusMap.put("bookmarksCount", bookmarks);
+        statusMap.put("commentsCount", comments);
+
+        /*
+        假設成功從Redis快取中獲取文章的指標則直接進行包裝並回傳
+         */
+        log.info("文章的狀態資訊 articleId:{},statusMap:{}",articleId,statusMap);
+        //進行包裝並回傳
+        return AmsArticleStatusVo.builder()
+                .viewsCount(views)
+                .likesCount(likes)
+                .bookmarksCount(bookmarks)
+                .commentsCount(comments)
+                .build();
     }
 
-    private AmsArtStatus getArticleStatusFromDB(long articleId) {
+    private AmsArticleStatusVo parseArticleStatusVoFromRedis(long articleId) {
+        log.info("開始執行 parseArticleStatusFromRedis - articleId: {}", articleId);
+        //嘗試從Redis取得文章的指標
+        String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+
+        RMap<String, Integer> statusMap = redissonClient.getMap(redisKey, new TypedJsonJacksonCodec(String.class, Integer.class));
+
+        Map<String, Integer> stringIntMap = statusMap.readAllMap();
+        log.info("stringIntMap: {}", stringIntMap);
+
+        if(stringIntMap.isEmpty()){
+            return null;
+        }
+
+        /*
+        獲取文章指標的值
+        假設文章指標為空，則將指標值設為-1
+         */
+        int views = stringIntMap.get("viewsCount");
+        int likes = stringIntMap.get("likesCount");
+        int bookmarks = stringIntMap.get("bookmarksCount");
+        int comments = stringIntMap.get("commentsCount");
+
+        AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
+                .likesCount(likes)
+                .bookmarksCount(bookmarks)
+                .commentsCount(comments)
+                .viewsCount(views)
+                .build();
+        log.info("articleStatusVo: {}", articleStatusVo);
+        return articleStatusVo;
+    }
 
 
+    private AmsArtStatus QueryArticleStatus(long articleId) {
+        log.info("開始執行 QueryArticleStatus articleId={}",articleId);
 
-            AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
-                    new LambdaQueryWrapper<AmsArtStatus>()
-                            .select(AmsArtStatus::getViewsCount,AmsArtStatus::getBookmarksCount,AmsArtStatus::getCommentsCount,AmsArtStatus::getLikesCount)
-                            .eq(AmsArtStatus::getArticleId, articleId)
-                    ,false
+
+        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
+                new LambdaQueryWrapper<AmsArtStatus>()
+                        .select(AmsArtStatus::getViewsCount,AmsArtStatus::getBookmarksCount,AmsArtStatus::getCommentsCount,AmsArtStatus::getLikesCount)
+                        .eq(AmsArtStatus::getArticleId, articleId)
+                ,false
+        );
+        log.info("amsArtStatus={}",amsArtStatus);
+        return amsArtStatus;
+    }
+
+    /**
+     * 根據文章ID取得文章狀態
+     * 採用Hash結構
+     * @param articleId
+     * @return
+     */
+    public AmsArticleStatusVo getArticleStatusVo(long articleId) {
+        log.info("開始執行 getArticleStatusVo - articleId: {}", articleId);
+
+        //先判斷是否存在該文章
+        boolean articleNotExists = isArticleNotExists(articleId);
+        if(articleNotExists){
+            //假設文章不存在則直接拋出異常
+            log.warn("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
+        }
+
+        //嘗試從Redis取得文章的指標
+        String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        log.info("redisKey: {}", redisKey);
+        AmsArticleStatusVo articleStatusVo = this.parseArticleStatusVoFromRedis(articleId);
+
+        //判斷是否成功從Redis中獲取文章的指標或articleStatusVo中其中某個欄位是否為null
+        if (articleStatusVo == null || articleStatusVo.allNull()) {
+            /*
+            假設未成功從Redis獲取文章的指標，或者指標鍵值有遺漏
+             */
+            //從DB資料庫中查詢
+            articleStatusVo = redisCacheLoaderUtils.loadMapWithLock(
+                    redisKey,
+                    RedisLockKey.ARTICLE_STATUS_LOCK.getFormat(articleId),
+                    () -> loadArticleStatusVo(articleId),
+                    () -> this.parseArticleStatusVoFromRedis(articleId),
+                    3,
+                    10,
+                    TimeUnit.SECONDS,
+                    3
             );
 
-            return amsArtStatus;
+
+
+
+        }
+        /*
+        假設成功從Redis快取中獲取文章的指標則直接進行包裝並回傳
+         */
+        log.info("文章的包裝後指標資訊 articleStatusVo:{}", articleStatusVo);
+        return articleStatusVo;
     }
-
-
-//
-//    public Long getArticleBookmarks(long articleId) {
-//        final String redisKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
-//        RAtomicLong bookmarksCounter = redissonClient.getAtomicLong(redisKey);
-//
-//        // 先嘗試從 Redis 讀
-//        try {
-//            if (bookmarksCounter.isExists()) {
-//                long bookmarks = bookmarksCounter.get();
-//                log.debug("bookmarks:{}", bookmarks);
-//                return bookmarks;
-//            }
-//        } catch (RedisConnectionException | RedisTimeoutException e) {
-//            // 連線/逾時 -> 降級讀庫（此時通常無法回填）
-//            log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
-//            return readbookmarksFromDb(articleId);
-//        } catch (Exception e) {
-//            // 非預期錯誤 -> 告警
-//            log.error("獲取文章點讚數發生非預期錯誤，articleId={}", articleId, e);
-//            return 0L;
-//        }
-//
-//        // 冷啟動：Redis鍵不存在 -> 讀DB並回填（避免穿透）
-//        Long bookmarksFromDb = readbookmarksFromDb(articleId);
-//
-//        // 回填：用 CAS 避免覆蓋併發新值
-//        try {
-//            boolean casOk = bookmarksCounter.compareAndSet(0L, bookmarksFromDb);
-//            if (!casOk) {
-//                // 可能已有併發寫入，取最新值返回
-//                long current = bookmarksCounter.get();
-//                log.debug("回填CAS失敗，返回當前Redis值={}，articleId={}", current, articleId);
-//                return current;
-//            }
-//            // 對 0 值設短TTL作為負快取，降低穿透；正值可不設或設長TTL
-//            if (bookmarksFromDb == 0L) {
-//                bookmarksCounter.expire(5, java.util.concurrent.TimeUnit.MINUTES);
-//            }
-//        } catch (Exception e) {
-//            // 回填失敗不影響主流程
-//            log.warn("Redis回填失敗，articleId={}", articleId, e);
-//        }
-//
-//        return bookmarksFromDb;
-//    }
-
-//
-//    private Long readbookmarksFromDb(long articleId) {
-//        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
-//                new LambdaQueryWrapper<AmsArtStatus>()
-//                        .select(AmsArtStatus::getBookmarksCount)
-//                        .eq(AmsArtStatus::getArticleId, articleId)
-//                ,false
-//        );
-//        return Optional.ofNullable(amsArtStatus)
-//                .map(AmsArtStatus::getBookmarksCount)
-//                .map(Integer::longValue)
-//                .orElse(0L);
-//    }
-//
-//    private Long readLikesFromDb(long articleId) {
-//        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
-//                new LambdaQueryWrapper<AmsArtStatus>()
-//                        .select(AmsArtStatus::getLikesCount)
-//                        .eq(AmsArtStatus::getArticleId, articleId)
-//                        ,false
-//        );
-//        return Optional.ofNullable(amsArtStatus)
-//                .map(AmsArtStatus::getLikesCount)
-//                .map(Integer::longValue)
-//                .orElse(0L);
-//    }
-
-
-//
-//    public Long getArticleCommentsCount(long articleId) {
-//        final String redisKey = RedisCacheKey.ARTICLE_COMMENTS.format(articleId);
-//        RAtomicLong commentsCount = redissonClient.getAtomicLong(redisKey);
-//
-//        // 先嘗試從 Redis 讀
-//        try {
-//            if (commentsCount.isExists()) {
-//                long comments = commentsCount.get();
-//                log.debug("comments:{}", comments);
-//                return comments;
-//            }
-//        } catch (RedisConnectionException | RedisTimeoutException e) {
-//            // 連線/逾時 -> 降級讀庫（此時通常無法回填）
-//            log.warn("Redis不可用，降級讀DB，articleId={}", articleId, e);
-//            return readCommentsFromDb(articleId);
-//        } catch (Exception e) {
-//            // 非預期錯誤 -> 告警
-//            log.error("獲取文章評論數發生非預期錯誤，articleId={}", articleId, e);
-//            return 0L;
-//        }
-//
-//        // 冷啟動：Redis鍵不存在 -> 讀DB並回填（避免穿透）
-//        Long commentsFromDbFromDb = readCommentsFromDb(articleId);
-//
-//        // 回填：用 CAS 避免覆蓋併發新值
-//        try {
-//            boolean casOk = commentsCount.compareAndSet(0L, commentsFromDbFromDb);
-//            if (!casOk) {
-//                // 可能已有併發寫入，取最新值返回
-//                long current = commentsCount.get();
-//                log.debug("回填CAS失敗，返回當前Redis值={}，articleId={}", current, articleId);
-//                return current;
-//            }
-//            // 對 0 值設短TTL作為負快取，降低穿透；正值可不設或設長TTL
-//            if (commentsFromDbFromDb == 0L) {
-//                commentsCount.expire(5, java.util.concurrent.TimeUnit.MINUTES);
-//            }
-//        } catch (Exception e) {
-//            // 回填失敗不影響主流程
-//            log.warn("Redis回填失敗，articleId={}", articleId, e);
-//        }
-//
-//        return commentsFromDbFromDb;
-//    }
-//
-//    private Long readCommentsFromDb(long articleId) {
-//        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
-//                new LambdaQueryWrapper<AmsArtStatus>()
-//                        .select(AmsArtStatus::getBookmarksCount)
-//                        .eq(AmsArtStatus::getArticleId, articleId)
-//                ,false
-//        );
-//        return Optional.ofNullable(amsArtStatus)
-//                .map(AmsArtStatus::getBookmarksCount)
-//                .map(Integer::longValue)
-//                .orElse(0L);
-//    }
 
 
     /**

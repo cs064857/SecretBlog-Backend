@@ -30,7 +30,7 @@ public enum RedisCacheKey {
     //已使用
     ARTICLE_BOOKMARKS("ams:article:bookmarks:%s", "文章書籤數（計數用）", null),
 
-
+    ARTICLE_STATUS("ams:article:status:%s","文章指標計數",null),
 
 
 

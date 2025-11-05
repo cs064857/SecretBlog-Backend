@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.ObjectUtils;
 
 /**
  * 文章統計資料 VO
@@ -32,4 +33,8 @@ public class AmsArticleStatusVo {
 
     @Schema(description = "評論數")
     private Integer commentsCount;
+
+    public boolean allNull(){
+        return ObjectUtils.allNull(viewsCount,likesCount,bookmarksCount,commentsCount);
+    }
 }
