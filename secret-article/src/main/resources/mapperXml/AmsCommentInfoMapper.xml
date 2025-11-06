@@ -10,6 +10,6 @@
         <result column="create_at" property="createAt" jdbcType="TIMESTAMP"/>
         <result column="update_at" property="updateAt" jdbcType="TIMESTAMP"/>
         <result column="likes_count" property="likesCount" jdbcType="INTEGER"/>
-        <result column="replys_count" property="replysCount" jdbcType="INTEGER"/>
+        <result column="replies_count" property="repliesCount" jdbcType="INTEGER"/>
     </resultMap>
 </mapper>

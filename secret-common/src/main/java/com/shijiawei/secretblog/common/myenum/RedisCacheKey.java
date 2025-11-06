@@ -61,7 +61,9 @@ public enum RedisCacheKey {
 //    ARTICLE_COMMENT_IDS("ams:article:comments:%s:comment_ids", "文章評論ID集合(ZSet)", null),
 
     // 文章評論的點讚數聚合（Hash: field=commentId, value=likesCount）已使用
-    ARTICLE_COMMENT_LIKES_HASH("ams:article:comment:%s:comment_likes", "文章評論點讚數Hash", null),
+    ARTICLE_COMMENT_LIKES_COUNT_HASH("ams:article:comment:%s:comment_likes", "文章評論點讚數Hash", Duration.ofMinutes(30)),
+    // 文章留言的留言數聚合（Hash: field=commentId, value=replies_count）已使用
+    ARTICLE_COMMENT_REPLIES_COUNT_HASH("ams:article:comment:%s:replies_count", "文章評論的回覆數Hash", Duration.ofMinutes(30)),
 
     // 文章評論的書籤數聚合（Hash: field=commentId, value=bookmarksCount）
     ARTICLE_COMMENT_BOOKMARKS_HASH("ams:article:comment:%s:comment_bookmarks", "文章評論書籤數Hash", null),

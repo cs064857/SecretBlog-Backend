@@ -17,7 +17,7 @@ public class AmsArtCommentsVo {
     private String username;
     private String commentContent;
     private Integer likesCount;
-    private Integer replysCount;
+    private Integer repliesCount;
 
     private LocalDateTime createAt;
     private LocalDateTime  updateAt;

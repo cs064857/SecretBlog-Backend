@@ -311,7 +311,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public AmsArticleVo getAmsArticleVoWithStatus(Long articleId){
 
         if(isArticleNotExists(articleId)){
-            log.info("文章不存在，articleId={}",articleId);
+            log.warn("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
 
@@ -387,7 +387,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public AmsArticleVo getAmsArticleVo(Long articleId) {
 
         if(isArticleNotExists(articleId)){
-            log.info("文章不存在，articleId={}",articleId);
+            log.warn("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
 
@@ -508,7 +508,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public Long incrementArticleViewsCount(Long articleId) {
 
         if(isArticleNotExists(articleId)){
-            log.info("文章不存在，articleId={}",articleId);
+            log.warn("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
 
@@ -572,7 +572,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
         if(isArticleNotExists(articleId)){
-            log.info("文章不存在，articleId={}",articleId);
+            log.warn("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
 
@@ -685,7 +685,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
         if(isArticleNotExists(articleId)){
-            log.info("文章不存在，articleId={}",articleId);
+            log.warn("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
 

@@ -56,7 +56,7 @@ public class AmsCommentInfo {
     @TableField(value = "likes_count")
     private Integer likesCount;
 
-    @TableField(value = "replys_count")
-    private Integer replysCount;
+    @TableField(value = "replies_count")
+    private Integer repliesCount;
 
 }

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.entity.AmsArtStatus;
-import com.shijiawei.secretblog.article.entity.AmsArtinfo;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.entity.AmsCommentInfo;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
@@ -31,7 +30,6 @@ import org.redisson.api.*;
 import org.redisson.client.RedisConnectionException;
 import org.redisson.client.RedisException;
 import org.redisson.client.codec.StringCodec;
-import org.redisson.codec.JsonJacksonCodec;
 import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,9 +37,11 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -82,6 +82,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     private AmsArtinfoService amsArtinfoService;
     @Autowired
     private AmsArtStatusService amsArtStatusService;
+
+    @Autowired
+    private RedisCacheLoaderUtils redisCacheLoaderUtils;
 
 //    public AmsCommentServiceImpl(RedissonClient redissonClient){
 //        this.redissonClient = redissonClient;
@@ -175,7 +178,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //                            amsCommentInfo.setParentCommentId(amsCommentCreateDTO.getParentCommentId());
 //                            //透過ParentCommentId去查詢到該父評論,並將其留言數量+1
 //                            AmsCommentInfo parentAmsCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getId, amsCommentCreateDTO.getParentCommentId()));
-//                            parentAmsCommentInfo.setReplysCount(parentAmsCommentInfo.getReplysCount()+1);
+//                            parentAmsCommentInfo.setrepliesCount(parentAmsCommentInfo.getrepliesCount()+1);
 //
 //
 //                            this.baseMapper.insert(amsComment);
@@ -344,7 +347,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             amsCommentInfo.setParentCommentId(amsCommentCreateDTO.getParentCommentId());
                             //透過ParentCommentId去查詢到該父評論,並將其留言數量+1
                             AmsCommentInfo parentAmsCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getCommentId, amsCommentCreateDTO.getParentCommentId()));
-                            parentAmsCommentInfo.setReplysCount(parentAmsCommentInfo.getReplysCount()+1);
+                            parentAmsCommentInfo.setRepliesCount(parentAmsCommentInfo.getRepliesCount()+1);
 
 
                             this.baseMapper.insert(amsComment);
@@ -403,7 +406,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //
 //        //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
 //        if(amsArticleService.isArticleNotExists(articleId)){
-//            log.info("文章不存在，articleId={}",articleId);
+//            log.warn("文章不存在，articleId={}",articleId);
 //            throw new CustomBaseException("文章不存在");
 //        }
 //
@@ -463,7 +466,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //
 //            amsArtCommentsVo.setLikesCount(commentLikeCountFromRedis.intValue());
 //
-//            amsArtCommentsVo.setReplysCount(amsCommentInfo.getReplysCount());
+//            amsArtCommentsVo.setrepliesCount(amsCommentInfo.getrepliesCount());
 //            amsArtCommentsVo.setCreateAt(amsCommentInfo.getCreateAt());
 //            amsArtCommentsVo.setUpdateAt(amsCommentInfo.getUpdateAt());
 //
@@ -503,44 +506,54 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      */
     @Override
     public List<AmsArtCommentsVo> getArtComments(Long articleId) {
+        log.info("查詢文章中的所有評論 - articleId: {}", articleId);
 
-
-        //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
+        /*
+        透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
+         */
         if(amsArticleService.isArticleNotExists(articleId)){
-            log.info("文章不存在，articleId={}",articleId);
+            log.warn("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
-        //獲取文章中評論的靜態資訊
+        /*
+        獲取文章中評論的靜態資訊
+         */
         List<AmsArtCommentStaticVo> staticCommentDetails = self.getStaticCommentDetails(articleId);
         if(staticCommentDetails.isEmpty()){
-            log.info("文章無評論, articleId:{}", articleId);
+            log.warn("文章無評論, articleId:{}", articleId);
             return Collections.emptyList();
         }
 
-        /**
-         * 已判斷該文章是否存在評論
-         */
 
         log.info("留言的靜態資訊 staticCommentDetails:{}",staticCommentDetails);
-        //獲取文章中評論的動態資訊(點讚數、評論數、書籤數等)
-        //獲取點讚數
-        RMap<Long, Long> likesCountMap = getCommentLikesCountMapFromRedis(articleId);
-        log.info("留言的點讚數 likesCountMap:{}",likesCountMap);
+        /*
+        獲取文章中評論的動態資訊(點讚數、評論數、書籤數等)
+         */
+
+        Map<String, Map<Long, Integer>> commentsMetrics = getCommentsMetrics(articleId);
+        Map<Long, Integer> likesCountMap = commentsMetrics.get("likesCountMap");
+        Map<Long, Integer> repliesCountMap = commentsMetrics.get("repliesCountMap");
+
+        log.debug("文章中所有留言的指標, articleId:{} , commentsMetrics:{}",articleId,commentsMetrics);
 
 
-        //將文章中評論的靜態資訊和動態資訊合併
+        /*
+        將文章中評論的靜態資訊和動態資訊合併
+         */
 
         List<AmsArtCommentsVo> amsArtCommentsVoList = staticCommentDetails.stream().map(item -> {
 
             AmsArtCommentsVo amsArtCommentsVo = new AmsArtCommentsVo();
 
-            //如果沒有對應的點讚數則給一個預設值0L
-            Long commentLikeCount = likesCountMap.getOrDefault(item.getCommentId(),0L);
-            amsArtCommentsVo.setLikesCount(Math.toIntExact(commentLikeCount));
+            //如果沒有對應的點讚數則給一個預設值-1
+            int commentLikeCount = likesCountMap.getOrDefault(item.getCommentId(),-1);
+            int repliesCount = repliesCountMap.getOrDefault(item.getCommentId(),-1);
+            amsArtCommentsVo.setLikesCount(commentLikeCount);
+            amsArtCommentsVo.setRepliesCount(repliesCount);
             BeanUtils.copyProperties(item, amsArtCommentsVo);
             return amsArtCommentsVo;
         }).toList();
-        log.info("文章評論資訊合併完成,評論內容:{}",amsArtCommentsVoList);
+        log.info("文章中所有留言合併完成,留言內容:{}",amsArtCommentsVoList);
         return amsArtCommentsVoList;
 
     }
@@ -557,7 +570,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
         //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
         if(amsArticleService.isArticleNotExists(articleId)){
-            log.info("文章不存在，articleId={}",articleId);
+            log.warn("文章不存在，articleId={}",articleId);
             throw new CustomBaseException("文章不存在");
         }
 
@@ -685,110 +698,6 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     }
 
-//    private boolean isCommentNotExistsFromDB(Long commentId) {
-//        if (commentId == null || commentId <= 0) {
-//            log.warn("非法評論ID: {}", commentId);
-//            return true;
-//        }
-//
-//        AmsComment amsComment = this.baseMapper.selectById(commentId);
-//        if(amsComment == null){
-//            //資料庫中不存在該評論
-//            log.info("該評論ID:{}不存在或已被刪除", commentId);
-//            return true;
-//        }
-//
-//        Long amsCommentId = amsComment.getId();
-//
-//
-//        if(amsCommentId==null){
-//            //表示該評論一定不存在
-//            log.info("該評論ID:{}不存在或已被刪除", commentId);
-//            return true;
-//        }
-//        return false;
-//    }
-
-
-//    /**
-//     * 舊版本點讚
-//     * @param commentId
-//     * @return
-//     */
-//    @Transactional(rollbackFor = RuntimeException.class)
-//    @Override
-//    public Long OldlikeComment(Long commentId) {
-//        /// TODO同步點讚數從Redis到資料庫中
-//
-//
-//        //透過布隆過濾器判斷該評論是否不存在, 若不存在則拋出異常
-//        if(this.isCommentNotExists(commentId)){
-//            log.info("評論不存在，commentId={}",commentId);
-//            throw new CustomBaseException("評論不存在");
-//        }
-//
-//        /*
-//          檢查用戶是否登入
-//        */
-//
-//        if (!UserContextHolder.isCurrentUserLoggedIn()) {
-//            log.warn("未取得登入用戶資訊，拒絕對評論按讚");
-//            throw new CustomBaseException("未登入或登入狀態已失效");
-//        }
-//        Long userId = UserContextHolder.getCurrentUserId();
-//        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
-//        if (userId == null) {
-//            log.warn("用戶ID為空，拒絕對評論按讚");
-//            throw new CustomBaseException("用戶ID缺失");
-//        }
-//
-//
-//
-//        String BucketName = RedisCacheKey.ARTICLE_COMMENTS_LIKES.format(commentId);
-//
-//        log.debug("BucketName:{}",BucketName);
-//        /*
-//          判斷該評論是否存在
-//        */
-//        //獲取桶對象, 注意原子性因此採用RAtomicLong
-//        RAtomicLong atomicLong = redissonClient.getAtomicLong(BucketName);
-//        //先嘗試從Redis中讀取是否存在該評論的緩存
-//        boolean atomicLongExists = atomicLong.isExists();
-//
-//
-//
-//        if(!atomicLongExists){
-//            //若不存在則根據commentId從資料庫中讀取該評論是否存在
-//            if(!this.existsCommentId(commentId)){
-//                //假設從Reids緩存以及從資料庫中讀取該評論皆表明該評論不存在
-//                throw new CustomBaseException("該評論不存在或已被刪除");
-//            }
-//
-//
-//        }
-//
-//
-//        /*
-//        判斷用戶是否已對該評論按讚,若已按讚則不能重複讚按
-//         */
-//        String userLikeKey = RedisCacheKey.COMMENT_LIKED_USERS.format(userId);
-//        RSet<Long> userLikeSet = redissonClient.getSet(userLikeKey);
-//
-//
-//
-//        //成功點讚紀錄用戶已點讚
-//        boolean add = userLikeSet.add(userId);
-//        if(!add){
-//            //若用戶已存在於點讚集合中,表示用戶已點讚過
-//            log.warn("用戶ID:{}，用戶名稱:{}，重複對評論ID:{}按讚",userId,userNameFromToken,commentId);
-//            throw new CustomBaseException("您已對該評論按讚過，請勿重複按讚");
-//        }
-//        //設置點讚值為++ , 注意原子性
-//        long newLikes = atomicLong.incrementAndGet();
-//        log.debug("newLikes:{}",newLikes);
-//
-//        return newLikes;
-//    }
 
     /**
      * 點讚評論
@@ -823,7 +732,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         }
 
         String userLikedSetKey = RedisCacheKey.COMMENT_LIKED_USERS.format(commentId);
-        String commentLikesHashKey = RedisCacheKey.ARTICLE_COMMENT_LIKES_HASH.format(articleId);
+        String commentLikesHashKey = RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.format(articleId);
 
 
         /*
@@ -915,239 +824,198 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         return true;
 
     }
-
-
-//    public Long getCommentLikeCountFromRedis(Long articleId,Long commentId){
-//
-//
-//
-//        String BucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_HASH.getPattern(),articleId);
-////        String BucketName = RedisCacheKey.ARTICLE_COMMENT_LIKES_HASH.format(articleId);
-//
-//        RMap<Long, Long> commentLikesHash = redissonClient.getMap(BucketName);
-//        if(!commentLikesHash.isExists() || !commentLikesHash.containsKey(commentId)){
-//            log.debug("取得文章中該則評論點讚數失敗,文章ID:{},評論ID:{}",articleId,commentId);
-//            ///TODO 嘗試從DB中取得以及重建緩存
-//            throw new CustomBaseException("文章中的評論點讚數無法取得,請稍後再試");
-//        }
-//
-//
-////        RAtomicLong atomicLong = redissonClient.getAtomicLong(BucketName);
-////        if(!atomicLong.isExists()){
-////            return 0L;
-////        }
-////        Long LikeCount = atomicLong.get();
-//
-////
-////        RSet<Long> set = redissonClient.getSet(BucketName);
-////        if(!set.isExists()){
-////            return null;
-////        }
-////        set.
-//
-//        Long LikeCount = commentLikesHash.get(commentId);
-//        if(LikeCount == null){
-//            log.info("取得文章中該則評論點讚數失敗,文章ID:{},評論ID:{}",articleId,commentId);
-//            return 0L;
-//        }
-//        log.info("LikeCount:{}",LikeCount);
-//        return LikeCount;
-//    }
-
-//    public RMap<Long, Long> getCommentLikesCountMapFromRedis(Long articleId){
-//
-//
-//
-//        String bucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_HASH.getPattern(),articleId);
-////        String BucketName = RedisCacheKey.ARTICLE_COMMENT_LIKES_HASH.format(articleId);
-//
-//        RMap<Long, Long> commentLikesHash = redissonClient.getMap(bucketName,new JsonJacksonCodec());
-//        if(!commentLikesHash.isExists()){
-//            log.debug("取得文章中所有評論點讚數失敗,文章ID:{}",articleId);
-//            ///TODO 嘗試從DB中取得以及重建緩存
-//            String lockKey = String.format(RedisLockKey.ARTICLE_COMMENTS_EXISTS_LOCK.getPattern(), articleId);
-//            RLock lock = redissonClient.getLock(lockKey);
-//            boolean locked = false;
-//            try {
-//                locked = lock.tryLock(3, 10, TimeUnit.SECONDS);
-//                if(!locked){
-//                    //未成功取得鎖(鎖可能正被其他線程占用)
-//                    //持續檢查最多60秒
-//                    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-//                    while(System.nanoTime() < deadline){
-//
-//                        commentLikesHash = redissonClient.getMap(bucketName);
-//                        if(commentLikesHash.isExists()){
-//                            //已由其他線程初始化完畢
-//                            return commentLikesHash;
-//                        }
-//
-//                        //間隔時間
-//                        TimeUnit.SECONDS.sleep(2);
-//                    }
-//
-//                    throw new CustomBaseException("文章中的評論點讚數無法取得,請稍後再試");
-//                } else {
-//                    //已成功取得鎖
-//                    //從資料庫中取得數據前再次判斷是否已存在
-//                    if(commentLikesHash.isExists()) return commentLikesHash;
-//
-//                    //從資料庫中取得該文章的評論點讚數
-//                    List<AmsCommentInfo> amsCommentInfoList = amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, articleId));
-//                    if(amsCommentInfoList.isEmpty()){
-//                        /*
-//                        在進入這個區塊之前已經判斷過文章是否存在評論
-//                        所以在這裡就不再判斷是否存在評論了
-//                        假設文章無評論,則拋出異常
-//                         */
-//                        throw new CustomBaseException("文章無評論, 請稍後再試");
-//
-//                    }
-//
-//                    Map<@NotNull Long, Long> commentLikesHashFromDB = amsCommentInfoList.stream().collect(Collectors.toMap(AmsCommentInfo::getCommentId,comment -> comment.getLikesCount().longValue()));
-//                    //再將該文章的評論點讚數加入至緩存中之前再次判斷是否已存在, 防止其他線程在取得鎖後已存在 , 若已存在則直接回傳
-//                    //將從資料庫中取得的資料加入至緩存中
-//                    commentLikesHash.putAll(commentLikesHashFromDB);
-//                    return commentLikesHash;
-//
-//                }
-//
-//            } catch (InterruptedException e) {
-//                Thread.currentThread().interrupt();
-//                log.error("文章中的評論點讚數無法取得,請稍後再試,異常錯誤:"+e.getMessage());
-//                throw new CustomBaseException("文章中的評論點讚數無法取得,請稍後再試,異常錯誤:"+e.getMessage());
-//            } finally {
-//                if( locked && lock.isHeldByCurrentThread()){
-//                    lock.unlock();
-//                }
-//
-//            }
-//        }
-//
-//
-//        log.info("commentLikesHash:{}",commentLikesHash);
-//        return commentLikesHash;
-//    }
-
+    
     /**
      * 取得文章中評論的點讚數聚合（Hash: field=commentId, value=likesCount）
      * 先從Redis中取得，如果不存在則從DB中取得，再將DB中的資料加入Redis中進行快取
      * @param articleId
      * @return
      */
-    public RMap<Long, Long> getCommentLikesCountMapFromRedis(Long articleId){
+    public Map<String, Map<Long, Integer>> getCommentsMetrics(Long articleId) {
+        log.info("開始執行 getCommentsMetrics - articleId: {}", articleId);
+
+        //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
+        if(amsArticleService.isArticleNotExists(articleId)){
+            log.warn("文章不存在，articleId={}",articleId);
+            throw new CustomBaseException("文章不存在");
+        }
+        
+        String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+
+        //先嘗試從Redis中讀取文章中所有留言的指標資料
+        Map<String, Map<Long, Integer>> commentsMetricMap = this.parseCommentsMetric(articleId);
+        //判斷是否成功從Redis中讀取
+        Map<Long, Integer> likesCountMap = commentsMetricMap.get("likesCountMap");
+        Map<Long, Integer> repliesCountMap = commentsMetricMap.get("repliesCountMap");
+
+        boolean needLoadFromDB = likesCountMap.isEmpty() || !repliesCountMap.isEmpty();
+        log.debug("Redis 快取狀態 - articleId: {}, needLoadFromDB: {}, likesCount: {}, repliesCount: {}",
+                articleId, needLoadFromDB, likesCountMap.size(), repliesCountMap.size());
+        if(needLoadFromDB){
+            //假設未成功從Redis中讀取則調用資料庫
+            log.info("Redis 快取未命中,從資料庫載入 - articleId: {}", articleId);
+            commentsMetricMap = redisCacheLoaderUtils.loadMapWithLock(
+                    likesCountBucketName,
+                    RedisLockKey.ARTICLE_COMMENTS_LIKES_LOCK.getFormat(articleId),
+                    () -> LoadCommentsMetric(articleId),
+                    () -> parseCommentsMetric(articleId),
+                    3,
+                    10,
+                    TimeUnit.SECONDS,
+                    3
 
 
-
-        String bucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_HASH.getPattern(),articleId);
-//        String BucketName = RedisCacheKey.ARTICLE_COMMENT_LIKES_HASH.format(articleId);
-
-        RMap<Long, Long> commentLikesHash = redissonClient.getMap(bucketName,new TypedJsonJacksonCodec(Long.class,
-                Long.class));
-        if(!commentLikesHash.isExists()){
-            log.debug("取得文章中所有評論點讚數失敗,文章ID:{}",articleId);
-            ///TODO 嘗試從DB中取得以及重建緩存
-            String lockKey = String.format(RedisLockKey.ARTICLE_COMMENTS_EXISTS_LOCK.getPattern(), articleId);
-            RLock lock = redissonClient.getLock(lockKey);
-            boolean locked = false;
-            try {
-                locked = lock.tryLock(2, 10, TimeUnit.SECONDS);
-                if(!locked){
-                    //未成功取得鎖(鎖可能正被其他線程占用)
-                    //持續檢查最多60秒
-                    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(8);
-                    while(System.nanoTime() < deadline){
-
-                        commentLikesHash = redissonClient.getMap(bucketName,new TypedJsonJacksonCodec(Long.class,
-                                Long.class));
-                        if(commentLikesHash.isExists()){
-                            //已由其他線程初始化完畢
-                            return commentLikesHash;
-                        }
-
-                        //間隔時間
-                        TimeUnit.SECONDS.sleep(2);
-                    }
-
-                    throw new CustomBaseException("文章中的評論點讚數無法取得,請稍後再試");
-                } else {
-                    //已成功取得鎖
-                    //從資料庫中取得數據前再次判斷是否已存在
-                    if(commentLikesHash.isExists()) return commentLikesHash;
-
-                    Map<Long, Long> commentLikesCountMapFromDB = getCommentLikesCountMapFromDB(articleId);
-
-                    //將從資料庫中取得的資料加入至緩存中
-                    commentLikesHash.putAll(commentLikesCountMapFromDB);
-
-                    log.info("commentLikesCountMapFromDB:{}",commentLikesCountMapFromDB);
-
-//                    //已成功取得鎖
-//                    //從資料庫中取得數據前再次判斷是否已存在
-//                    if(commentLikesHash.isExists()) return commentLikesHash;
-//
-//                    //從資料庫中取得該文章的評論點讚數
-//                    List<AmsCommentInfo> amsCommentInfoList = amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, articleId));
-//                    if(amsCommentInfoList.isEmpty()){
-//                        /*
-//                        在進入這個區塊之前已經判斷過文章是否存在評論
-//                        所以在這裡就不再判斷是否存在評論了
-//                        假設文章無評論,則拋出異常
-//                         */
-//                        throw new CustomBaseException("文章無評論, 請稍後再試");
-//
-//                    }
-//
-//                    Map<@NotNull Long, Long> commentLikesHashFromDB = amsCommentInfoList.stream().collect(Collectors.toMap(AmsCommentInfo::getCommentId,comment -> comment.getLikesCount().longValue()));
-//
-//
-//
-//                    //再將該文章的評論點讚數加入至緩存中之前再次判斷是否已存在, 防止其他線程在取得鎖後已存在 , 若已存在則直接回傳
-//                    //將從資料庫中取得的資料加入至緩存中
-//                    commentLikesHash.putAll(commentLikesHashFromDB);
-//                    return commentLikesHash;
-
-                }
-
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("文章中的評論點讚數無法取得,請稍後再試,異常錯誤:"+e.getMessage());
-                throw new CustomBaseException("文章中的評論點讚數無法取得,請稍後再試,異常錯誤:"+e.getMessage());
-            } finally {
-                if( locked && lock.isHeldByCurrentThread()){
-                    lock.unlock();
-                }
-
-            }
+            );
+            log.info("成功從資料庫載入並快取文章所有留言的指標 - articleId: {}", articleId);
+        }else{
+            log.info("成功從 Redis 讀取文章所有留言的指標 - articleId: {}", articleId);
         }
 
 
-        log.info("commentLikesHash:{}",commentLikesHash);
-        return commentLikesHash;
+        return commentsMetricMap;
+
     }
 
-    public Map<Long, Long> getCommentLikesCountMapFromDB(Long articleId){
 
-        //從資料庫中取得該文章的評論點讚數
-        List<AmsCommentInfo> amsCommentInfoList = amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, articleId));
+
+    /**
+     * 從資料庫中獲取文章中所有留言的指標，並寫入至快取中
+     * @param articleId
+     * @return
+     */
+    public Map<String,Map<Long,Integer>> LoadCommentsMetric(Long articleId){
+        log.info("開始執行獲取文章中所有留言的指標 LoadCommentsMetric - articleId: {}", articleId);
+
+        log.debug("執行資料庫查詢 - articleId: {}", articleId);
+        List<AmsCommentInfo> amsCommentInfoList = QueryCommentsMetric(articleId);
+        log.info("資料庫查詢完成 - articleId: {}, 留言數量: {}", articleId, amsCommentInfoList.size());
+        String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+        String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
+
+        log.debug("Redis Key 資訊 - likesKey: {}, repliesKey: {}", likesCountBucketName, repliesCountBucketName);
+        //判斷是否成功從資料庫中取得該文章所有留言的指標
         if(amsCommentInfoList.isEmpty()){
             /*
-            在進入這個區塊之前已經判斷過文章是否存在評論
-            所以在這裡就不再判斷是否存在評論了
-            假設文章無評論,則拋出異常
+            假設未成功從資料庫中取得該文章所有留言的指標，則寫入空快取，避免快取穿透，並設置TTL為3分鐘
              */
-            throw new CustomBaseException("文章無評論, 請稍後再試");
+            log.warn("資料庫無留言資料,寫入空快取標記防止快取穿透 - articleId: {}, TTL: 3分鐘", articleId);
+            //創建批次
+            RBatch putBatch = redissonClient.createBatch();
 
+
+            RMapAsync<Long, Integer> putLikesMapAsync = putBatch.getMap(likesCountBucketName, new TypedJsonJacksonCodec(Long.class, Integer.class));
+            RMapAsync<Long, Integer> putRepliesMapAsync = putBatch.getMap(repliesCountBucketName, new TypedJsonJacksonCodec(Long.class, Integer.class));
+            //創建空快取標記
+            Map<@NotNull Long, Integer> likesMap = new HashMap<>();
+            likesMap.put(-1L, -1);  // 創建空緩存標記
+            Map<@NotNull Long, Integer> repliesMap = new HashMap<>();
+            repliesMap.put(-1L, -1);  // 創建空緩存標記
+
+
+            //將快取標記寫入資料庫, 過期時間為3分鐘
+            putLikesMapAsync.putAllAsync(likesMap);
+            putLikesMapAsync.expireAsync(Duration.ofMinutes(3));
+            putRepliesMapAsync.putAllAsync(repliesMap);
+            putRepliesMapAsync.expireAsync(Duration.ofMinutes(3));
+            //執行批次實現空快取標記
+            putBatch.execute();
+
+            Map<String,Map<Long,Integer>> result = new HashMap<>();
+            //從資料庫中取得該文章的評論點讚數
+
+            //包裝成目標對象, 其中內容包含空快取標記-1L
+
+            result.put("likesCountMap",likesMap);
+            result.put("repliesCountMap",repliesMap);
+
+            log.warn("資料庫查詢無留言資料,寫入空快取標記防止快取穿透 - articleId: {}",articleId);
+            return result;
         }
+        //假設成功從資料庫中取得該文章所有留言的指標，則寫入快取
 
-        Map<@NotNull Long, Long> commentLikesHashFromDB = amsCommentInfoList.stream().collect(Collectors.toMap(AmsCommentInfo::getCommentId,comment -> comment.getLikesCount().longValue()));
-        //再將該文章的評論點讚數加入至緩存中之前再次判斷是否已存在, 防止其他線程在取得鎖後已存在 , 若已存在則直接回傳
+        log.debug("處理留言指標資料 - article: {}, amsCommentInfoList: {}",articleId,amsCommentInfoList);
+
+        Map<@NotNull Long, Integer> likesMap = amsCommentInfoList.stream().collect(Collectors.toMap(AmsCommentInfo::getCommentId, AmsCommentInfo::getLikesCount));
+        Map<@NotNull Long, Integer> repliesMap = amsCommentInfoList.stream().collect(Collectors.toMap(AmsCommentInfo::getCommentId, AmsCommentInfo::getRepliesCount));
+        Map<String,Map<Long,Integer>> result = new HashMap<>();
+
+        //包裝成目標對象
+        result.put("likesCountMap",likesMap);
+        result.put("repliesCountMap",repliesMap);
 
 
-        log.info("commentLikesHashFromDB:{}",commentLikesHashFromDB);
-        return commentLikesHashFromDB;
+
+        RBatch putBatch = redissonClient.createBatch();
+        RMapAsync<Long, Integer> putLikesMapAsync = putBatch.getMap(likesCountBucketName, new TypedJsonJacksonCodec(Long.class, Integer.class));
+        RMapAsync<Long, Integer> putRepliesMapAsync = putBatch.getMap(repliesCountBucketName, new TypedJsonJacksonCodec(Long.class, Integer.class));
+        //將快取標記寫入資料庫
+        putLikesMapAsync.putAllAsync(likesMap);
+        putRepliesMapAsync.putAllAsync(repliesMap);
+        putLikesMapAsync.expireAsync(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getTtl());
+        putRepliesMapAsync.expireAsync(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getTtl());
+        //執行批次實現快取
+        putBatch.execute();
+
+
+        log.info("成功獲取文章中所有留言的指標並且入至快取中 LoadCommentsMetric - articleId: {}", articleId);
+
+        return result;
     }
 
+    /**
+     * 從資料庫中取得文章中所有留言的留言ID、點讚數、回覆數
+     * @param articleId
+     * @return
+     */
+    public List<AmsCommentInfo> QueryCommentsMetric(Long articleId)  {
+        log.info("開始執行 QueryCommentsMetric - articleId: {}", articleId);
+        //從資料庫中取得該文章的評論點讚數
 
+        return amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>()
+                .eq(AmsCommentInfo::getArticleId, articleId)
+                .select(AmsCommentInfo::getCommentId,AmsCommentInfo::getLikesCount,AmsCommentInfo::getRepliesCount)
+        );
+    }
+
+    /**
+     * 從Redis中取得文章中所有留言的評論ID、點讚數、回覆數，並包裝成
+     * @param articleId
+     * @return
+     */
+    public Map<String,Map<Long,Integer>> parseCommentsMetric(Long articleId){
+        log.info("開始從 Redis 解析文章中所有留言的指標 - articleId: {}", articleId);
+
+        try {
+            String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+            String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
+
+            log.debug("Redis Key 資訊 - likesKey: {}, repliesKey: {}", likesCountBucketName, repliesCountBucketName);
+
+            RBatch batch = redissonClient.createBatch();
+            RMapAsync<Long, Integer> likesMapAsync = batch.getMap(likesCountBucketName, new TypedJsonJacksonCodec(Long.class, Integer.class));
+            RMapAsync<Long, Integer> repliesMapAsync = batch.getMap(repliesCountBucketName, new TypedJsonJacksonCodec(Long.class, Integer.class));
+
+            RFuture<Map<Long, Integer>> likesFuture = likesMapAsync.readAllMapAsync();
+            RFuture<Map<Long, Integer>> repliesFuture = repliesMapAsync.readAllMapAsync();
+
+            batch.execute();
+            Map<Long, Integer> likesMap = likesFuture.get();
+            Map<Long, Integer> repliesMap = repliesFuture.get();
+            log.debug("解析留言指標資料 - articleId: {}, 點讚指標數量: {}, 回覆指標數量: {}",articleId,likesMap.size(),repliesMap.size());
+
+            Map<String,Map<Long,Integer>> result = new HashMap<>();
+
+            //包裝成目標對象
+
+            result.put("likesCountMap",likesMap.isEmpty()? Collections.emptyMap() : likesMap);
+            result.put("repliesCountMap",repliesMap.isEmpty()? Collections.emptyMap() : repliesMap);
+
+            log.info("成功解析文章中所有留言的指標 - articleId: {}, 結果數量: {}",articleId,result.size());
+            return result;
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("解析文章中所有留言的指標失敗 - articleId: {}", articleId, e);
+            throw new CustomBaseException(e.getMessage());
+        }
+    }
 }
 
