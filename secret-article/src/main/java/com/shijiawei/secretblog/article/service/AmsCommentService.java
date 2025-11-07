@@ -27,7 +27,7 @@ public interface AmsCommentService extends IService<AmsComment> {
     @OpenCache(prefix = "AmsComments", key = "articleId_#{#articleId}", time = 30, chronoUnit = ChronoUnit.MINUTES)
     List<AmsArtCommentStaticVo> getStaticCommentDetails(Long articleId);
 
-    Long likeComment(Long articleId, Long commentId);
+    Integer likeComment(Long articleId, Long commentId);
 
     Boolean existsCommentIdFromDB(Long commentId);
 }

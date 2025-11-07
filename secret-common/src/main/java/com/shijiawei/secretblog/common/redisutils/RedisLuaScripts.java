@@ -25,7 +25,7 @@ public class RedisLuaScripts {
      *
      */
     public static final String LIKE_COMMENT_SCRIPT =
-            "local added = redis.call('SADD', KEYS[1], ARGV[1]) " + // 嘗試將userId加入集合
+                    "local added = redis.call('SADD', KEYS[1], ARGV[1]) " + // 嘗試將userId加入集合
                     "if added == 1 then " + //判斷是否成功加入集合,假設userId不存在於KEYS[1]鍵中，代表沒有點讚過該評論，才能成功加入集合;否則無法加入集合(已經對該評論點過讚)
                     "  local newCount = redis.call('HINCRBY', KEYS[2], ARGV[2], 1) " + // 更新某個文章(KEYS[2])鍵中某個評論(ARGV[2])字段的按讚數加1
                     "  return newCount " + //增加按讚數成功, 返回新的按讚數
@@ -46,7 +46,7 @@ public class RedisLuaScripts {
      *
      */
     public static final String UNLIKE_COMMENT_SCRIPT =
-            "local removed = redis.call('SREM', KEYS[1], ARGV[1]) " +
+                    "local removed = redis.call('SREM', KEYS[1], ARGV[1]) " +
                     "if removed == 1 then " +
                     "  local newCount =redis.call('HINCRBY', KEYS[2], ARGV[2], -1) " +
                     "  return newCount " +

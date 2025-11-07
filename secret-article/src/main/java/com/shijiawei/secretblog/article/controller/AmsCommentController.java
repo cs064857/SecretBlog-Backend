@@ -75,9 +75,9 @@ public class AmsCommentController {
      */
 
     @PostMapping("/{articleId}/comments/{commentId}/likes")
-    public R<Long> likeComment(@NotNull @PathVariable(value = "articleId")  Long articleId,@NotNull @PathVariable(value = "commentId") Long commentId){
+    public R<Integer> likeComment(@NotNull @PathVariable(value = "articleId")  Long articleId,@NotNull @PathVariable(value = "commentId") Long commentId){
         log.debug("commentId:{}",commentId);
-        Long newLikes = amsCommentService.likeComment(articleId,commentId);
+        Integer newLikes = amsCommentService.likeComment(articleId,commentId);
 
         return R.ok(newLikes);
     }

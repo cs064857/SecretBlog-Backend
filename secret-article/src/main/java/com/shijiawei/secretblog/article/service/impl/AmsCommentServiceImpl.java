@@ -706,7 +706,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      * @return
      */
     @Override
-    public Long likeComment(Long articleId,Long commentId) {
+    public Integer likeComment(Long articleId,Long commentId) {
         /// TODO同步點讚數從Redis到資料庫中
 
 
@@ -738,14 +738,11 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         /*
           判斷該評論是否存在
         */
-        //獲取桶對象, 注意原子性因此採用RAtomicLong
-//        RSet<Long> userLikedSet = redissonClient.getSet(userLikedSetKey);
-        RMap<Long, Long> commentLikesHash = redissonClient.getMap(commentLikesHashKey);
+        //獲取桶對象
+
+        RMap<Long, Integer> commentLikesHash = redissonClient.getMap(commentLikesHashKey);
 
         //先嘗試從Redis中讀取是否存在該評論的緩存
-//        boolean likesHashExists = commentLikesHash.isExists();
-
-//        if(!likesHashExists){
         //若快取中不存在該評論ID，則從資料庫中讀取該評論是否存在，若存在則新增至快取中
         if(!commentLikesHash.containsKey(commentId)){
             //若不存在則根據commentId從資料庫中讀取該評論是否存在
@@ -753,7 +750,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             if(commentIdFromDB){
 
                 // 從 DB 查詢評論信息（包含點讚數）
-                AmsCommentInfo amsCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getCommentId, commentId));
+                AmsCommentInfo amsCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>().select(AmsCommentInfo::getCommentId,AmsCommentInfo::getLikesCount).eq(AmsCommentInfo::getCommentId, commentId));
 
                 if(amsCommentInfo == null){
 
@@ -761,7 +758,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                 }
                 // 從 DB 查詢成功得到該評論的資訊
                 // 初始化緩存，將該評論的點讚數加入緩存
-                commentLikesHash.put(commentId, Long.valueOf(amsCommentInfo.getLikesCount()));
+                commentLikesHash.put(amsCommentInfo.getCommentId(), amsCommentInfo.getLikesCount());
 
             }
 
@@ -787,8 +784,19 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
             if (luaResult > 0) {
                 log.info("點讚成功,用戶ID:{},評論ID:{},新的按讚數:{}", userId, commentId, luaResult);
+
+
+                boolean update = amsCommentInfoService.update(new LambdaUpdateWrapper<AmsCommentInfo>()
+                        .eq(AmsCommentInfo::getCommentId, commentId)
+                        .set(AmsCommentInfo::getLikesCount, luaResult));
+
+                if(!update){
+                    log.error("更新資料庫中評論點讚數失敗,用戶ID:{},評論ID:{}", userId, commentId);
+                    throw new CustomBaseException("系統異常");
+                }
+
                 // 返回新的按讚數
-                return luaResult;
+                return Math.toIntExact(luaResult);
             } else if (luaResult == -1) {
                 log.warn("重複點讚,用戶ID:{},評論ID:{}", userId, commentId);
                 throw new CustomBaseException("您已經點過讚了");
@@ -841,6 +849,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         }
         
         String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+        String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
 
         //先嘗試從Redis中讀取文章中所有留言的指標資料
         Map<String, Map<Long, Integer>> commentsMetricMap = this.parseCommentsMetric(articleId);
@@ -848,21 +857,22 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         Map<Long, Integer> likesCountMap = commentsMetricMap.get("likesCountMap");
         Map<Long, Integer> repliesCountMap = commentsMetricMap.get("repliesCountMap");
 
-        boolean needLoadFromDB = likesCountMap.isEmpty() || !repliesCountMap.isEmpty();
+        boolean needLoadFromDB = likesCountMap.isEmpty() || repliesCountMap.isEmpty();
         log.debug("Redis 快取狀態 - articleId: {}, needLoadFromDB: {}, likesCount: {}, repliesCount: {}",
                 articleId, needLoadFromDB, likesCountMap.size(), repliesCountMap.size());
         if(needLoadFromDB){
             //假設未成功從Redis中讀取則調用資料庫
             log.info("Redis 快取未命中,從資料庫載入 - articleId: {}", articleId);
             commentsMetricMap = redisCacheLoaderUtils.loadMapWithLock(
-                    likesCountBucketName,
-                    RedisLockKey.ARTICLE_COMMENTS_LIKES_LOCK.getFormat(articleId),
-                    () -> LoadCommentsMetric(articleId),
+
+                    () -> loadCommentsMetric(articleId),
                     () -> parseCommentsMetric(articleId),
                     3,
                     10,
                     TimeUnit.SECONDS,
-                    3
+                    3,
+                    RedisLockKey.ARTICLE_COMMENTS_LIKES_LOCK.getFormat(articleId),
+                    likesCountBucketName,repliesCountBucketName
 
 
             );
@@ -883,8 +893,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      * @param articleId
      * @return
      */
-    public Map<String,Map<Long,Integer>> LoadCommentsMetric(Long articleId){
-        log.info("開始執行獲取文章中所有留言的指標 LoadCommentsMetric - articleId: {}", articleId);
+    public Map<String,Map<Long,Integer>> loadCommentsMetric(Long articleId){
+        log.info("開始執行獲取文章中所有留言的指標 loadCommentsMetric - articleId: {}", articleId);
 
         log.debug("執行資料庫查詢 - articleId: {}", articleId);
         List<AmsCommentInfo> amsCommentInfoList = QueryCommentsMetric(articleId);

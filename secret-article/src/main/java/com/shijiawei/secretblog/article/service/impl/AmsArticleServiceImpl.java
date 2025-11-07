@@ -966,14 +966,14 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
              */
             //從DB資料庫中查詢
             articleStatusVo = redisCacheLoaderUtils.loadMapWithLock(
-                    redisKey,
-                    RedisLockKey.ARTICLE_STATUS_LOCK.getFormat(articleId),
                     () -> loadArticleStatusVo(articleId),
                     () -> this.parseArticleStatusVoFromRedis(articleId),
                     3,
                     10,
                     TimeUnit.SECONDS,
-                    3
+                    3,
+                    RedisLockKey.ARTICLE_STATUS_LOCK.getFormat(articleId),
+                    redisKey
             );
 
 
