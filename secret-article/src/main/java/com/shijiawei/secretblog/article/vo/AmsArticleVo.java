@@ -33,7 +33,12 @@ public class AmsArticleVo {
     /**
      * 作者名稱
      */
-    private String userName;
+//    private String accountName;
+
+
+    private String nickName;
+
+    private String avatar;
 
     /**
      * 作者名稱

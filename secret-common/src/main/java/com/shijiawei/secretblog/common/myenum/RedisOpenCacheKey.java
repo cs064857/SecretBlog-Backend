@@ -31,7 +31,16 @@ public class RedisOpenCacheKey {
 
     }
 
+    /*
+     * 文章相關常數
+     */
+    public static class ArticleDetails{
+        private ArticleDetails() {}
 
+        public static final String ARTICLE_DETAILS_PREFIX = ARTICLE + "articleDetails";
+        public static final String ARTICLE_DETAILS_KEY = "#{#articleId}";
+
+    }
 
 //    /*
 //     * 文章評論資訊相關常數(點讚數、書簽署)

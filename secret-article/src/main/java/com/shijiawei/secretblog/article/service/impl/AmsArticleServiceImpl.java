@@ -26,6 +26,7 @@ import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
+import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import com.shijiawei.secretblog.common.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,6 +89,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     private RedisCacheLoaderUtils redisCacheLoaderUtils;
 
     private final RedisRateLimiterUtils redisRateLimiterUtils;
+
+    @Autowired
+    @Lazy
+    private AmsArticleService amsArticleService;
+
 
     public AmsArticleServiceImpl(RedisRateLimiterUtils redisRateLimiterUtils) {
         this.redisRateLimiterUtils = redisRateLimiterUtils;
@@ -158,7 +165,20 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             this.baseMapper.insert(amsArticle);
 
             amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
-            amsArtinfo.setUserName(userNameFromToken);
+            R<UserBasicDTO> user = userFeignClient.getUserById(userId);
+            if(user.getData()!=null){
+                amsArtinfo.setAccountName(user.getData().getAccountName());
+                amsArtinfo.setNickName(user.getData().getNickName());
+                amsArtinfo.setAvatar(user.getData().getAvatar());
+            }
+
+
+            //▼
+//            amsArtinfo.setNickName(userNameFromToken);
+//            amsArtinfo.setAvatar(userNameFromToken);
+
+
+
             amsArtinfo.setArticleId(amsArticle.getId());
             amsArtinfo.setUserId(userId);
             amsArtinfoService.save(amsArtinfo);
@@ -315,8 +335,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             throw new CustomBaseException("文章不存在");
         }
 
-
-        AmsArticleVo amsArticleVo = getAmsArticleVo(articleId);
+        AmsArticleVo amsArticleVo = amsArticleService.getAmsArticleVo(articleId);
+//        AmsArticleVo amsArticleVo = getAmsArticleVo(articleId);
         if(amsArticleVo==null){
             log.warn("無法成功獲取文章資訊，該文章可能已被刪除");
             throw new CustomBaseException("無法成功獲取文章資訊，該文章可能已被刪除");
@@ -382,9 +402,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         return amsArticleVo;
     }
 
-    @OpenCache(prefix = "AmsArticle",key = "ArticleVo_#{#articleId}",time = 30,chronoUnit = ChronoUnit.MINUTES)
+    @OpenCache(prefix = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_PREFIX,key = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_KEY,time = 30,chronoUnit = ChronoUnit.MINUTES)
     @Override
     public AmsArticleVo getAmsArticleVo(Long articleId) {
+        log.info("獲取文章詳情，articleId={}",articleId);
 
         if(isArticleNotExists(articleId)){
             log.warn("文章不存在，articleId={}",articleId);
@@ -416,24 +437,35 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         // 優先通過用戶服務獲取最新用戶暱稱；失敗時保留DB中的備援 userName
-        try {
-            Long uid = amsArticleVo.getUserId();
-            if (uid != null) {
-                amsArticleVo.setUserId(uid);
-                R<UserBasicDTO> userResp = userFeignClient.getUserById(uid);
-                if (userResp != null && userResp.getData() != null) {
-                    String nick = userResp.getData().getNickName();
+        /// TODO透過Openfeign獲取用戶資料
+//        try {
+//            Long uid = amsArticleVo.getUserId();
+//            if (uid != null) {
+//                amsArticleVo.setUserId(uid);
+//                R<UserBasicDTO> userResp = userFeignClient.getUserById(uid);
+//                if (userResp != null && userResp.getData() != null) {
+//                    String nickName = userResp.getData().getNickName();
+//                    String avatar = userResp.getData().getAvatar();
+//
+//                    if (nickName != null ) {
+//                        //▼ avatar!=null && nickName != null
+//                        amsArticleVo.setNickName(nickName);
+//
+//                    }
+//                    if(avatar !=null){
+//                        amsArticleVo.setAvatar(avatar);
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            // 遠端失敗不影響主流程，採用本地 userName 作為退化顯示
+//            log.warn("透過用戶服務獲取暱稱失敗，articleId={}, userId={}, err={}", articleId, amsArticleVo.getUserId(), e.getMessage());
+//        }
 
-                    if (nick != null && !nick.isEmpty()) {
-                        amsArticleVo.setUserName(nick);
 
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // 遠端失敗不影響主流程，採用本地 userName 作為退化顯示
-            log.warn("透過用戶服務獲取暱稱失敗，articleId={}, userId={}, err={}", articleId, amsArticleVo.getUserId(), e.getMessage());
-        }
+
+
+
 
 
 //        AmsArticle amsArticle = this.baseMapper.selectById(articleId);
@@ -466,7 +498,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        /*
 //        設置文章資訊
 //         */
-//        ///  TODO缺少userName
+//        ///  TODO缺少accountName
 //        BeanUtils.copyProperties(amsArtinfo, amsArticleVo,"id","articleId");
 //        /*
 //        設置分類資訊
@@ -957,10 +989,12 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         //嘗試從Redis取得文章的指標
         String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
         log.info("redisKey: {}", redisKey);
+        //初步嘗試從Redis中讀取文章的指標
         AmsArticleStatusVo articleStatusVo = this.parseArticleStatusVoFromRedis(articleId);
 
         //判斷是否成功從Redis中獲取文章的指標或articleStatusVo中其中某個欄位是否為null
         if (articleStatusVo == null || articleStatusVo.allNull()) {
+            log.info("Redis 快取未命中,從資料庫載入 - articleId: {}", articleId);
             /*
             假設未成功從Redis獲取文章的指標，或者指標鍵值有遺漏
              */

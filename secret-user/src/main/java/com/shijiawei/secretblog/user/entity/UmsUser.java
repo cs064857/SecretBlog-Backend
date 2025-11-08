@@ -49,6 +49,15 @@ public class UmsUser implements Serializable {
     @Size(max = 255,message = "用戶名最大长度要小于 255")
     private String nickName;
 
+//    /**
+//     * 用戶帳號
+//     */
+//    @TableField(value = "account_name")
+//    @Schema(description="帳號")
+//    @Size(max = 255,message = "用戶帳號最大长度要小于 255")
+//    private String accountName;
+
+
     /**
      * 使用者組Id
      */

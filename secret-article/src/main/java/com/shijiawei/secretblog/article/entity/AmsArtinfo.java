@@ -24,10 +24,16 @@ public class AmsArtinfo implements Serializable {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @TableId(value = "id")
     private Long id;
-    /// TODO 移除userName
-    @TableField(value = "user_name")
-    private String userName;
-    
+
+    @TableField(value = "account_name")
+    private String accountName;
+
+    @TableField(value = "nick_name")
+    private String nickName;
+
+    @TableField(value = "avatar")
+    private String avatar;
+
     /**
      * 文章id(雪花算法,不可為空)
      */

@@ -25,11 +25,11 @@ public class AmsArticlePreviewVo {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long articleId;
     ///TODO 預覽文章時列出用戶名及用戶頭像
-    private String username;
+    private String nickName;
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long userId;
     private String avatar;
-    private String accountName;
+
 
     private String categoryName;
     @JsonFormat(shape = JsonFormat.Shape.STRING)
