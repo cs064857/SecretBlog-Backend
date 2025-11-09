@@ -167,7 +167,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
             R<UserBasicDTO> user = userFeignClient.getUserById(userId);
             if(user.getData()!=null){
-                amsArtinfo.setAccountName(user.getData().getAccountName());
+//                amsArtinfo.setAccountName(user.getData().getAccountName());
                 amsArtinfo.setNickName(user.getData().getNickName());
                 amsArtinfo.setAvatar(user.getData().getAvatar());
             }

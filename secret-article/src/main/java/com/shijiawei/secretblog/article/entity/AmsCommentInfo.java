@@ -59,4 +59,10 @@ public class AmsCommentInfo {
     @TableField(value = "replies_count")
     private Integer repliesCount;
 
+    @TableField(value = "nick_name")
+    private String nickName;
+
+    @TableField(value = "avatar")
+    private String avatar;
+
 }

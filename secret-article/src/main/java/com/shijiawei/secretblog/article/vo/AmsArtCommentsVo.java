@@ -14,7 +14,7 @@ import java.util.List;
  */
 @Data
 public class AmsArtCommentsVo {
-    private String username;
+    private String nickName;
     private String commentContent;
     private Integer likesCount;
     private Integer repliesCount;

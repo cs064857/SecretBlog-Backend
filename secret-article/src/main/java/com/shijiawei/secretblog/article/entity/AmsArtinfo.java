@@ -25,9 +25,6 @@ public class AmsArtinfo implements Serializable {
     @TableId(value = "id")
     private Long id;
 
-    @TableField(value = "account_name")
-    private String accountName;
-
     @TableField(value = "nick_name")
     private String nickName;
 

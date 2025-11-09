@@ -1,8 +1,11 @@
 package com.shijiawei.secretblog.article.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.core.mapper.Mapper;
 import com.shijiawei.secretblog.article.entity.AmsComment;
+import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * ClassName: AmsCommentMapper
@@ -12,4 +15,7 @@ import com.shijiawei.secretblog.article.entity.AmsComment;
  */
 
 public interface AmsCommentMapper extends BaseMapper<AmsComment> {
+
+    List<AmsArtCommentStaticVo> getStaticCommentDetails(@Param(value = "articleId") Long articleId);
+
 }

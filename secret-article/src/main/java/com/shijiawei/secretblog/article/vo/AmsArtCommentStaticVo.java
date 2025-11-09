@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  */
 @Data
 public class AmsArtCommentStaticVo {
-    private String username;
+    private String nickName;
     private String commentContent;
 
     private LocalDateTime createAt;
@@ -23,6 +23,7 @@ public class AmsArtCommentStaticVo {
     private Long parentCommentId;
 
     private String avatar;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long commentId;
 }
