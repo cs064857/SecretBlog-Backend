@@ -8,6 +8,7 @@ import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.entity.AmsArtStatus;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.entity.AmsCommentInfo;
+import com.shijiawei.secretblog.article.entity.AmsCommentStatistics;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
 import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
 import com.shijiawei.secretblog.article.service.*;
@@ -43,7 +44,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -85,6 +85,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     @Autowired
     private RedisCacheLoaderUtils redisCacheLoaderUtils;
+
+    @Autowired
+    private AmsCommentStatisticsService amsCommentStatisticsService;
 
 //    public AmsCommentServiceImpl(RedissonClient redissonClient){
 //        this.redissonClient = redissonClient;
@@ -349,9 +352,12 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             amsCommentInfo.setCreateAt(LocalDateTime.now());
                             amsCommentInfo.setUpdateAt(LocalDateTime.now());
                             amsCommentInfo.setParentCommentId(amsCommentCreateDTO.getParentCommentId());
-                            //透過ParentCommentId去查詢到該父評論,並將其留言數量+1
-                            AmsCommentInfo parentAmsCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getCommentId, amsCommentCreateDTO.getParentCommentId()));
-                            parentAmsCommentInfo.setRepliesCount(parentAmsCommentInfo.getRepliesCount()+1);
+                            //透過ParentCommentId去查詢到該父評論的指標,並將其留言數量+1
+                            amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
+                                    .eq(AmsCommentStatistics::getCommentId, amsCommentCreateDTO.getParentCommentId())
+                                    .setSql("replies_count = replies_count + 1")
+                            );
+
 
                             amsCommentInfo.setNickName(user.getData().getNickName());
                             amsCommentInfo.setAvatar(user.getData().getAvatar());
@@ -359,8 +365,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             this.baseMapper.insert(amsComment);
                             //儲存新創建的評論
                             amsCommentInfoService.save(amsCommentInfo);
-                            //更新父評論
-                            amsCommentInfoService.updateById(parentAmsCommentInfo);
+
 
 
                             //將資料庫中的文章評論數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
@@ -765,15 +770,15 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             if(commentIdFromDB){
 
                 // 從 DB 查詢評論信息（包含點讚數）
-                AmsCommentInfo amsCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>().select(AmsCommentInfo::getCommentId,AmsCommentInfo::getLikesCount).eq(AmsCommentInfo::getCommentId, commentId));
+                AmsCommentStatistics amsCommentStatistics = amsCommentStatisticsService.getOne(new LambdaQueryWrapper<AmsCommentStatistics>().select(AmsCommentStatistics::getCommentId,AmsCommentStatistics::getLikesCount).eq(AmsCommentStatistics::getCommentId, commentId));
 
-                if(amsCommentInfo == null){
+                if(amsCommentStatistics == null){
 
                     throw new CustomBaseException("該評論不存在或已被刪除");
                 }
                 // 從 DB 查詢成功得到該評論的資訊
                 // 初始化緩存，將該評論的點讚數加入緩存
-                commentLikesHash.put(amsCommentInfo.getCommentId(), amsCommentInfo.getLikesCount());
+                commentLikesHash.put(amsCommentStatistics.getCommentId(), amsCommentStatistics.getLikesCount());
 
             }
 
@@ -801,9 +806,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                 log.info("點讚成功,用戶ID:{},評論ID:{},新的按讚數:{}", userId, commentId, luaResult);
 
 
-                boolean update = amsCommentInfoService.update(new LambdaUpdateWrapper<AmsCommentInfo>()
-                        .eq(AmsCommentInfo::getCommentId, commentId)
-                        .set(AmsCommentInfo::getLikesCount, luaResult));
+                boolean update = amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
+                        .eq(AmsCommentStatistics::getCommentId, commentId)
+                        .set(AmsCommentStatistics::getLikesCount, luaResult));
 
                 if(!update){
                     log.error("更新資料庫中評論點讚數失敗,用戶ID:{},評論ID:{}", userId, commentId);
@@ -912,14 +917,14 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         log.info("開始執行獲取文章中所有留言的指標 loadCommentsMetric - articleId: {}", articleId);
 
         log.debug("執行資料庫查詢 - articleId: {}", articleId);
-        List<AmsCommentInfo> amsCommentInfoList = QueryCommentsMetric(articleId);
-        log.info("資料庫查詢完成 - articleId: {}, 留言數量: {}", articleId, amsCommentInfoList.size());
+        List<AmsCommentStatistics> amsCommentStatistics = QueryCommentsMetric(articleId);
+        log.info("資料庫查詢完成 - articleId: {}, 留言數量: {}", articleId, amsCommentStatistics.size());
         String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
         String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
 
         log.debug("Redis Key 資訊 - likesKey: {}, repliesKey: {}", likesCountBucketName, repliesCountBucketName);
         //判斷是否成功從資料庫中取得該文章所有留言的指標
-        if(amsCommentInfoList.isEmpty()){
+        if(amsCommentStatistics.isEmpty()){
             /*
             假設未成功從資料庫中取得該文章所有留言的指標，則寫入空快取，避免快取穿透，並設置TTL為3分鐘
              */
@@ -958,10 +963,10 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         }
         //假設成功從資料庫中取得該文章所有留言的指標，則寫入快取
 
-        log.debug("處理留言指標資料 - article: {}, amsCommentInfoList: {}",articleId,amsCommentInfoList);
+        log.debug("處理留言指標資料 - article: {}, amsCommentStatistics: {}",articleId,amsCommentStatistics);
 
-        Map<@NotNull Long, Integer> likesMap = amsCommentInfoList.stream().collect(Collectors.toMap(AmsCommentInfo::getCommentId, AmsCommentInfo::getLikesCount));
-        Map<@NotNull Long, Integer> repliesMap = amsCommentInfoList.stream().collect(Collectors.toMap(AmsCommentInfo::getCommentId, AmsCommentInfo::getRepliesCount));
+        Map<@NotNull Long, Integer> likesMap = amsCommentStatistics.stream().collect(Collectors.toMap(AmsCommentStatistics::getCommentId, AmsCommentStatistics::getLikesCount));
+        Map<@NotNull Long, Integer> repliesMap = amsCommentStatistics.stream().collect(Collectors.toMap(AmsCommentStatistics::getCommentId, AmsCommentStatistics::getRepliesCount));
         Map<String,Map<Long,Integer>> result = new HashMap<>();
 
         //包裝成目標對象
@@ -992,13 +997,13 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      * @param articleId
      * @return
      */
-    public List<AmsCommentInfo> QueryCommentsMetric(Long articleId)  {
+    public List<AmsCommentStatistics> QueryCommentsMetric(Long articleId)  {
         log.info("開始執行 QueryCommentsMetric - articleId: {}", articleId);
         //從資料庫中取得該文章的評論點讚數
 
-        return amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>()
-                .eq(AmsCommentInfo::getArticleId, articleId)
-                .select(AmsCommentInfo::getCommentId,AmsCommentInfo::getLikesCount,AmsCommentInfo::getRepliesCount)
+        return amsCommentStatisticsService.list(new LambdaQueryWrapper<AmsCommentStatistics>()
+                .eq(AmsCommentStatistics::getArticleId, articleId)
+                .select(AmsCommentStatistics::getCommentId,AmsCommentStatistics::getLikesCount,AmsCommentStatistics::getRepliesCount)
         );
     }
 

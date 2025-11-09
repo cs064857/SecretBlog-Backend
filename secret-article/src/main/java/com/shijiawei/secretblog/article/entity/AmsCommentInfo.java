@@ -53,11 +53,6 @@ public class AmsCommentInfo {
     @TableField(value = "update_at",fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateAt;
 
-    @TableField(value = "likes_count")
-    private Integer likesCount;
-
-    @TableField(value = "replies_count")
-    private Integer repliesCount;
 
     @TableField(value = "nick_name")
     private String nickName;

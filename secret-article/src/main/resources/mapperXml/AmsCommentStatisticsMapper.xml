@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.shijiawei.secretblog.article.mapper.AmsCommentStatisticsMapper">
+    <resultMap id="AmsCommentStatisticsBaseResultMap" type="com.shijiawei.secretblog.article.entity.AmsCommentStatistics">
+        <id column="comment_id" property="commentId" javaType="long" jdbcType="BIGINT"/>
+        <result column="likes_count" property="likesCount" javaType="integer" jdbcType="INTEGER"/>
+        <result column="replies_count" property="repliesCount" javaType="integer" jdbcType="INTEGER"/>
+    </resultMap>
+
+
+
+</mapper>
