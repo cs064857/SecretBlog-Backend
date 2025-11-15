@@ -35,7 +35,7 @@ public class AmsArticlePreviewVo {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long categoryId;
 
-    private List<AmsArtTag> amsArtTagList;
+    private List<AmsArtTagsVo> amsArtTagList;
 
     /**
      * 創建時間

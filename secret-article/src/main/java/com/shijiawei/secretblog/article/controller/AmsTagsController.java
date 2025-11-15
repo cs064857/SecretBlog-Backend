@@ -44,7 +44,7 @@ public class AmsTagsController {
      */
     @GetMapping("/list")
     public R<List<AmsTags>> getArtTags(){
-        List<AmsTags> amsTagsList = amsTagsService.list();
+        List<AmsTags> amsTagsList = amsTagsService.getArtTags();
         return R.ok(amsTagsList);
     }
     /**

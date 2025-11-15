@@ -1,8 +1,11 @@
 package com.shijiawei.secretblog.article.mapper;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.shijiawei.secretblog.article.vo.AmsArtTagsVo;
+import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import org.apache.ibatis.annotations.Param;
 
@@ -16,4 +19,11 @@ public interface AmsArticleMapper extends BaseMapper<AmsArticle> {
 
     AmsArtTagsVo getArticleTagVoList(@Param("articleId") Long articleId);
     AmsArticleVo getArticleVo(@Param("articleId") Long articleId);
+//    List<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(@Param("categoryId") Long categoryId);
+
+//    IPage<AmsArticlePreviewVo> getArticlePreviewListByCategoryId(
+    IPage<AmsArticlePreviewVo> getArticlesPreviewPage(
+            Page<?> page,
+            @Param("categoryId") Long categoryId
+    );
 }

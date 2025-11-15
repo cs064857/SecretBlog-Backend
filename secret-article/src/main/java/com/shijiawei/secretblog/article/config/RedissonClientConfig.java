@@ -1,9 +1,13 @@
 package com.shijiawei.secretblog.article.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
 import org.redisson.codec.JsonJacksonCodec;
+import org.redisson.codec.TypedJsonJacksonCodec;
 import org.redisson.config.Config;
 import org.redisson.spring.starter.RedissonProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +47,17 @@ public class RedissonClientConfig {
         config.setLockWatchdogTimeout(120);
 
         config.setCodec(StringCodec.INSTANCE);// 設置Redisson使用String進行序列化和反序列化
+
+//        // 使用支援 Java 8 日期時間的 Codec
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        objectMapper.registerModule(new JavaTimeModule());
+//        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+//        config.setCodec(new JsonJacksonCodec(objectMapper));
+
+//        config.setCodec(new TypedJsonJacksonCodec(objectMapper));
+
+
+//        config.setCodec(new TypedJsonJacksonCodec(Object.class, springObjectMapper));
 //        config.setCodec(new JsonJacksonCodec());// 設置Redisson使用JsonJacksonCodec進行序列化和反序列化
 
         // 根據配置創建RedissonClient

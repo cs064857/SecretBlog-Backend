@@ -1,13 +1,11 @@
 package com.shijiawei.secretblog.article.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.baomidou.mybatisplus.core.conditions.update.Update;
 import com.baomidou.mybatisplus.core.injector.methods.Insert;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.common.vaildation.ValidationGroups;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -36,5 +34,13 @@ public class AmsTags {
     private LocalDateTime createAt;
     @TableField(value = "update_at",fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateAt;
+
+    /**
+     * 邏輯刪除(0未刪除,1被刪除)
+     */
+    @TableField(value = "deleted")
+    @Schema(description="邏輯刪除(0未刪除,1被刪除)")
+    @NotNull(message = "邏輯刪除(0未刪除,1被刪除)不能为null")
+    private Byte deleted;
 
 }

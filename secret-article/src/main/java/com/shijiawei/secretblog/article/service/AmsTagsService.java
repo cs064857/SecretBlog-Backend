@@ -3,6 +3,11 @@ package com.shijiawei.secretblog.article.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.entity.AmsTags;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * ClassName: AmsTagsService
  * Description:
@@ -11,4 +16,8 @@ import com.shijiawei.secretblog.article.entity.AmsTags;
  */
 public interface AmsTagsService extends IService<AmsTags> {
     void createArtTag(String name);
+
+    List<AmsTags> getArtTags();
+
+    Map<Long, AmsTags> getArtTagsByIds(Set<Long> set);
 }

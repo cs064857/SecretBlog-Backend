@@ -7,11 +7,11 @@
         <result column="content" property="content" jdbcType="VARCHAR"/>
     </resultMap>
 
-    <sql id="getArticlesByCategoryIdAndPage">
-        SELECT *
-        FROM ams_article AS ams_article
-        INNER JOIN ams_artInfo as ams_artInfo AND a
-    </sql>
+<!--    <sql id="getArticlesByCategoryIdAndPage">-->
+<!--        SELECT *-->
+<!--        FROM ams_article AS ams_article-->
+<!--        INNER JOIN ams_artInfo as ams_artInfo AND a-->
+<!--    </sql>-->
 
     <resultMap id="ArticleTagVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArtTagsVo">
         <id property="id" column="tag_id"/>
@@ -78,5 +78,122 @@
         WHERE ams_art_tag.article_id = #{articleId}
         ORDER BY ams_art_tag.id
     </select>
+
+
+
+    <!--    getArticlesByCategoryIdAndPage  -->
+<!--    <resultMap id="ArticlePreviewVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo">-->
+<!--        <id property="articleId" column="article_id"/>-->
+<!--        <result property="title" column="title"/>-->
+<!--        <result property="nickName" column="nick_name"/>-->
+<!--        <result property="userId" column="user_id"/>-->
+<!--        <result property="avatar" column="avatar"/>-->
+<!--        <result property="categoryName" column="category_name"/>-->
+<!--        <result property="categoryId" column="category_id"/>-->
+<!--        <result property="createTime" column="create_time"/>-->
+<!--        <result property="updateTime" column="update_time"/>-->
+<!--        <result property="viewsCount" column="views_count"/>-->
+<!--        <result property="likesCount" column="likes_count"/>-->
+<!--        <result property="bookmarksCount" column="bookmarks_count"/>-->
+<!--        <result property="commentsCount" column="comments_count"/>-->
+<!--        <collection property="amsArtTagList"-->
+<!--                    ofType="com.shijiawei.secretblog.article.vo.AmsArtTagsVo"-->
+<!--                    column="tags_json"-->
+<!--                    javaType="ArrayList"-->
+<!--                    typeHandler="com.shijiawei.secretblog.article.typehandler.TagsJsonTypeHandler"/>-->
+
+<!--    </resultMap>-->
+
+<!--    <select id="getArticlesByCategoryIdAndPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
+
+<!--        SELECT-->
+<!--            a.title,-->
+<!--            ai.article_id,-->
+<!--            ai.nick_name,-->
+<!--            ai.user_id,-->
+<!--            ai.avatar,-->
+<!--            ac.category_name,-->
+<!--            ai.category_id,-->
+<!--            ai.create_time,-->
+<!--            ai.update_time,-->
+<!--            aas.views_count,-->
+<!--            aas.likes_count,-->
+<!--            aas.bookmarks_count,-->
+<!--            aas.comments_count,-->
+<!--            GROUP_CONCAT(-->
+<!--                    DISTINCT-->
+<!--                    CONCAT('{"id":', tags.id, ',"name":"', tags.name, '"}')-->
+<!--                    SEPARATOR ','-->
+<!--            ) AS tags_json-->
+<!--        FROM ams_artInfo AS ai-->
+<!--                 INNER JOIN ams_article AS a ON a.id = ai.article_id-->
+<!--                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id-->
+<!--                 LEFT JOIN ams_art_tag AS atag ON ai.article_id = atag.article_id-->
+<!--                 LEFT JOIN ams_tags AS tags ON atag.tags_id = tags.id-->
+<!--                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
+<!--        WHERE ai.category_id = 2-->
+<!--        GROUP BY ai.article_id, a.title, ai.nick_name, ai.user_id, ai.avatar,-->
+<!--                 ac.category_name, ai.category_id, ai.create_time, ai.update_time,-->
+<!--                 aas.views_count, aas.likes_count, aas.bookmarks_count, aas.comments_count-->
+<!--        ORDER BY ai.update_time DESC-->
+
+<!--    </select>-->
+
+
+
+
+
+
+
+
+
+    <!--    getArticlesByCategoryIdAndPage  -->
+    <resultMap id="ArticlePreviewVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo">
+        <id property="articleId" column="article_id"/>
+        <result property="title" column="title"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="userId" column="user_id"/>
+        <result property="avatar" column="avatar"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="viewsCount" column="views_count"/>
+        <result property="likesCount" column="likes_count"/>
+        <result property="bookmarksCount" column="bookmarks_count"/>
+        <result property="commentsCount" column="comments_count"/>
+        <collection property="amsArtTagList" ofType="com.shijiawei.secretblog.article.vo.AmsArtTagsVo" >
+            <id property="id" column="tag_id"/>
+
+        </collection>
+    </resultMap>
+
+    <select id="getArticlesPreviewPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >
+
+        SELECT
+            a.title AS title,
+            ai.article_id AS article_id,
+            ai.nick_name AS nick_name,
+            ai.user_id AS user_id,
+            ai.avatar AS avatar,
+            ac.category_name AS category_name,
+            ai.category_id AS category_id,
+            ai.create_time AS create_time,
+            ai.update_time AS update_time,
+            aas.views_count AS views_count,
+            aas.likes_count AS likes_count,
+            aas.bookmarks_count AS bookmarks_count,
+            aas.comments_count AS comments_count,
+            tag.tags_id AS tag_id
+        FROM ams_artInfo AS ai
+                 INNER JOIN ams_article AS a ON a.id = ai.article_id
+                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id
+                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id
+                 INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id
+        WHERE ai.category_id = #{categoryId}
+        ORDER BY ai.update_time DESC
+
+    </select>
+
 
 </mapper>

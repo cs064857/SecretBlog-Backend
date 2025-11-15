@@ -1,6 +1,6 @@
 package com.shijiawei.secretblog.article.controller;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
@@ -108,10 +108,10 @@ public class AmsArticleController {
      */
 
     @GetMapping("/categories/{categoryId}/articles")
-    public R<Page<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
+    public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
         log.info("categoryId:{}",categoryId);
         log.info("routePage:{}",routePage);
-        Page<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesByCategoryIdAndPage(categoryId,routePage);
+        IPage<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesPreviewPage(categoryId,routePage);
         return R.ok(Page);
     }
 //    /**

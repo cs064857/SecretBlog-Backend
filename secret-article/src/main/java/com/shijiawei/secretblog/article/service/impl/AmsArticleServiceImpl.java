@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -13,17 +14,14 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
-import com.shijiawei.secretblog.article.vo.AmsArticleStatusVo;
-import com.shijiawei.secretblog.article.vo.AmsArticleVo;
+import com.shijiawei.secretblog.article.vo.*;
 
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
-import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
-import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
@@ -34,7 +32,6 @@ import org.redisson.api.*;
 import org.redisson.client.RedisConnectionException;
 import org.redisson.client.RedisTimeoutException;
 import org.redisson.client.codec.StringCodec;
-import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -46,8 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -137,39 +134,47 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         AmsArtinfo amsArtinfo = new AmsArtinfo();
         // 從網關傳遞的請求標頭中取得用戶資訊
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
-            log.warn("未取得登入用戶資訊，拒絕發佈文章");
-            throw new IllegalStateException("未登入或登入狀態已失效");
+            log.warn("未取得登入用戶資訊，拒絕發佈文章 - 文章標題:{}", amsSaveArticleVo.getTitle());
+            throw new CustomBaseException("未登入或登入狀態已失效");
         }
 
         Long userId = UserContextHolder.getCurrentUserId();
 
-        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
+
+//        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
         if (userId == null) {
             log.warn("用戶ID為空，拒絕發佈文章");
-            throw new IllegalStateException("用戶ID缺失");
+            throw new CustomBaseException("用戶ID缺失");
         }
-
+        log.info("成功驗證用戶登入狀態,開始保存文章 - 用戶ID:{}, 標題:{}, 分類ID:{} , 標籤ID:{}",
+                userId, amsSaveArticleVo.getTitle(), amsSaveArticleVo.getCategoryId(),amsSaveArticleVo.getTagsId()!=null?amsSaveArticleVo.getTagsId():"未附加標籤");
         try {
-            //設置文章標題
+
             amsArticle.setTitle(amsSaveArticleVo.getTitle());
 
             /// TODO保存原始文章內容用於安全方面, 避免從原始文章內容從Markdown格式轉換HTML時遺漏某些字等(編輯文章時要更新兩者、讀取時只讀取轉換後的文章)
+            log.debug("即將轉換Markdown文章內容,原始文章內容長度:{}",amsSaveArticleVo.getContent().length());
 
             // 將原始文章內容從Markdown轉為HTML格式
             String html = CommonmarkUtils.parseMdToHTML(amsSaveArticleVo.getContent());
 
-            log.info("html:{}",html);
+            log.debug("Markdown格式的文章內容轉換完成,內容長度:{}",html.length());
             //將Markdown格式的文章保存至資料庫中
             amsArticle.setContent(html);
 
             this.baseMapper.insert(amsArticle);
 
             amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
+
             R<UserBasicDTO> user = userFeignClient.getUserById(userId);
             if(user.getData()!=null){
+                log.debug("成功透過OpenFeign獲取用戶資訊 - userId: {}, nickName: {}", userId, user.getData().getNickName());
 //                amsArtinfo.setAccountName(user.getData().getAccountName());
                 amsArtinfo.setNickName(user.getData().getNickName());
                 amsArtinfo.setAvatar(user.getData().getAvatar());
+            }else {
+                log.warn("透過OpenFeign獲取用戶資訊失敗 - userId: {}", userId);
+
             }
 
 
@@ -192,17 +197,19 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     return amsArtTag;
                 }).toList();
                 amsArtTagService.saveBatch(amsArtTagList);
+                log.info("成功將標籤加入文章 - articleId: {}, tagIds: {}", amsArticle.getId(), tagIds);
             } else {
-                log.debug("本次發佈未附加標籤或標籤列表為空");
+                log.debug("本次發佈未附加標籤或標籤列表為空 - articleId: {}" ,amsArticle.getId());
             }
 
             AmsArtStatus amsArtStatus = new AmsArtStatus();
             amsArtStatus.setArticleId(amsArticle.getId());
             amsArtStatusService.save(amsArtStatus);
 
+            log.info("創建文章成功, 用戶ID:{}, 標題:{}, 分類ID:{} , 標籤數量:{}",amsArticle.getId(), amsSaveArticleVo.getTitle(), amsSaveArticleVo.getCategoryId(),(tagIds != null && !tagIds.isEmpty()) ? tagIds.size() : 0);
 
         } catch (Exception e) {
-            log.error("保存文章過程失敗，將回滾事務", e);
+            log.error("創建文章過程失敗，將回滾事務", e);
             throw e; // 讓 @Transactional 觸發回滾
         }
 
@@ -256,75 +263,100 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 
     //    @OpenLog
-//    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")//姝ｇ?SpEL瑾炴■,璁婃暩浣跨敤#{#璁婃暩鍚峿
+//    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")
     @Override
-    public Page<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(Long categoryId, Integer routePage) {
-        // 根據categoryId分類查詢
-        Page<AmsArtinfo> amsArtinfoPage = amsArtinfoService.page(new Page<>(routePage, 20),
-                new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getCategoryId, categoryId));
-        List<AmsArtinfo> amsArtinfoRecords = amsArtinfoPage.getRecords();
+    public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Long categoryId, Integer routePage) {
+        log.info("開始取得文章列表 - categoryId: {}, routePage: {}", categoryId, routePage);
 
-        // 若本頁沒有資料，直接回傳空分頁但保留分頁資訊
-        if (amsArtinfoRecords == null || amsArtinfoRecords.isEmpty()) {
-            Page<AmsArticlePreviewVo> empty = new Page<>(amsArtinfoPage.getCurrent(), amsArtinfoPage.getSize(), amsArtinfoPage.getTotal());
-            empty.setRecords(new ArrayList<>());
-            return empty;
+        Page<AmsArticlePreviewVo> page = new Page<>(routePage, 20);
+
+        IPage<AmsArticlePreviewVo> resultPage = this.baseMapper.getArticlesPreviewPage(page, categoryId);
+        log.info("文章預覽條目數:{}",resultPage.getTotal());
+
+        //目標是重新包裝其中的amsArtTagList欄位
+        List<AmsArticlePreviewVo> articles = resultPage.getRecords();
+        if(articles.isEmpty()){
+            throw new CustomBaseException("系統異常，請稍後再試");
         }
+        //獲取文章所需的標籤IDS，目標是取得標籤的名稱等資訊
 
-        // 從文章資訊列表獲取所有的文章ID與用戶ID
-        List<Long> articleIdList = amsArtinfoRecords.stream().map(AmsArtinfo::getArticleId).collect(Collectors.toList());
-        List<Long> userIdList = amsArtinfoRecords.stream().map(AmsArtinfo::getUserId).collect(Collectors.toList());
 
-        // 查詢關聯資料
-        List<AmsArticle> amsArticleList = this.baseMapper.selectBatchIds(articleIdList);
-        List<AmsArtStatus> amsArtStatusList = amsArtStatusService.list(new LambdaQueryWrapper<AmsArtStatus>().in(AmsArtStatus::getArticleId, articleIdList));
-        AmsCategory amsCategory = amsCategoryService.getById(categoryId);
-        List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().in(AmsArtTag::getArticleId, articleIdList));
+//        List<Long> articleIdList = articles.stream().map(AmsArticlePreviewVo::getArticleId).toList();
+//
+//        List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>()
+//                .in(AmsArtTag::getArticleId, articleIdList)
+//        );
 
-        // 映射加速查找
-        Map<Long, AmsArtStatus> amsArtStatusMap = amsArtStatusList.stream().collect(Collectors.toMap(AmsArtStatus::getArticleId, Function.identity(), (a, b) -> a));
-        Map<Long, AmsArticle> amsArticleMap = amsArticleList.stream().collect(Collectors.toMap(AmsArticle::getId, Function.identity(), (a, b) -> a));
-        Map<Long, List<AmsArtTag>> amsArtTagMap = amsArtTagList.stream().collect(Collectors.groupingBy(AmsArtTag::getArticleId));
+//        Set<Long> tagsIdSet = amsArtTagList.stream().map(AmsArtTag::getTagsId).collect(Collectors.toSet());
 
-        R<List<UserBasicDTO>> usersByIds = userFeignClient.selectUserBasicInfoByIds(userIdList);
-        Map<Long, UserBasicDTO> userDTOMap = new HashMap<>();
-        if (usersByIds != null && usersByIds.getData() != null) {
-            userDTOMap = usersByIds.getData().stream().collect(Collectors.toMap(UserBasicDTO::getUserId, Function.identity(), (a, b) -> a));
-        }
+//        Stream<Set<Long>> setStream = articles.stream().map(item -> {
+//            Set<Long> collect = item.getAmsArtTagList().stream().map(AmsArtTagsVo::getId).collect(Collectors.toSet());
+//            return ;
+//        }).;
 
-        // 組裝VO，按原 amsArtinfoRecords 順序
-        List<AmsArticlePreviewVo> amsArticlePreviewVoList = new ArrayList<>();
-        for (AmsArtinfo artInfo : amsArtinfoRecords) {
-            AmsArticlePreviewVo vo = new AmsArticlePreviewVo();
-            // artInfo 基本屬性
-            BeanUtils.copyProperties(artInfo, vo);
+        Stream<AmsArtTagsVo> amsArtTagsVoStream = articles.stream().flatMap(item -> item.getAmsArtTagList().stream());
+        Set<Long> tagsIdSet = amsArtTagsVoStream.map(AmsArtTagsVo::getId).collect(Collectors.toSet());
 
-            // article 基本屬性
-            AmsArticle amsArticle = amsArticleMap.get(artInfo.getArticleId());
-            vo.setTitle(amsArticle.getTitle());
-            // 狀態屬性
-            AmsArtStatus status = amsArtStatusMap.get(artInfo.getArticleId());
-            if (status != null) {
-                BeanUtils.copyProperties(status, vo);
-            }
-            // 使用者屬性
-            UserBasicDTO userBasicDTO = userDTOMap.get(artInfo.getUserId());
-            if (userBasicDTO != null) {
-                BeanUtils.copyProperties(userBasicDTO, vo);
-            }
-            // 分類與標籤
-            if (amsCategory != null) {
-                vo.setCategoryName(amsCategory.getCategoryName());
-            }
-            vo.setAmsArtTagList(amsArtTagMap.get(artInfo.getArticleId()));
+        Map<Long, AmsTags> tagsList = amsTagsService.getArtTagsByIds(tagsIdSet);
 
-            amsArticlePreviewVoList.add(vo);
-        }
 
-        // 包裝為分頁返回
-        Page<AmsArticlePreviewVo> resultPage = new Page<>(amsArtinfoPage.getCurrent(), amsArtinfoPage.getSize(), amsArtinfoPage.getTotal());
-        resultPage.setRecords(amsArticlePreviewVoList);
+        articles.stream()
+            .flatMap(article -> article.getAmsArtTagList().stream())
+            .forEach(
+                    AmsArtTagsVo->{
+                        AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
+                        if(tags!=null){
+                            AmsArtTagsVo.setName(tags.getName());
+                        }else{
+                            log.warn("標籤 ID {} 不存在於 tagsList 中", AmsArtTagsVo.getId());
+                        }
+                    });
+
+
+
+//        Stream<AmsArtTagsVo> artTagsVoStream = articles.stream().flatMap(item -> item.getAmsArtTagList().stream());
+//        artTagsVoStream.forEach(
+//                AmsArtTagsVo->{
+//            AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
+//            AmsArtTagsVo.setName(tags.getName());
+//        });
+
+        articles.stream().forEach(item->{
+            List<AmsArtTagsVo> amsArtTagList = item.getAmsArtTagList();
+            amsArtTagList.forEach(AmsArtTagsVo->{
+                AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
+                AmsArtTagsVo.setName(tags.getName());
+            });
+        });
+
+        log.info("tagsList:{}",tagsList);
+        // 將標籤ID映射到標籤名稱
+
+//         需要按 articleId 分組後再轉換
+//        Map<Long, List<AmsArtTagsVo>> artTagsVoMap = amsArtTagList.stream()
+//                .collect(Collectors.groupingBy(
+//                        AmsArtTag::getArticleId,
+//                        Collectors.mapping(item -> {
+//                            AmsArtTagsVo vo = new AmsArtTagsVo();
+//                            vo.setId(item.getTagsId());  // 使用 tagsId
+//                            AmsTags tags = tagsList.get(item.getTagsId());
+//                            if(tags!=null){
+//                                vo.setName(tags.getName());
+//
+//                            }
+//
+//                            return vo;
+//                        }, Collectors.toList())
+//                ));
+//
+//        articles.forEach(article -> {
+//            article.setAmsArtTagList(artTagsVoMap.get(article.getArticleId()));
+//        });
+//
+//        resultPage.setRecords(articles);
+        log.info("resultPage:{}",resultPage);
         return resultPage;
+
     }
 
     @Override
@@ -902,7 +934,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         int comments = (articleStatusFromDB == null)? -1 : articleStatusFromDB.getCommentsCount();
 
         String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
-        RMap<String, Integer> statusMap = redissonClient.getMap(redisKey, new TypedJsonJacksonCodec(String.class, Integer.class));
+        RMap<String, Integer> statusMap = redissonClient.getMap(redisKey);
         statusMap.put("viewsCount", views);
         statusMap.put("likesCount", likes);
         statusMap.put("bookmarksCount", bookmarks);
@@ -926,7 +958,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         //嘗試從Redis取得文章的指標
         String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
 
-        RMap<String, Integer> statusMap = redissonClient.getMap(redisKey, new TypedJsonJacksonCodec(String.class, Integer.class));
+        RMap<String, Integer> statusMap = redissonClient.getMap(redisKey);
 
         Map<String, Integer> stringIntMap = statusMap.readAllMap();
         log.info("stringIntMap: {}", stringIntMap);

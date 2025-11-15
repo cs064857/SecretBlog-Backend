@@ -67,7 +67,7 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
   mapper-locations: classpath*:/mapperXml/**/*.xml
-
+  type-handlers-package: com.shijiawei.secretblog.article.typehandler
 # springdoc-openapi
 springdoc:
   swagger-ui:

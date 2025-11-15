@@ -1,31 +1,17 @@
 package com.shijiawei.secretblog.article;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
+import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
-import org.redisson.api.RBucket;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
-import org.springframework.expression.EvaluationContext;
-import org.springframework.expression.ParserContext;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 
-import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 
 @SpringBootTest
@@ -36,6 +22,22 @@ class SecretArticleApplicationTests {
 
     @Autowired
     private AmsCommentMapper amsCommentMapper;
+
+    @Autowired
+    private AmsArticleMapper amsArticleMapper;
+
+    @Test
+    void testGetArticlesByCategoryIdAndPage(){
+//        Page<AmsArticlePreviewVo> page =
+        Page<AmsArticlePreviewVo> page = new Page<>(0, 20);
+
+        IPage<AmsArticlePreviewVo> articlesByCategoryIdAndPage = amsArticleMapper.getArticlesPreviewPage(page, 2L);
+        System.out.println("articlesByCategoryIdAndPage:"+articlesByCategoryIdAndPage);
+        List<AmsArticlePreviewVo> articlesByCategoryIdAndPageRecords = articlesByCategoryIdAndPage.getRecords();
+        System.out.println("articlesByCategoryIdAndPageRecords:"+articlesByCategoryIdAndPageRecords);
+    }
+
+
 
     @Test
     void testGetStaticCommentDetails() {
