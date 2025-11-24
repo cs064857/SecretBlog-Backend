@@ -49,11 +49,11 @@ class SecretArticleApplicationTests {
 
         // 驗證結果
 //        assertNotNull(result, "查詢結果不應為null");
-        System.out.println("評論統計結果: " + result);
+        System.out.println("留言統計結果: " + result);
 
         // 根據實際業務邏輯添加更多斷言
         // 例如:
-        // assertTrue(result.getCommentCount() >= 0, "評論數量應該大於等於0");
+        // assertTrue(result.getCommentCount() >= 0, "留言數量應該大於等於0");
     }
 
 //	@Autowired

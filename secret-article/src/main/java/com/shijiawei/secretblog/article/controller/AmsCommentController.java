@@ -5,6 +5,7 @@ import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +22,14 @@ import java.util.List;
  */
 @Slf4j
 @RestController
+@Tag(name = "文章留言管理", description = "文章留言相關的 CRUD 操作")
 @RequestMapping("/article")
 public class AmsCommentController {
 
     @Autowired
     AmsCommentService amsCommentService;
     /**
-     * 創建評論
+     * 創建留言
      * @param amsCommentCreateDTO
      * @return
      */
@@ -40,7 +42,7 @@ public class AmsCommentController {
     }
 
 //    /**
-//     * 檢查評論是否存在
+//     * 檢查留言是否存在
 //     * @param commentId
 //     * @return
 //     */
@@ -54,7 +56,7 @@ public class AmsCommentController {
 //    }
 
     /**
-     * 取得文章中的所有評論
+     * 取得文章中的所有留言
      * @param articleId
      * @return
      */
@@ -69,7 +71,7 @@ public class AmsCommentController {
 
     }
     /**
-     * 點讚評論
+     * 點讚留言
      * @param commentId
      * @return
      */

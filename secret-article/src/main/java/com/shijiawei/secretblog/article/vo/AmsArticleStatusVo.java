@@ -31,7 +31,7 @@ public class AmsArticleStatusVo {
     @Schema(description = "收藏數")
     private Integer bookmarksCount;
 
-    @Schema(description = "評論數")
+    @Schema(description = "留言數")
     private Integer commentsCount;
 
     public boolean allNull(){

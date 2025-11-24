@@ -16,18 +16,23 @@ import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 import com.shijiawei.secretblog.article.vo.*;
 
+import com.shijiawei.secretblog.common.codeEnum.IErrorCode;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessException;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import com.shijiawei.secretblog.common.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.*;
 import org.redisson.client.RedisConnectionException;
 import org.redisson.client.RedisTimeoutException;
@@ -123,19 +128,40 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            }
 //        }
 
+    /**
+     * 保存文章
+     * @param amsSaveArticleVo 文章資料保存VO
+     * @param httpServletRequest HTTP請求
+     * @param authentication 認證物件
+     */
     @OpenLog//開啟方法執行時間紀錄
     @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
 //    @DelayDoubleDelete(prefix = "AmsArticle",key = "articles",delay = 5,timeUnit = TimeUnit.SECONDS)//AOP延遲雙刪
-
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest,Authentication authentication) {
+
+        if((amsSaveArticleVo.getTitle()==null)||(amsSaveArticleVo.getTitle().isEmpty())){
+            log.warn("文章標題為空，拒絕發佈文章");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage("文章標題不可為空")
+                    .build();
+        }
+        log.info("準備新增文章，標題:{}，分類ID:{}，tags:{}",
+                amsSaveArticleVo.getTitle(),
+                amsSaveArticleVo.getCategoryId(),
+                amsSaveArticleVo.getTagsId());
+
+
         AmsArticle amsArticle = new AmsArticle();
         AmsArtinfo amsArtinfo = new AmsArtinfo();
         // 從網關傳遞的請求標頭中取得用戶資訊
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
-            log.warn("未取得登入用戶資訊，拒絕發佈文章 - 文章標題:{}", amsSaveArticleVo.getTitle());
-            throw new CustomBaseException("未登入或登入狀態已失效");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage(String.format("用戶未登入，拒絕發佈文章 - 文章標題:%S",amsSaveArticleVo.getTitle()))
+                    .build();
         }
 
         Long userId = UserContextHolder.getCurrentUserId();
@@ -143,8 +169,12 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 //        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
         if (userId == null) {
-            log.warn("用戶ID為空，拒絕發佈文章");
-            throw new CustomBaseException("用戶ID缺失");
+//            log.warn("用戶ID為空，拒絕發佈文章 - 文章標題:{}", amsSaveArticleVo.getTitle());
+//            throw new CustomRuntimeException("用戶ID缺失");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_NOT_FOUND)
+                    .data(Map.of("articleTitle",StringUtils.defaultString(amsSaveArticleVo.getTitle(),"")))
+                    .build();
         }
         log.info("成功驗證用戶登入狀態,開始保存文章 - 用戶ID:{}, 標題:{}, 分類ID:{} , 標籤ID:{}",
                 userId, amsSaveArticleVo.getTitle(), amsSaveArticleVo.getCategoryId(),amsSaveArticleVo.getTagsId()!=null?amsSaveArticleVo.getTagsId():"未附加標籤");
@@ -153,18 +183,20 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             amsArticle.setTitle(amsSaveArticleVo.getTitle());
 
             /// TODO保存原始文章內容用於安全方面, 避免從原始文章內容從Markdown格式轉換HTML時遺漏某些字等(編輯文章時要更新兩者、讀取時只讀取轉換後的文章)
-            log.debug("即將轉換Markdown文章內容,原始文章內容長度:{}",amsSaveArticleVo.getContent().length());
+            log.debug("即將轉換Markdown文章內容,原始文章內容長度:{}", amsSaveArticleVo.getContent() != null ? amsSaveArticleVo.getContent().length() : 0);
 
             // 將原始文章內容從Markdown轉為HTML格式
             String html = CommonmarkUtils.parseMdToHTML(amsSaveArticleVo.getContent());
 
-            log.debug("Markdown格式的文章內容轉換完成,內容長度:{}",html.length());
+            log.debug("Markdown格式的文章內容轉換完成,HTML內容長度:{}", html != null ? html.length() : 0);
             //將Markdown格式的文章保存至資料庫中
             amsArticle.setContent(html);
 
             this.baseMapper.insert(amsArticle);
+            log.info("文章主體已寫入DB，文章ID:{}", amsArticle.getId());
 
             amsArtinfo.setCategoryId(amsSaveArticleVo.getCategoryId());
+            log.debug("透過 OpenFeign 請求用戶資訊，userId:{}", userId);
 
             R<UserBasicDTO> user = userFeignClient.getUserById(userId);
             if(user.getData()!=null){
@@ -187,9 +219,12 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             amsArtinfo.setArticleId(amsArticle.getId());
             amsArtinfo.setUserId(userId);
             amsArtinfoService.save(amsArtinfo);
+            log.debug("文章附加資訊已寫入DB，文章ID:{}, userId:{}", amsArticle.getId(), userId);
 
             List<Long> tagIds = amsSaveArticleVo.getTagsId();
             if (tagIds != null && !tagIds.isEmpty()) {
+                log.debug("準備寫入文章標籤，文章ID:{}，tagIds:{}", amsArticle.getId(), tagIds);
+
                 List<AmsArtTag> amsArtTagList = tagIds.stream().map(tagsId -> {
                     AmsArtTag amsArtTag = new AmsArtTag();
                     amsArtTag.setTagsId(tagsId);
@@ -205,12 +240,23 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             AmsArtStatus amsArtStatus = new AmsArtStatus();
             amsArtStatus.setArticleId(amsArticle.getId());
             amsArtStatusService.save(amsArtStatus);
+            log.debug("文章狀態已初始化，文章ID:{}", amsArticle.getId());
 
-            log.info("創建文章成功, 用戶ID:{}, 標題:{}, 分類ID:{} , 標籤數量:{}",amsArticle.getId(), amsSaveArticleVo.getTitle(), amsSaveArticleVo.getCategoryId(),(tagIds != null && !tagIds.isEmpty()) ? tagIds.size() : 0);
-
+            log.info("創建文章成功, 文章ID:{}, 用戶ID:{}, 標題:{}, 分類ID:{} , 標籤數量:{}",
+                    amsArticle.getId(), userId, amsSaveArticleVo.getTitle(),
+                    amsSaveArticleVo.getCategoryId(),
+                    (tagIds != null && !tagIds.isEmpty()) ? tagIds.size() : 0);
         } catch (Exception e) {
-            log.error("創建文章過程失敗，將回滾事務", e);
-            throw e; // 讓 @Transactional 觸發回滾
+//            log.error("創建文章過程失敗，將回滾事務,userId:{}, 標題:{}, 分類ID:{}",
+//                    userId, amsSaveArticleVo.getTitle(), amsSaveArticleVo.getCategoryId(), e);
+//            throw new CustomRuntimeException("系統異常，請稍後再試"); // 讓 @Transactional 觸發回滾
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                    .detailMessage("創建文章過程失敗")
+                    .cause(e.getCause())
+                    .data(Map.of("title",amsSaveArticleVo.getTitle(),
+                            "categoryId", ObjectUtils.defaultIfNull(amsSaveArticleVo.getCategoryId(), "")))
+                    .build();
         }
 
         // 在事務方法的最後（確保提交前執行）
@@ -262,21 +308,35 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //    }
 //
 
+
+    /**
+     * 獲取文章預覽列表分頁
+     * @param categoryId 分類ID
+     * @param routePage 分頁頁碼
+     * @return 文章預覽列表分頁VO
+     */
     //    @OpenLog
 //    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")
     @Override
     public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Long categoryId, Integer routePage) {
-        log.info("開始取得文章列表 - categoryId: {}, routePage: {}", categoryId, routePage);
+        log.info("開始取得文章預覽列表 - categoryId: {}, routePage: {}", categoryId, routePage);
 
         Page<AmsArticlePreviewVo> page = new Page<>(routePage, 20);
 
         IPage<AmsArticlePreviewVo> resultPage = this.baseMapper.getArticlesPreviewPage(page, categoryId);
-        log.info("文章預覽條目數:{}",resultPage.getTotal());
+        log.info("文章預覽查詢完成，總條數:{}，當前頁:{}，每頁數量:{}", resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize());
 
         //目標是重新包裝其中的amsArtTagList欄位
         List<AmsArticlePreviewVo> articles = resultPage.getRecords();
         if(articles.isEmpty()){
-            throw new CustomBaseException("系統異常，請稍後再試");
+//            log.warn("文章預覽結果為空，categoryId:{}，routePage:{}", categoryId, routePage);
+//            throw new CustomRuntimeException("系統異常，請稍後再試");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                    .detailMessage("獲取文章預覽時結果為空")
+                    .data(Map.of("categoryId",ObjectUtils.defaultIfNull(categoryId, ""),
+                            "routePage", ObjectUtils.defaultIfNull(routePage, "")))
+                    .build();
         }
         //獲取文章所需的標籤IDS，目標是取得標籤的名稱等資訊
 
@@ -296,21 +356,23 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         Stream<AmsArtTagsVo> amsArtTagsVoStream = articles.stream().flatMap(item -> item.getAmsArtTagList().stream());
         Set<Long> tagsIdSet = amsArtTagsVoStream.map(AmsArtTagsVo::getId).collect(Collectors.toSet());
+        log.debug("彙總標籤ID完成，標籤ID數量:{}", tagsIdSet.size());
 
         Map<Long, AmsTags> tagsList = amsTagsService.getArtTagsByIds(tagsIdSet);
+        log.debug("從DB取得標籤實體數量:{}", tagsList != null ? tagsList.size() : 0);
 
 
         articles.stream()
-            .flatMap(article -> article.getAmsArtTagList().stream())
-            .forEach(
-                    AmsArtTagsVo->{
-                        AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
-                        if(tags!=null){
-                            AmsArtTagsVo.setName(tags.getName());
-                        }else{
-                            log.warn("標籤 ID {} 不存在於 tagsList 中", AmsArtTagsVo.getId());
-                        }
-                    });
+                .flatMap(article -> article.getAmsArtTagList().stream())
+                .forEach(
+                        AmsArtTagsVo->{
+                            AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
+                            if(tags!=null){
+                                AmsArtTagsVo.setName(tags.getName());
+                            }else{
+                                log.warn("標籤 ID {} 不存在於 tagsList 中", AmsArtTagsVo.getId());
+                            }
+                        });
 
 
 
@@ -323,13 +385,19 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         articles.stream().forEach(item->{
             List<AmsArtTagsVo> amsArtTagList = item.getAmsArtTagList();
-            amsArtTagList.forEach(AmsArtTagsVo->{
-                AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
-                AmsArtTagsVo.setName(tags.getName());
+            if (amsArtTagList == null) {
+                log.debug("文章 文章ID:{} 無標籤列表", item.getArticleId());
+                return;
+            }
+            amsArtTagList.forEach(amsArtTagsVo -> {
+                AmsTags tags = tagsList.get(amsArtTagsVo.getId());
+                if (tags != null) {
+                    amsArtTagsVo.setName(tags.getName());
+                }
             });
         });
 
-        log.info("tagsList:{}",tagsList);
+
         // 將標籤ID映射到標籤名稱
 
 //         需要按 articleId 分組後再轉換
@@ -354,29 +422,54 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        });
 //
 //        resultPage.setRecords(articles);
-        log.info("resultPage:{}",resultPage);
+        log.debug("文章預覽標籤填充完成，categoryId:{}，routePage:{}", categoryId, routePage);
+        log.info("文章預覽結果返回，records:{}，total:{}", resultPage.getRecords().size(), resultPage.getTotal());
         return resultPage;
 
     }
 
+    /**
+     * 獲取帶指標的文章詳情
+     * @param articleId 文章ID
+     * @return 文章詳情VO
+     */
     @Override
     public AmsArticleVo getAmsArticleVoWithStatus(Long articleId){
+        log.info("開始獲取帶指標的文章詳情 - 文章ID:{}", articleId);
 
         if(isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+//            log.warn("文章不存在，articleId={}",articleId);
+//            throw new CustomRuntimeException("文章不存在");
+            AmsArticleVo amsArticleVo = new AmsArticleVo();
+            amsArticleVo.setAvatar("testAvattt");
+            amsArticleVo.setCategoryName("testCat");
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
+
         }
 
         AmsArticleVo amsArticleVo = amsArticleService.getAmsArticleVo(articleId);
 //        AmsArticleVo amsArticleVo = getAmsArticleVo(articleId);
         if(amsArticleVo==null){
-            log.warn("無法成功獲取文章資訊，該文章可能已被刪除");
-            throw new CustomBaseException("無法成功獲取文章資訊，該文章可能已被刪除");
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
         Long amsArticleVoId = amsArticleVo.getId();
         if (amsArticleVoId == null) {
-            log.warn("文章ID為空，無法獲取文章資訊");
-            throw new CustomBaseException("文章ID缺失");
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
 
@@ -396,12 +489,15 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         try {
             long views = incrementArticleViewsCount(amsArticleVoId);
+            log.debug("文章瀏覽數累加成功，文章ID:{}，views:{}", amsArticleVoId, views);
 
             // 建議 VO 改為 long，避免溢位
 //            amsArticleVo.setViewsCount(Math.toIntExact(views));
         } catch (RedisConnectionException | RedisTimeoutException e) {
-            log.warn("Redis 計數失敗，改用 DB 回填 viewsCount，articleId={}, err={}", amsArticleVoId, e.getMessage());
-        // 僅查所需欄位 + 保證唯一
+            log.error("Redis 計數失敗，改用 DB 回填 viewsCount，文章ID:{}, err:{}",
+                    amsArticleVoId, e.getMessage());
+
+            // 僅查所需欄位 + 保證唯一
 //            AmsArtStatus status = amsArtStatusService.getOne(
 //                    Wrappers.<AmsArtStatus>lambdaQuery()
 //                            .select(AmsArtStatus::getViewsCount)
@@ -411,15 +507,21 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            int fallbackViews = status != null && status.getViewsCount() != null ? status.getViewsCount() : 0;
 //            amsArticleVo.setViewsCount(fallbackViews);
         } catch (Exception e) {
-        // 其他未知例外：不要默默吞，應該明確告警
+            // 其他未知例外：不要默默吞，應該明確告警
             log.error("計數發生非預期錯誤，articleId={}", amsArticleVoId, e);
-        // 可選：最後一道防線，顯示 DB 值或 0
+            // 可選：最後一道防線，顯示 DB 值或 0
 //            amsArticleVo.setViewsCount(0);
         }
 
         AmsArticleStatusVo articleStatus = getArticleStatusVo(articleId);
         BeanUtils.copyProperties(articleStatus, amsArticleVo);
 
+        log.info("獲取帶指標的文章詳情成功，文章ID:{}，views:{}，likes:{}，bookmarks:{}，comments:{}",
+                articleId,
+                articleStatus.getViewsCount(),
+                articleStatus.getLikesCount(),
+                articleStatus.getBookmarksCount(),
+                articleStatus.getCommentsCount());
         ///TODO注意安全性
 
 
@@ -434,14 +536,23 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         return amsArticleVo;
     }
 
+    /**
+     * 獲取文章詳情
+     * @param articleId 文章ID
+     * @return 文章詳情VO
+     */
     @OpenCache(prefix = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_PREFIX,key = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_KEY,time = 30,chronoUnit = ChronoUnit.MINUTES)
     @Override
     public AmsArticleVo getAmsArticleVo(Long articleId) {
         log.info("獲取文章詳情，articleId={}",articleId);
 
         if(isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
 
@@ -465,7 +576,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         AmsArticleVo amsArticleVo = this.baseMapper.getArticleVo(articleId);
         if(amsArticleVo== null){
-            throw new CustomBaseException("無法成功獲取文章資訊，該文章可能已被刪除");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
         // 優先通過用戶服務獲取最新用戶暱稱；失敗時保留DB中的備援 userName
@@ -542,7 +657,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //         */
 //        BeanUtils.copyProperties(amsArtStatus, amsArticleVo,"id","articleId");
 //        /*
-//        設置評論數量
+//        設置留言數量
 //         */
 //        amsArticleVo.setCommentsCount((int) commentsCount);
 //
@@ -563,17 +678,26 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 //
 //
-////    @Override
-////    public Page<AmsArticle> getLatestArticles() {
-////
-////
-////    }
+    ////    @Override
+    ////    public Page<AmsArticle> getLatestArticles() {
+    ////
+    ////
+    ////    }
 
+    /**
+     * 用戶瀏覽文章，累加文章瀏覽數
+     * @param articleId 文章ID
+     * @return 新的文章瀏覽數
+     */
     public Long incrementArticleViewsCount(Long articleId) {
+        log.info("開始累加文章瀏覽數，文章ID={}",articleId);
 
         if(isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
 
@@ -583,22 +707,16 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 //        if (!UserContextHolder.isCurrentUserLoggedIn()) {
 //            log.warn("未取得登入用戶資訊，拒絕對文章按讚");
-//            throw new CustomBaseException("未登入或登入狀態已失效");
+//            throw new CustomRuntimeException("未登入或登入狀態已失效");
 //        }
 //        Long userId = UserContextHolder.getCurrentUserId();
 //        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
 //        if (userId == null) {
 //            log.warn("用戶ID為空，拒絕對文章按讚");
-//            throw new CustomBaseException("用戶ID缺失");
+//            throw new CustomRuntimeException("用戶ID缺失");
 //        }
 
         /// TODO(可選)根據IP、UA、Cookie等資訊限制同一用戶在短時間內多次刷新導致瀏覽數異常增長
-
-        if(articleId==null || articleId <=0){
-            throw new CustomBaseException("文章ID不能為空或小於等於0");
-        }
-
-
 
         /**
          * 驗證該文章是否存在
@@ -610,34 +728,42 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          */
         //例如：ams:article:views:1965494783750287361
         final String redisKey = RedisCacheKey.ARTICLE_VIEWS.format(articleId);
+        log.debug("文章瀏覽數 快取鍵:{}",redisKey);
         //獲取桶對象, 注意原子性因此採用RAtomicLong
 
 
         /// TODO排程定時將Redis中的瀏覽數同步到資料庫中
 
         RAtomicLong viewCounter = redissonClient.getAtomicLong(redisKey);
-
+        log.debug("取得文章瀏覽數計數器對象完成，文章ID:{}", articleId);
         //設置該文章查看人數值為++ , 注意原子性
         long newViews = viewCounter.incrementAndGet();
 
 
         if (newViews == 1) {
             viewCounter.clearExpire(); // 移除任何可能存在的 TTL
-            log.info("文章 {} 產生第一次瀏覽，已確保 Key 為持久化", articleId);
+            log.debug("文章ID:{} 產生第一次瀏覽，已確保快取為持久化", articleId);
         }
 
-        log.debug("newLikes:{}",newViews);
+        log.info("文章瀏覽數增加完成，文章ID:{}，新的文章瀏覽數:{}", articleId, newViews);
         return newViews;
     }
 
-
+    /**
+     * 用戶對文章點讚
+     * @param articleId 文章ID
+     * @return 新的文章點讚數
+     */
     @Override
     public Long incrementArticleLikes(Long articleId) {
-
+        log.info("開始累加文章點讚數，文章ID={}",articleId);
 
         if(isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
         /*
@@ -645,10 +771,13 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         */
 
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
-            log.warn("未取得登入用戶資訊，拒絕對文章按讚");
-            throw new CustomBaseException("未登入或登入狀態已失效");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage(String.format("用戶未登入，拒絕對文章按讚 - 文章ID:%S",articleId))
+                    .build();
         }
         Long userId = UserContextHolder.getCurrentUserId();
+        log.info("用戶文章點讚文章, 用戶ID:{} , 文章ID:{}", userId, articleId);
         /**
          * 點讚限流
          */
@@ -697,9 +826,13 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         );
 
         if (result == -1) {
-            throw new CustomBaseException("您已經點讚過該文章");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_ALREADY_LIKED)
+                    .detailMessage(String.format("用戶ID:%S 已經點讚過該文章ID:%s , 不允許重複點讚", userId,articleId))
+                    .build();
         }
 
+        log.info("文章點讚數增加完成，文章ID:{}，新的文章點讚數:{}", articleId, result);
 
 
 
@@ -709,7 +842,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        boolean add = set.add(userId);
 //        if(!add){
 //            log.warn("用戶 {} 已經點讚過該文章 {}",userId,articleId);
-//            throw new CustomBaseException("您已經點讚過該文章，請勿重複點讚");
+//            throw new CustomRuntimeException("您已經點讚過該文章，請勿重複點讚");
 //        }
 //        /**
 //         * 同步點讚數從Redis到資料庫中
@@ -744,13 +877,22 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         return result;
     }
 
+    /**
+     * 用戶對文章加入書籤
+     * @param articleId 文章ID
+     * @return 新的文章書籤數
+     */
     @Override
     public Long incrementArticleBooksMarket(Long articleId) {
+        log.info("開始對文章加入書籤，articleId:{}", articleId);
 
 
         if(isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
 
@@ -759,10 +901,21 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         */
 
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
-            log.warn("未取得登入用戶資訊，拒絕對文章加入書籤");
-            throw new CustomBaseException("未登入或登入狀態已失效");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，拒絕對文章加入書籤")
+                    .build();
         }
         Long userId = UserContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_NOT_FOUND)
+                    .detailMessage("用戶ID不存在，拒絕對文章加入書籤")
+                    .build();
+        }
+
+        log.debug("用戶嘗試對文章加入書籤，userId:{}，articleId:{}", userId, articleId);
+
         /**
          * 點讚限流
          */
@@ -786,6 +939,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         final String userBookMarksKey = RedisCacheKey.ARTICLE_MARKED_USERS.format(articleId);
         final String likesCountKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
 
+        log.debug("用戶書籤快取鍵:{}, 文章書籤數快取鍵:{}", userBookMarksKey, likesCountKey);
+
         // Lua 腳本保證原子性
         String luaScript =
                 "local added = redis.call('SADD', KEYS[1], ARGV[1]) \n" +
@@ -806,10 +961,16 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         );
 
         if (result == -1) {
-            throw new CustomBaseException("您已經點讚過該文章");
+//            log.warn("用戶ID:{} 已經對該文章:{} 加入書籤 , 不允許重複加入書籤",userId,articleId);
+//            throw new CustomRuntimeException("您已經對該文章加入書籤 , 不允許重複加入書籤");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_ALREADY_BOOKMARKED)
+                    .data(Map.of("userId",ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
         }
 
-
+        log.info("文章加入用戶的書籤完成, 用戶ID:{}, 文章ID:{}, 新的文章書籤數:{}",userId, articleId, result);
         return result;
     }
 
@@ -827,7 +988,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 ////
 ////        if (!UserContextHolder.isCurrentUserLoggedIn()) {
 ////            log.warn("未取得登入用戶資訊，拒絕對文章按讚");
-////            throw new CustomBaseException("未登入或登入狀態已失效");
+////            throw new CustomRuntimeException("未登入或登入狀態已失效");
 ////        }
 ////        Long userId = UserContextHolder.getCurrentUserId();
 ////        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
@@ -865,9 +1026,9 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        // 同時更新資料庫（省略...）
 //        return newLikes;
 //    }
-////        // 同時更新資料庫（省略...）
-////        return newLikes;
-////    }
+    ////        // 同時更新資料庫（省略...）
+    ////        return newLikes;
+    ////    }
 
 //    public Long getArticleLikes(long articleId) {
 //        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
@@ -914,15 +1075,17 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        return likesFromDb;
 //    }
 
+    /**
+     * 從資料庫中讀取文章指標並回填Redis
+     * @param articleId 文章ID
+     * @return 文章指標VO對象
+     */
     private AmsArticleStatusVo loadArticleStatusVo(long articleId) {
         log.info("開始執行 loadArticleStatus - articleId: {}", articleId);
         AmsArtStatus articleStatusFromDB = QueryArticleStatus(articleId);
 
-        log.info("articleStatusFromDB:{}", articleStatusFromDB);
-
         if(articleStatusFromDB ==null){
             log.warn("文章狀態資訊不存在，不拋出異常，回傳-1");
-
         }
 
         /*
@@ -943,7 +1106,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         /*
         假設成功從Redis快取中獲取文章的指標則直接進行包裝並回傳
          */
-        log.info("文章的狀態資訊 articleId:{},statusMap:{}",articleId,statusMap);
+        log.info("文章的狀態資訊 文章ID:{},指標數量:{}",articleId,statusMap.size());
         //進行包裝並回傳
         return AmsArticleStatusVo.builder()
                 .viewsCount(views)
@@ -953,17 +1116,21 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 .build();
     }
 
+    /**
+     * 從Redis中解析文章指標VO對象
+     * @param articleId 文章ID
+     * @return 文章指標VO對象
+     */
     private AmsArticleStatusVo parseArticleStatusVoFromRedis(long articleId) {
-        log.info("開始執行 parseArticleStatusFromRedis - articleId: {}", articleId);
         //嘗試從Redis取得文章的指標
         String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
 
         RMap<String, Integer> statusMap = redissonClient.getMap(redisKey);
 
         Map<String, Integer> stringIntMap = statusMap.readAllMap();
-        log.info("stringIntMap: {}", stringIntMap);
 
         if(stringIntMap.isEmpty()){
+            log.debug("Redis中無文章指標數據 - 文章ID: {} , 文章快取鍵:{}", articleId,redisKey);
             return null;
         }
 
@@ -971,41 +1138,64 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         獲取文章指標的值
         假設文章指標為空，則將指標值設為-1
          */
-        int views = stringIntMap.get("viewsCount");
-        int likes = stringIntMap.get("likesCount");
-        int bookmarks = stringIntMap.get("bookmarksCount");
-        int comments = stringIntMap.get("commentsCount");
+        Integer views = getMapValueAsInt(stringIntMap.get("viewsCount"));
+        Integer likes = getMapValueAsInt(stringIntMap.get("likesCount"));
+        Integer bookmarks = getMapValueAsInt(stringIntMap.get("bookmarksCount"));
+        Integer comments = getMapValueAsInt(stringIntMap.get("commentsCount"));
 
-        AmsArticleStatusVo articleStatusVo = AmsArticleStatusVo.builder()
+
+
+//        Integer views = stringIntMap.get("viewsCount");
+//        Integer likes = stringIntMap.get("likesCount");
+//        Integer bookmarks = stringIntMap.get("bookmarksCount");
+//        Integer comments = stringIntMap.get("commentsCount");
+
+        log.debug("從Redis取得文章指標完成，articleId:{}，stringIntMap:{}", articleId, stringIntMap);
+        return AmsArticleStatusVo.builder()
                 .likesCount(likes)
                 .bookmarksCount(bookmarks)
                 .commentsCount(comments)
                 .viewsCount(views)
                 .build();
-        log.info("articleStatusVo: {}", articleStatusVo);
-        return articleStatusVo;
     }
 
+    private Integer getMapValueAsInt(Object value) {
+        if (value == null) {
+            return -1; // 依照你的註釋，空值設為 -1
+        }
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+        try {
+            // 將 Object 轉為 String 再解析為 int
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            // 如果 Redis 裡存了非數字的髒數據，保險起見也返回 -1 或 0
+            return -1;
+        }
+    }
 
+    /**
+     * 根據文章ID於資料庫中查詢文章指標
+     * @param articleId 文章ID
+     * @return 文章指標對象
+     */
     private AmsArtStatus QueryArticleStatus(long articleId) {
-        log.info("開始執行 QueryArticleStatus articleId={}",articleId);
+        log.debug("從DB查詢文章狀態，articleId:{}", articleId);
 
-
-        AmsArtStatus amsArtStatus = amsArtStatusService.getOne(
+        return amsArtStatusService.getOne(
                 new LambdaQueryWrapper<AmsArtStatus>()
-                        .select(AmsArtStatus::getViewsCount,AmsArtStatus::getBookmarksCount,AmsArtStatus::getCommentsCount,AmsArtStatus::getLikesCount)
+                        .select(AmsArtStatus::getViewsCount, AmsArtStatus::getBookmarksCount, AmsArtStatus::getCommentsCount, AmsArtStatus::getLikesCount)
                         .eq(AmsArtStatus::getArticleId, articleId)
-                ,false
+                , false
         );
-        log.info("amsArtStatus={}",amsArtStatus);
-        return amsArtStatus;
     }
 
     /**
      * 根據文章ID取得文章狀態
      * 採用Hash結構
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 文章指標對象
      */
     public AmsArticleStatusVo getArticleStatusVo(long articleId) {
         log.info("開始執行 getArticleStatusVo - articleId: {}", articleId);
@@ -1014,8 +1204,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         boolean articleNotExists = isArticleNotExists(articleId);
         if(articleNotExists){
             //假設文章不存在則直接拋出異常
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
         //嘗試從Redis取得文章的指標
@@ -1056,8 +1249,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     /**
      * 判斷文章是否不存在，透過布隆過濾器以及資料庫雙重確認，非分佈式鎖版本
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 布林值, true 表示文章不存在，false 表示文章存在
      */
     @Override
     public boolean isArticleNotExists(Long articleId) {
@@ -1082,20 +1275,23 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 return true;
             }
         } catch (RedisConnectionException e) {
-            log.debug("Redis 連線異常，跳過布隆過濾器檢查，articleId={}", articleId, e);
+            log.error("Redis 連線異常，跳過布隆過濾器檢查，articleId={}", articleId, e);
             return isArticleNotExistsFromDB(articleId);
 
         }
 
-
         return false;
-
     }
 
+    /**
+     * 修改文章
+     * @param articleId 文章ID
+     * @param amsArticleUpdateDTO 更新的文章資料
+     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateArticle(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO) {
-
+        log.info("開始修改文章，articleId={}",articleId);
         /**
          * 透過布隆過濾器判斷文章id是否絕對不存在, 若不存在則拋出異常
          */
@@ -1103,8 +1299,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         boolean contains = bloomFilter.contains(articleId);
         if(!contains){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
 
 
@@ -1113,16 +1312,20 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * 判斷更新資料是否為空
          */
         if(amsArticleUpdateDTO==null){
-            log.warn("更新資料不存在，articleId={}",articleId);
-            throw new CustomBaseException("更新資料不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage(String.format("修改文章時更新資料為空 - 文章ID:%s", articleId))
+                    .build();
         }
 
         /**
          * 判斷用戶是否登入, 是否為文章的作者或者管理員權限
          */
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
-            log.warn("未取得登入用戶資訊，拒絕編輯文章");
-            throw new CustomBaseException("未登入或登入狀態已失效");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，拒絕對文章加入書籤")
+                    .build();
         }
 
 
@@ -1134,24 +1337,32 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 //        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
         if (userId == null) {
-            log.warn("用戶ID為空，拒絕編輯文章");
-            throw new CustomBaseException("用戶ID缺失");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage(String.format("用戶ID為空，拒絕編輯文章 - 文章ID:%S",articleId))
+                    .build();
         }
+        log.info("修改文章 - 文章ID: {} , 文章標題:{} , 用戶ID:{}" , articleId ,amsArticleUpdateDTO.getTitle() ,userId);
 
         //判斷該用戶使否為文章的作者
         int isArtOwner= amsArtinfoService.isArticleOwner(articleId, userId);
         //假設isArtOwner為0表示不是文章的作者,否則是文章的作者
         if(isArtOwner == 0){
+            log.info("用戶ID:{} , 並非為文章的作者，將判斷是否為管理員",userId);
+
             //並非文章的作者,因此需要判斷是否為管理員或者足夠的權限
             //進一步判斷是否為管理員或者足夠的權限
             /// TODO測試管理員權限是否成功實施
 //            getHeader(HEADER_USER_ROLE);
             boolean currentUserAdmin = UserContextHolder.isCurrentUserAdmin();
+
             //判斷是否為管理員或者足夠的權限
             if(!currentUserAdmin){
                 //不是文章的作者也不是管理員
-                log.warn("權限不足，您無權編輯該文章.UserId:{},ArticleId:{}",userId,articleId);
-                throw new CustomBaseException("權限不足，您無權編輯該文章");
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.FORBIDDEN)
+                        .detailMessage(String.format("用戶權限不足，無權編輯該文章 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                        .build();
             }
 
         }
@@ -1171,8 +1382,13 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         String articleMd = CommonmarkUtils.parseMdToHTML(amsArticleUpdateDTO.getContent());
 
         articleUpdateWrapper.set(AmsArticle::getContent,articleMd);
-        this.baseMapper.update(articleUpdateWrapper);
-
+        int articleContentUpdate = this.baseMapper.update(articleUpdateWrapper);
+        if(articleContentUpdate == 0){
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_UPDATE_FAILED)
+                    .detailMessage(String.format("編輯文章時更新文章內容失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                    .build();
+        }
 
 
         /**
@@ -1182,7 +1398,14 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         LambdaUpdateWrapper<AmsArtinfo> artInfoUpdateWrapper = Wrappers.lambdaUpdate();
         artInfoUpdateWrapper.eq(AmsArtinfo::getArticleId, articleId);
         artInfoUpdateWrapper.set(AmsArtinfo::getCategoryId,amsArticleUpdateDTO.getCategoryId());
-        amsArtinfoService.update(artInfoUpdateWrapper);
+        boolean artInfoUpdate = amsArtinfoService.update(artInfoUpdateWrapper);
+        if(artInfoUpdate){
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_UPDATE_FAILED)
+                    .detailMessage(String.format("編輯文章時更新文章分類失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                    .build();
+        }
         /**
          * 判斷文章是否存在舊標籤, 無論是否有新標籤都需要刪除舊標籤
          * 因為假設情況：
@@ -1191,6 +1414,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          */
         //取得文章的舊標籤ID
         List<AmsArtTag> oldTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>().eq(AmsArtTag::getArticleId, articleId));
+        log.info("文章ID:{} , 舊標籤數量:{}",articleId,oldTagList!=null ? oldTagList.size() : 0);
         //判斷該文章是否存在舊標籤
         if(oldTagList!=null && !oldTagList.isEmpty()){
             //刪除該文章原本的所有標籤
@@ -1198,8 +1422,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             if(removed){
                 log.info("文章ID:{},刪除舊標籤成功",articleId);
             }else {
-                log.error("文章ID:{},刪除舊標籤失敗",articleId);
-                throw new CustomBaseException("文章ID:"+articleId+",刪除舊標籤失敗");
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.ARTICLE_UPDATE_FAILED)
+                        .detailMessage(String.format("編輯文章時刪除舊標籤失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                        .build();
             }
         }
 
@@ -1209,42 +1435,55 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * 更新文章標籤
          */
 
+        /**
+         * 先判斷要修改的標籤是否存在
+         */
+
+        List<Long> newArtTagsIdList = amsArticleUpdateDTO.getTagsId();
+        //假設存在要修改的標籤
+        if (newArtTagsIdList!=null && !newArtTagsIdList.isEmpty()) {
             /**
-             * 先判斷要修改的標籤是否存在
+             * 判斷新的標籤是否存在, 避免新增了一個不存在的標籤
              */
 
-            List<Long> newArtTagsIdList = amsArticleUpdateDTO.getTagsId();
-            //假設存在要修改的標籤
-            if (newArtTagsIdList!=null && !newArtTagsIdList.isEmpty()) {
+            List<AmsTags> newTagList = amsTagsService.listByIds(newArtTagsIdList);
+            //要修改的標籤存在於資料庫中
+            if(newTagList !=null&& !newTagList.isEmpty()){
+
                 /**
-                 * 判斷新的標籤是否存在, 避免新增了一個不存在的標籤
+                 * 增加新的標籤
                  */
+                List<AmsArtTag> amsArtTags = newArtTagsIdList.stream().map(tagsId -> {
+                    AmsArtTag amsArtTag = new AmsArtTag();
+                    amsArtTag.setTagsId(tagsId);
+                    amsArtTag.setArticleId(articleId);
+                    return amsArtTag;
+                }).toList();//包裝成amsArtTag對象(tagsId以及articleId)
 
-                List<AmsTags> newTagList = amsTagsService.listByIds(newArtTagsIdList);
-                //要修改的標籤存在於資料庫中
-                if(newTagList !=null&& !newTagList.isEmpty()){
-
-                    /**
-                     * 增加新的標籤
-                     */
-                    List<AmsArtTag> amsArtTags = newArtTagsIdList.stream().map(tagsId -> {
-                        AmsArtTag amsArtTag = new AmsArtTag();
-                        amsArtTag.setTagsId(tagsId);
-                        amsArtTag.setArticleId(articleId);
-                        return amsArtTag;
-                    }).toList();//包裝成amsArtTag對象(tagsId以及articleId)
-
-                    boolean saveBatch = amsArtTagService.saveBatch(amsArtTags);
-                    if(!saveBatch){
-                        log.error("文章ID:{},增加新標籤失敗",articleId);
-                        throw new CustomBaseException("文章ID:"+articleId+",增加新標籤失敗");
-                    }
-
+                boolean saveBatch = amsArtTagService.saveBatch(amsArtTags);
+                if(!saveBatch){
+                    throw BusinessRuntimeException.builder()
+                            .iErrorCode(ResultCode.ARTICLE_UPDATE_FAILED)
+                            .detailMessage(String.format("編輯文章時增加新標籤失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                            .build();
                 }
 
             }
+
+        }
+        log.info("修改文章成功 - 文章ID: {}, 標題: {}, 用戶ID: {}, 分類ID: {}, 標籤數: {}",
+                articleId,
+                amsArticleUpdateDTO.getTitle(),
+                userId,
+                amsArticleUpdateDTO.getCategoryId(),
+                newArtTagsIdList != null ? newArtTagsIdList.size() : 0);
     }
 
+    /**
+     * 判斷文章是否不存在，透過查詢資料庫確認
+     * @param articleId 文章ID
+     * @return 如果文章不存在則返回true，否則返回false
+     */
     private boolean isArticleNotExistsFromDB(Long articleId) {
         if (articleId == null || articleId <= 0) {
             log.warn("非法文章ID: {}", articleId);
@@ -1254,7 +1493,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         AmsArticle amsArticle = this.baseMapper.selectById(articleId);
         if(amsArticle == null){
             //資料庫中不存在該文章
-            log.info("該文章ID:{}不存在或已被刪除", articleId);
+            log.warn("該文章ID:{}不存在或已被刪除", articleId);
             return true;
         }
 
@@ -1279,7 +1518,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 //        if (articleId == null || articleId <= 0) {
 //            log.warn("文章ID不能小於等於0或為空");
-//            throw new CustomBaseException("文章ID不能小於等於0或為空");
+//            throw new CustomRuntimeException("文章ID不能小於等於0或為空");
 //        }
 //
 //        /**
@@ -1315,7 +1554,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 //                    TimeUnit.MILLISECONDS.sleep(300);
 //                }
-//                throw new CustomBaseException("系統繁忙，請稍後再試");
+//                throw new CustomRuntimeException("系統繁忙，請稍後再試");
 //            }
 //            //        Long artcileId =this.baseMapper.selectById((new LambdaQueryWrapper<AmsArticle>()
 ////                .select(AmsArticle::getId)
@@ -1350,7 +1589,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        catch (InterruptedException e) {
 //            Thread.currentThread().interrupt();
 //            log.warn("文章存在性檢查被中斷，articleId={}", articleId);
-//            throw new CustomBaseException("系統繁忙，請稍後再試");
+//            throw new CustomRuntimeException("系統繁忙，請稍後再試");
 //        }
 //        finally {
 //            if(lock.isHeldByCurrentThread()){
@@ -1369,7 +1608,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 //        if(articleId == null || articleId <= 0){
 //            log.warn("文章ID不能小於等於0或為空");
-//            throw new CustomBaseException("文章ID不能小於等於0或為空");
+//            throw new CustomRuntimeException("文章ID不能小於等於0或為空");
 //        }
 //
 //        /**
@@ -1401,7 +1640,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 //                    TimeUnit.MILLISECONDS.sleep(300);
 //                }
-//                throw new CustomBaseException("系統繁忙，請稍後再試");
+//                throw new CustomRuntimeException("系統繁忙，請稍後再試");
 //            }
 //                //        Long artcileId =this.baseMapper.selectById((new LambdaQueryWrapper<AmsArticle>()
 ////                .select(AmsArticle::getId)
@@ -1439,7 +1678,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        catch (InterruptedException e) {
 //            Thread.currentThread().interrupt();
 //            log.warn("文章存在性檢查被中斷，articleId={}", articleId);
-//            throw new CustomBaseException("系統繁忙，請稍後再試");
+//            throw new CustomRuntimeException("系統繁忙，請稍後再試");
 //        }
 //        finally {
 //            if(lock.isHeldByCurrentThread()){
@@ -1458,13 +1697,13 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //
 //        if (!UserContextHolder.isCurrentUserLoggedIn()) {
 //            log.warn("未取得登入用戶資訊，拒絕對文章按讚");
-//            throw new CustomBaseException("未登入或登入狀態已失效");
+//            throw new CustomRuntimeException("未登入或登入狀態已失效");
 //        }
 //        Long userId = UserContextHolder.getCurrentUserId();
 //        String userNameFromToken = UserContextHolder.getCurrentUserNickname();
 //        if (userId == null) {
 //            log.warn("用戶ID為空，拒絕對文章按讚");
-//            throw new CustomBaseException("用戶ID缺失");
+//            throw new CustomRuntimeException("用戶ID缺失");
 //        }
 //
 //        /**
@@ -1487,7 +1726,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            //若不存在則根據commentId從資料庫中讀取該文章是否存在
 //            if(!this.isExistsArticle(articleId)){
 //                //假設從Reids緩存以及從資料庫中讀取該文章皆表明該文章不存在
-//                throw new CustomBaseException("該文章不存在或已被刪除");
+//                throw new CustomRuntimeException("該文章不存在或已被刪除");
 //            }
 //
 //
@@ -1510,7 +1749,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        if(!add){
 //            //若用戶已存在於點讚集合中,表示用戶已點讚過
 //            log.warn("用戶ID:{}，用戶名稱:{}，重複對文章ID:{}按讚",userId,userNameFromToken,articleId);
-//            throw new CustomBaseException("您已對該文章按讚過，請勿重複按讚");
+//            throw new CustomRuntimeException("您已對該文章按讚過，請勿重複按讚");
 //        }
 //        //設置點讚值為++ , 注意原子性
 //        long newLikes = atomicLong.incrementAndGet();

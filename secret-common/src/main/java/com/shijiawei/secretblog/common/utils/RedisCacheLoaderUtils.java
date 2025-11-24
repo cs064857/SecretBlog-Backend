@@ -1,19 +1,14 @@
 package com.shijiawei.secretblog.common.utils;
 
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
-import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
 import org.redisson.api.RLock;
-import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
-import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -100,7 +95,9 @@ public class RedisCacheLoaderUtils {
             return dataFromDB;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new CustomBaseException("系統異常");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.THREAD_INTERRUPTED)
+                    .build();
         } finally {
             //最終釋放鎖
             if(lock.isLocked() && lock.isHeldByCurrentThread()){

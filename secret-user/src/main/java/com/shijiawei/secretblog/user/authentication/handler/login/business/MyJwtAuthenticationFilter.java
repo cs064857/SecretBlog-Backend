@@ -1,7 +1,10 @@
 package com.shijiawei.secretblog.user.authentication.handler.login.business;
 
 import java.io.IOException;
+import java.util.Map;
 
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.utils.JwtService;
 import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo;
 import com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService; // TEMP 新增
@@ -13,7 +16,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.shijiawei.secretblog.common.exception.ExceptionTool;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
@@ -57,18 +59,30 @@ public class MyJwtAuthenticationFilter extends OncePerRequestFilter {
 
     if (StringUtils.isEmpty(jwtToken)) {
       // 未攜帶 JWT 視為未認證，統一回傳 401 以便前端攔截器觸發
-      ExceptionTool.throwException("JWT token is missing!", HttpStatus.UNAUTHORIZED, "miss.token");
+//        throw new CustomRuntimeException("JWT token is missing!", HttpStatus.UNAUTHORIZED, "miss.token");
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                .detailMessage("JWT token is missing!")
+                .build();
     }
 
     try {
       UserLoginInfo userLoginInfo = jwtService.verifyJwt(jwtToken, UserLoginInfo.class);
       if (userLoginInfo == null) {
-        ExceptionTool.throwException("jwt無效", HttpStatus.UNAUTHORIZED, "token.invalid");
+//        throw new CustomRuntimeException("jwt無效", HttpStatus.UNAUTHORIZED, "token.invalid");
+          throw BusinessRuntimeException.builder()
+                  .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                  .detailMessage("JWT token invalid")
+                  .build();
       }
       // TEMP 黑名單校驗
       if (tokenBlacklistService != null && tokenBlacklistService.isBlacklisted(userLoginInfo.getSessionId())) {
-        logger.warn("Token sessionId={} 已在黑名單", userLoginInfo.getSessionId());
-        ExceptionTool.throwException("jwt已失效", HttpStatus.UNAUTHORIZED, "token.blacklisted");
+//        logger.warn("Token sessionId={} 已在黑名單", userLoginInfo.getSessionId());
+//        throw new CustomRuntimeException("jwt已失效", HttpStatus.UNAUTHORIZED, "token.blacklisted");
+          throw BusinessRuntimeException.builder()
+                  .iErrorCode(ResultCode.JWT_BLACKLISTED)
+                  .detailMessage("JWT token in blacklisted")
+                  .build();
       }
       MyJwtAuthentication authentication = new MyJwtAuthentication();
       authentication.setJwtToken(jwtToken);
@@ -76,10 +90,18 @@ public class MyJwtAuthenticationFilter extends OncePerRequestFilter {
       authentication.setCurrentUser(userLoginInfo);
       SecurityContextHolder.getContext().setAuthentication(authentication);
     }catch (ExpiredJwtException e) {
-      ExceptionTool.throwException("jwt過期", HttpStatus.UNAUTHORIZED, "token.expired");
+//      throw new CustomRuntimeException("jwt過期", HttpStatus.UNAUTHORIZED, "token.expired");
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                .detailMessage("JWT token invalid")
+                .build();
     } catch (Exception e) {
-      logger.error("JWT 校驗異常: {}", e.getMessage(), e);
-      ExceptionTool.throwException("jwt無效", HttpStatus.UNAUTHORIZED, "token.invalid");
+//      logger.error("JWT 校驗異常: {}", e.getMessage(), e);
+//      throw new CustomRuntimeException("jwt無效", HttpStatus.UNAUTHORIZED, "token.invalid");
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                .detailMessage("JWT token invalid")
+                .build();
     }
     filterChain.doFilter(request, response);
   }

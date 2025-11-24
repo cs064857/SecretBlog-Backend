@@ -1,30 +1,21 @@
 package com.shijiawei.secretblog.article.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.shijiawei.secretblog.article.entity.AmsCommentStatistics;
 import com.shijiawei.secretblog.article.entity.AmsTags;
 import com.shijiawei.secretblog.article.mapper.AmsTagsMapper;
 import com.shijiawei.secretblog.article.service.AmsTagsService;
-import com.shijiawei.secretblog.article.vo.AmsArticleStatusVo;
-import com.shijiawei.secretblog.common.annotation.OpenCache;
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessException;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
-import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import com.shijiawei.secretblog.common.utils.RedisCacheLoaderUtils;
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RBatch;
 import org.redisson.api.RMap;
-import org.redisson.api.RMapAsync;
 import org.redisson.api.RedissonClient;
-import org.redisson.codec.JacksonCodec;
 import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.hash.ObjectHashMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -53,20 +44,36 @@ public class AmsTagsServiceImpl extends ServiceImpl<AmsTagsMapper, AmsTags> impl
     private ObjectMapper objectMapper; // 已註冊 JavaTimeModule
     @Override
     public void createArtTag(String name) {
+        log.info("進行新增文章標籤 - name: {}", name);
+        AmsTags amsTags = new AmsTags();
+        amsTags.setName(name);
+        log.info("amsTags:{}", amsTags);
 
-            AmsTags amsTags = new AmsTags();
-            amsTags.setName(name);
-            log.info("amsTags:{}",amsTags);
 
-
-            this.baseMapper.insert(amsTags);
-             ///TODO 處理失敗異常
-
+        int insert = this.baseMapper.insert(amsTags);
+        if (insert <= 0) {
+//            log.warn("插入文章標籤失敗,標籤名稱:{}", name);
+//            throw new CustomRuntimeException("系統異常，請稍後再試");
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.ARTTAG_CREATE_FAILED)
+                    .detailMessage("插入文章標籤失敗")
+                    .data(Map.of("name",name))
+                    .build();
+        }
+        //清除快取
+        String redisKey = RedisCacheKey.ARTICLE_TAGS.getPattern();
+        log.info("清除文章標籤快取 - redisKey: {}", redisKey);
+        boolean delete = redissonClient.getMap(redisKey).delete();
+        if(delete){
+            log.info("成功清除文章標籤快取 - redisKey: {}", redisKey);
+        }else{
+            log.warn("清除文章標籤快取失敗或快取不存在 - redisKey: {}", redisKey);
         }
 
+    }
     @Override
     public List<AmsTags> getArtTags() {
-        log.warn("執行資料庫查詢所有標籤");
+        log.info("執行資料庫查詢所有可用標籤");
 
         return this.baseMapper.selectList(new QueryWrapper<>());
 
@@ -113,7 +120,7 @@ public class AmsTagsServiceImpl extends ServiceImpl<AmsTagsMapper, AmsTags> impl
     }
 
     private Map<Long, AmsTags> parseArtTagsByIds(Set<Long> set ,String redisKey) {
-//        log.info("開始執行 parseArticleStatusFromRedis - articleId: {}", articleId);
+        log.info("從快取中讀取文章標籤 - 快取鍵: {} , 指定標籤數量:{}", redisKey , set.size());
         //嘗試從Redis取得文章的指標
 
         RMap<Long, AmsTags> map = redissonClient.getMap(redisKey,new TypedJsonJacksonCodec(Long.class,AmsTags.class,objectMapper));
@@ -179,9 +186,5 @@ public class AmsTagsServiceImpl extends ServiceImpl<AmsTagsMapper, AmsTags> impl
 
     }
 
-//    public List<AmsTags> QueryArtTagsByIds(Set<Long> set){
-//        log.debug("執行資料庫查詢所有標籤 - setSize: {}", set.size());
-//        return this.baseMapper.selectList(new LambdaQueryWrapper<>());
-//    }
 
 }

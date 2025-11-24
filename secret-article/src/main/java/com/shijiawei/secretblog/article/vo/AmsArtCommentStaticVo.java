@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 /**
  * ClassName: AmsArtCommentStaticVo
- * Description:放置評論的快取靜態資訊，用於快取的動靜分離
+ * Description:放置留言的快取靜態資訊，用於快取的動靜分離
  *
  * @Create 2025/10/30 下午11:12
  */

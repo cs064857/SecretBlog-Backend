@@ -1,7 +1,8 @@
 package com.shijiawei.secretblog.user.controller;
 
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.JwtService; // TEMP 新增
 import com.shijiawei.secretblog.common.utils.TimeTool;
@@ -20,8 +21,8 @@ import com.shijiawei.secretblog.user.converter.UserConverter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.redisson.api.RedissonClient;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
@@ -81,7 +82,12 @@ public class UmsUserController {
 //            return R.ok(dto);
 //        }
         if(user.isEmpty()){
-            throw new CustomBaseException("500","未能獲得用戶資料", HttpStatus.BAD_REQUEST);
+//            throw new CustomRuntimeException("500","未能獲得用戶資料");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
+                    .detailMessage("未能獲得用戶資料")
+                    .data(Map.of("userId", ObjectUtils.defaultIfNull(id,"")))
+                    .build();
         }
 
         return R.ok(user);
@@ -92,7 +98,12 @@ public class UmsUserController {
 
         List<UserBasicDTO> userBasicDTOS = umsUserService.selectUserBasicInfoByIds(ids);
         if(userBasicDTOS.isEmpty()){
-            throw new CustomBaseException("暫時拋出錯誤");
+//            throw new CustomRuntimeException("500","未能獲得用戶基本資料");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
+                    .detailMessage("未能獲得用戶基本資料")
+                    .data(Map.of("userIds", ObjectUtils.defaultIfNull(ids,"")))
+                    .build();
         }
         log.info("userBasicDTOS:{}", userBasicDTOS);
         return R.ok(userBasicDTOS);
@@ -239,7 +250,7 @@ public class UmsUserController {
     public R<String> isLogin(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() ||
             "anonymousUser".equals(String.valueOf(authentication.getPrincipal()))) {
-            return new R<>(401, "未登入", null);
+            return new R<>("401", "未登入", null);
         }
 
         return R.ok("已登入", null);

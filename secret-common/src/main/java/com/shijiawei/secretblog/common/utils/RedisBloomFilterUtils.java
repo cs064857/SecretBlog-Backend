@@ -1,14 +1,18 @@
 package com.shijiawei.secretblog.common.utils;
 
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
-import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.util.Map;
 
 /**
  * ClassName: RedisBloomFilterUtils
@@ -64,8 +68,16 @@ public class RedisBloomFilterUtils {
         //判斷值是否存在於布隆過濾器中
         if (!filter.contains(value)) {
             //值絕對不存在於布隆過濾器中的情況下，拋出異常
-            log.warn("布隆過濾器確認該值不存在: key={}, value={} , errorMessage:{}", key, value ,errorMessage);
-            throw new CustomBaseException(errorMessage);
+//            log.warn("布隆過濾器確認該值不存在: key={}, value={} , errorMessage:{}", key, value ,errorMessage);
+//            throw new CustomRuntimeException(ResultCode.BLOOM_FILTER_KEY_NOT_FOUND.getCode(), ResultCode.BLOOM_FILTER_KEY_NOT_FOUND.getMessage());
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.BLOOM_FILTER_KEY_NOT_FOUND)
+                    .detailMessage("布隆過濾器確認該值不存在")
+                    .data(Map.of("key",StringUtils.defaultString(key),
+                            "value", ObjectUtils.defaultIfNull(value,"")))
+                    .build();
+
         }
     }
 

@@ -6,18 +6,16 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import com.shijiawei.secretblog.common.exception.ExceptionTool;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -25,6 +23,7 @@ import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
+
 @Service
 public class JwtService implements InitializingBean {
 
@@ -60,10 +59,15 @@ public class JwtService implements InitializingBean {
       PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(Decoders.BASE64.decode(privateKeyBase64));
       return kf.generatePrivate(ks);
     } catch (Exception e) {
-      logger.error("獲取Jwt私鑰失敗，詳細錯誤: {}", e.getMessage(), e);
-      logger.error("私鑰內容: {}", privateKeyBase64);
-      ExceptionTool.throwException("獲取Jwt私鑰失敗: " , e);
-      return null;
+//      logger.error("獲取Jwt私鑰失敗，詳細錯誤: {}", e.getMessage(), e);
+//      logger.error("私鑰內容: {}", privateKeyBase64);
+
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                .cause(e.getCause())
+                .detailMessage("獲取Jwt私鑰失敗, 格式錯誤或配置為空")
+                .data(Map.of("keyLength",privateKeyBase64!=null ? privateKeyBase64.length() : 0))
+                .build();
     }
   }
 
@@ -79,10 +83,16 @@ public class JwtService implements InitializingBean {
       return Jwts.parserBuilder().setSigningKey(pk).build();
     } catch (Exception e) {
       // 獲取公鑰失敗 - 記錄詳細錯誤信息
-      logger.error("獲取Jwt公鑰失敗，詳細錯誤: {}", e.getMessage(), e);
-      logger.error("公鑰內容: {}", publicKeyBase64);
-      ExceptionTool.throwException("獲取Jwt公鑰失敗: " + e.getMessage(), e);
-      return null;
+//      logger.error("獲取Jwt公鑰失敗，詳細錯誤: {}", e.getMessage(), e);
+//      logger.error("公鑰內容: {}", publicKeyBase64);
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                .cause(e.getCause())
+                .detailMessage("獲取Jwt公鑰失敗, 格式錯誤或配置為空")
+                .data(Map.of("keyLength",publicKeyBase64!=null ? publicKeyBase64.length() : 0,
+                             "publicKeyBase64", StringUtils.abbreviate(StringUtils.defaultString(publicKeyBase64), 20)))
+                .build();
+//      throw new CustomRuntimeException(ResultCode.JWT_CONFIG_ERROR.getCode(),ResultCode.JWT_CONFIG_ERROR.getMessage(), e.getCause());
     }
   }
 

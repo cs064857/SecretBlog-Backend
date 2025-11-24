@@ -38,7 +38,7 @@ public class AmsArtStatus {
     @TableField(value = "bookmarks_count")
     private Integer bookmarksCount;
 
-    @Min(value = 0, message = "評論數不能為負數")
+    @Min(value = 0, message = "留言數不能為負數")
     @TableField(value = "comments_count")
     private Integer commentsCount;
 

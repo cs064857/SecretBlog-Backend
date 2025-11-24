@@ -1,13 +1,12 @@
 package com.shijiawei.secretblog.common.myenum;
 
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
-import java.util.Arrays;
-import java.util.IllegalFormatException;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * ClassName: RedisLockKey
@@ -30,14 +29,24 @@ public enum RedisLockKey {
 
     public String getFormat(Object... args){
         if(Arrays.stream(args).anyMatch(Objects::isNull)){
-            throw new CustomBaseException("RedisKey模板參數值不可為空");
+//            throw new CustomRuntimeException(ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING.getCode(),ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING.getMessage());
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING)
+                    .build();
         }
 
 
         try {
             return String.format(Locale.ROOT, pattern, args);
         } catch (IllegalFormatException e) {
-            throw new CustomBaseException("鍵格式與參數不匹配", e);
+            //假設捕獲到格式化異常，則拋出異常
+//            throw new CustomRuntimeException(ResultCode.REDIS_KEY_FORMAT_ERROR.getCode(),ResultCode.PARAM_ERROR.getMessage(),ResultCode.REDIS_KEY_FORMAT_ERROR.getMessage(), e.getCause());
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REDIS_KEY_FORMAT_ERROR)
+                    .cause(e.getCause())
+                    .build();
+
         }
 
 

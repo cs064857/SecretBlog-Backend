@@ -1,6 +1,6 @@
 package com.shijiawei.secretblog.user.authentication.handler.exception;
 
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.utils.JSON;
 import com.shijiawei.secretblog.common.utils.R;
 import jakarta.servlet.FilterChain;
@@ -31,19 +31,20 @@ public class CustomSecurityExceptionHandler extends OncePerRequestFilter {
                                  FilterChain filterChain) throws ServletException, IOException {
         try {
             filterChain.doFilter(request, response);
-        } catch (CustomBaseException e) {
-            // 自定義異常
-            R result = new R(e.getCode(),e.getMessage());
-//            Result result = ResultBuilder.aResult()
-//                    .msg(e.getMessage())
-//                    .code(e.getCode())
-//                    .build();
-            response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
-            response.setStatus(e.getHttpStatus().value());
-            PrintWriter writer = response.getWriter();
-            writer.write(JSON.stringify(result));
-            writer.flush();
-            writer.close();
+//        }
+//        catch (BusinessRuntimeException e) {
+//            // 自定義異常
+//            R result = new R(e.getCode(),e.getMessage());
+////            Result result = ResultBuilder.aResult()
+////                    .msg(e.getMessage())
+////                    .code(e.getCode())
+////                    .build();
+//            response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
+//            response.setStatus(e.getHttpStatus().value());
+//            PrintWriter writer = response.getWriter();
+//            writer.write(JSON.stringify(result));
+//            writer.flush();
+//            writer.close();
         } catch (AuthenticationException | AccessDeniedException e) {
             response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
             response.setStatus(HttpStatus.FORBIDDEN.value());

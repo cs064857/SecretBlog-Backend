@@ -1,5 +1,10 @@
 package com.shijiawei.secretblog.common.utils;
 
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+import org.apache.http.protocol.HTTP;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -27,7 +32,10 @@ public class SecurityUtils {
             }
         }
 
-        throw new RuntimeException("用戶未登錄或認證信息無效");
+//        throw new CustomRuntimeException(HttpStatus.FORBIDDEN.getReasonPhrase(),HttpStatus.FORBIDDEN,HttpStatus.FORBIDDEN.getReasonPhrase());
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.FORBIDDEN)
+                .build();
     }
 
     /**

@@ -22,11 +22,14 @@ spring:
     name: secret-article
   cloud:
     nacos:
-      server-addr: 178.92.75.5:11346
+      server-addr: 127.0.0.1:8848
+#      server-addr: 178.92.75.5:11346
+
 #      password: nacos
 #      username: nacos
       discovery:
-        server-addr: 178.92.75.5:11346
+        server-addr: 127.0.0.1:8848
+#        server-addr: 178.92.75.5:11346
       config:
         timeout: 300000
 #        透過openfeign在調用其他微服務時將登入訊息獲取過來
@@ -81,10 +84,10 @@ springdoc:
       paths-to-match: '/**'
       packages-to-scan: com.shijiawei.secretblog.article.controller
 # knife4j
-knife4j:
-  enable: true
-  setting:
-    language: zh_cn
+#knife4j:
+#  enable: true
+#  setting:
+#    language: zh_cn
 bloom-filter:
   article:
     expected-insertions: 10000  # 預期1萬篇文章

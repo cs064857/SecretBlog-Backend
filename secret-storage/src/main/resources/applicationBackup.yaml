@@ -20,11 +20,14 @@ spring:
     name: secret-storage
   cloud:
     nacos:
-      server-addr: 178.92.75.5:11346
+      server-addr: 127.0.0.1:8848
+#      server-addr: 178.92.75.5:11346
+
 #      password: nacos
 #      username: nacos
       discovery:
-        server-addr: 178.92.75.5:11346
+        server-addr: 127.0.0.1:8848
+#        server-addr: 178.92.75.5:11346
       config:
         timeout: 300000
   config:
@@ -69,7 +72,7 @@ springdoc:
       paths-to-match: '/**'
       packages-to-scan: com.shijiawei.secretblog.storage.controller
 # knife4j
-knife4j:
-  enable: true
-  setting:
-    language: zh_cn
+#knife4j:
+#  enable: true
+#  setting:
+#    language: zh_cn

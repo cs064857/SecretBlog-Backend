@@ -75,7 +75,7 @@ public class AmsArticleVo {
      */
     private Integer bookmarksCount;
     /**
-     * 評論量
+     * 留言量
      */
     private Integer commentsCount;
 
@@ -114,7 +114,7 @@ public class AmsArticleVo {
 //    private Long userId;
 //
 //    /**
-//     * 文章父評論的id(可為空)
+//     * 文章父留言的id(可為空)
 //     */
 //
 //

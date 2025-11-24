@@ -1,7 +1,8 @@
 package com.shijiawei.secretblog.user.authentication.handler.login;
 
 
-import com.shijiawei.secretblog.common.exception.ExceptionTool;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.utils.JSON;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.TimeTool;
@@ -13,7 +14,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import com.shijiawei.secretblog.common.utils.JwtService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
@@ -52,8 +53,11 @@ public class LoginSuccessHandler extends
                                       Authentication authentication) throws IOException {
     Object principal = authentication.getPrincipal();
     if (principal == null || !(principal instanceof UserLoginInfo)) {
-      ExceptionTool.throwException(
-              "登陸認證成功後，authentication.getPrincipal()返回的Object對象必須是：UserLoginInfo！");
+//        throw new CustomRuntimeException(ResultCode.JWT_CONFIG_ERROR.getCode(), ResultCode.JWT_CONFIG_ERROR.getMessage(),"登陸認證成功後，authentication.getPrincipal()返回的Object對象必須是：UserLoginInfo！");
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.AUTH_INTERNAL_ERROR)
+                .detailMessage("登陸認證成功後，authentication.getPrincipal()返回的Object對象必須是：UserLoginInfo！")
+                .build();
     }
     UserLoginInfo currentUser = (UserLoginInfo) principal;
     currentUser.setSessionId(UUID.randomUUID().toString());
@@ -81,7 +85,7 @@ public class LoginSuccessHandler extends
     // 雖然APPLICATION_JSON_UTF8_VALUE過時了，但也要用。因為Postman工具不聲明utf-8編碼就會出現亂碼
     response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
     PrintWriter writer = response.getWriter();
-    writer.print(JSON.stringify(new R(200, "${login.success:登錄成功！}",responseData)));
+    writer.print(JSON.stringify(new R("200", "${login.success:登錄成功！}",responseData)));
     writer.flush();
     writer.close();
   }

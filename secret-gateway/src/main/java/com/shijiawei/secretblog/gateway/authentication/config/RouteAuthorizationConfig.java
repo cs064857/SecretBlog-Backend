@@ -33,7 +33,7 @@
 //
 //        // 文章管理 - 登錄用戶都可以訪問
 //        routeRoles.put("/api/article/**", Set.of("USER", "ADMIN"));
-//        // 評論點讚 - 登錄用戶都可以訪問
+//        // 留言點讚 - 登錄用戶都可以訪問
 //        routeRoles.put("/api/article/comment/**", Set.of("USER", "ADMIN"));
 //
 //        // 用戶個人資料 - 登錄用戶都可以訪問

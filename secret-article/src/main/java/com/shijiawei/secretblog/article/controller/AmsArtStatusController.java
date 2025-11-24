@@ -6,6 +6,7 @@ import com.shijiawei.secretblog.article.entity.AmsArtStatus;
 import com.shijiawei.secretblog.article.service.AmsArtStatusService;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.ValidationGroups;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
@@ -21,6 +22,7 @@ import java.util.List;
  */
 @Slf4j
 @RequestMapping("/article/artstatus")
+@Tag(name = "文章指標管理", description = "文章指標相關的 CRUD 操作")
 @RestController
 @RequiredArgsConstructor
 public class AmsArtStatusController {

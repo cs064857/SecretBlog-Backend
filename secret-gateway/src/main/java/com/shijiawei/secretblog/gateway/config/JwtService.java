@@ -1,11 +1,14 @@
 package com.shijiawei.secretblog.gateway.config;
 
 
-import com.shijiawei.secretblog.common.exception.ExceptionTool;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+
 import com.shijiawei.secretblog.common.utils.JSON;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -56,9 +59,12 @@ public class JwtService implements InitializingBean {
       PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(Decoders.BASE64.decode(privateKeyBase64));
       return kf.generatePrivate(ks);
     } catch (Exception e) {
-      logger.error(e.getMessage(), e);
-      ExceptionTool.throwException("獲取Jwt私鑰失敗");
-      return null;
+//      throw new CustomRuntimeException(ResultCode.JWT_CONFIG_ERROR.getCode(), ResultCode.JWT_CONFIG_ERROR.getMessage(),"獲取Jwt私鑰失敗", e.getCause());
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                .cause(e.getCause())
+                .detailMessage("獲取Jwt私鑰失敗, 格式錯誤或配置為空")
+                .build();
     }
   }
 
@@ -73,8 +79,14 @@ public class JwtService implements InitializingBean {
       return Jwts.parserBuilder().setSigningKey(pk).build();
     } catch (Exception e) {
       // 獲取公鑰失敗
-      ExceptionTool.throwException("獲取Jwt公鑰失敗");
-      return null;
+//      throw new CustomRuntimeException(ResultCode.JWT_CONFIG_ERROR.getCode(), ResultCode.JWT_CONFIG_ERROR.getMessage(),"獲取Jwt公鑰失敗", e.getCause());
+        throw BusinessRuntimeException.builder()
+                .iErrorCode(ResultCode.JWT_CONFIG_ERROR)
+                .cause(e.getCause())
+                .detailMessage("獲取Jwt公鑰失敗, 格式錯誤或配置為空")
+                .data(Map.of("keyLength",publicKeyBase64!=null ? publicKeyBase64.length() : 0,
+                        "publicKeyBase64", StringUtils.abbreviate(StringUtils.defaultString(publicKeyBase64), 20)))
+                .build();
     }
   }
 

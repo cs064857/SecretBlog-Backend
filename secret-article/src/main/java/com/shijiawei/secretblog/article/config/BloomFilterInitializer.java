@@ -5,10 +5,12 @@ import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -107,7 +110,12 @@ public class BloomFilterInitializer {
                     TimeUnit.MILLISECONDS.sleep(300);
                 }
 
-                throw new CustomBaseException("等待 Bloom Filter 初始化超時: " + rBloomFilterName);
+//                throw new CustomRuntimeException("等待 Bloom Filter 初始化超時: " + rBloomFilterName);
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                        .detailMessage("等待 Bloom Filter 初始化超時")
+                        .data(Map.of("rBloomFilterName", StringUtils.defaultString(rBloomFilterName)))
+                        .build();
             }
 
             //二次檢查
@@ -147,12 +155,24 @@ public class BloomFilterInitializer {
         }
         catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            log.error("Bloom {} 初始化被中斷", rBloomFilterName, ie);
-            throw new CustomBaseException("初始化中斷: " + rBloomFilterName);
+//            log.error("Bloom {} 初始化被中斷", rBloomFilterName, ie);
+//            throw new CustomRuntimeException("初始化中斷:");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                    .detailMessage("Bloom Filter 初始化中斷")
+                    .cause(ie.getCause())
+                    .data(Map.of("rBloomFilterName", StringUtils.defaultString(rBloomFilterName)))
+                    .build();
         }
         catch (Exception e) {
-            log.error("初始化布隆過濾器失敗: {}", e.getMessage());
-            throw new CustomBaseException(e.getMessage());
+//            log.error("初始化布隆過濾器失敗: {}", e.getMessage());
+//            throw new CustomRuntimeException(e.getMessage());
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                    .detailMessage("Bloom Filter 初始化失敗")
+                    .cause(e.getCause())
+                    .data(Map.of("rBloomFilterName", StringUtils.defaultString(rBloomFilterName)))
+                    .build();
         }
 
         finally {
@@ -217,7 +237,7 @@ public class BloomFilterInitializer {
 //            }
 //        } catch (Exception e) {
 //            log.error("初始化布隆過濾器失敗: {}", e.getMessage());
-//            throw new CustomBaseException(e.getMessage());
+//            throw new CustomRuntimeException(e.getMessage());
 //        }
 //
 //

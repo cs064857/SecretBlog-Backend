@@ -21,7 +21,7 @@ public class RedisOpenCacheKey {
 
 
     /*
-     * 文章評論相關常數(評論區快取)
+     * 文章留言相關常數(留言區快取)
      */
     public static class ArticleComments{
         private ArticleComments() {}
@@ -53,7 +53,7 @@ public class RedisOpenCacheKey {
 
     }
 //    /*
-//     * 文章評論資訊相關常數(點讚數、書簽署)
+//     * 文章留言資訊相關常數(點讚數、書簽署)
 //     */
 //    public static class ArticleCommentsStatus{
 //        private ArticleCommentsStatus() {}
@@ -68,7 +68,7 @@ public class RedisOpenCacheKey {
 
 
 //    /*
-//     * 文章評論資訊相關常數(點讚數、)
+//     * 文章留言資訊相關常數(點讚數、)
 //     */
 //    public static class ARTICLE_COMMENTS_STATUS{
 //        //        private ARTICLE_COMMENTS_STATUS() {}

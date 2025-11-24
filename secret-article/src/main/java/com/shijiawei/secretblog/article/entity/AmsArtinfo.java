@@ -46,7 +46,7 @@ public class AmsArtinfo implements Serializable {
     private Long userId;
 
 //    /**
-//     * 評論內容
+//     * 留言內容
 //     */
 //    @TableField(value = "comment")
 //    private String comment;

@@ -25,7 +25,7 @@ public class AmsSaveArtInfoVo {
     private Long userId;
 
     /**
-     * 評論內容
+     * 留言內容
      */
     private String comment;
 }

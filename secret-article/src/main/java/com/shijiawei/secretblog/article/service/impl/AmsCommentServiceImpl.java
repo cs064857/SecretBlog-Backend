@@ -17,8 +17,11 @@ import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
+import com.shijiawei.secretblog.common.codeEnum.HttpCodeEnum;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.exception.BusinessException;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
@@ -27,6 +30,8 @@ import com.shijiawei.secretblog.common.redisutils.RedisLuaScripts;
 import com.shijiawei.secretblog.common.utils.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.*;
 import org.redisson.client.RedisConnectionException;
 import org.redisson.client.RedisException;
@@ -35,6 +40,7 @@ import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -159,12 +165,12 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //
 //
 //
-//                            log.info("評論創建成功，用戶ID: {}, 文章ID: {}", userId, amsCommentCreateDTO.getArticleId());
-//                            return R.ok("評論發布成功");
+//                            log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, amsCommentCreateDTO.getArticleId());
+//                            return R.ok("留言發布成功");
 //                        })
 //                        .orElseGet(() -> {
-//                            log.error("創建評論失敗：評論內容為空或文章ID無效");
-//                            return R.error("評論內容不能為空");
+//                            log.error("創建留言失敗：留言內容為空或文章ID無效");
+//                            return R.error("留言內容不能為空");
 //                        });
 //            }else {
 //                return Optional.ofNullable(amsCommentCreateDTO.getArticleId())
@@ -179,22 +185,22 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //                            amsCommentInfo.setCreateAt(LocalDateTime.now());
 //                            amsCommentInfo.setUpdateAt(LocalDateTime.now());
 //                            amsCommentInfo.setParentCommentId(amsCommentCreateDTO.getParentCommentId());
-//                            //透過ParentCommentId去查詢到該父評論,並將其留言數量+1
+//                            //透過ParentCommentId去查詢到該父留言,並將其留言數量+1
 //                            AmsCommentInfo parentAmsCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getId, amsCommentCreateDTO.getParentCommentId()));
 //                            parentAmsCommentInfo.setrepliesCount(parentAmsCommentInfo.getrepliesCount()+1);
 //
 //
 //                            this.baseMapper.insert(amsComment);
-//                            //儲存新創建的評論
+//                            //儲存新創建的留言
 //                            amsCommentInfoService.save(amsCommentInfo);
-//                            //更新父評論
+//                            //更新父留言
 //                            amsCommentInfoService.updateById(parentAmsCommentInfo);
-//                            log.info("評論創建成功，用戶ID: {}, 文章ID: {}", userId, amsCommentCreateDTO.getArticleId());
-//                            return R.ok("評論發布成功");
+//                            log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, amsCommentCreateDTO.getArticleId());
+//                            return R.ok("留言發布成功");
 //                        })
 //                        .orElseGet(() -> {
-//                            log.error("創建評論失敗：評論內容為空或文章ID無效");
-//                            return R.error("評論內容不能為空");
+//                            log.error("創建留言失敗：留言內容為空或文章ID無效");
+//                            return R.error("留言內容不能為空");
 //                        });
 //            }
 //
@@ -241,9 +247,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //    }
 
     /**
-     * 創建文章評論
+     * 創建文章留言
      * @param articleId 文章ID
-     * @param amsCommentCreateDTO 評論內容DTO
+     * @param amsCommentCreateDTO 留言內容DTO
      * @return
      */
     @Transactional(rollbackFor = Exception.class)
@@ -255,12 +261,12 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //        RBloomFilter<Long> articleBloomFilter = redissonClient.getBloomFilter(articleBloomFilterKey);
 //        if(!articleBloomFilter.contains(articleId)){
 //            log.warn("文章不存在，articleId={}",articleId);
-//            throw new CustomBaseException("文章不存在");
+//            throw new CustomRuntimeException("文章不存在");
 //        }
 
         redisBloomFilterUtils.requireExists(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey(),articleId,"文章不存在");
 
-        log.info("回覆評論 amsCommentCreateDTO:{}",amsCommentCreateDTO);
+        log.info("回覆留言 amsCommentCreateDTO:{}",amsCommentCreateDTO);
 //        String jwtToken = amsCommentCreateDTO.getJwtToken();
 
         String userIdFromToken = null;
@@ -268,8 +274,10 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         try {
 
             if(!UserContextHolder.isCurrentUserLoggedIn()){
-                log.warn("未取得登入用戶信息，拒絕新增評論");
-                throw new IllegalStateException("用戶未登入，無法新增評論");
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.UNAUTHORIZED)
+                        .detailMessage("用戶未登入，無法新增留言")
+                        .build();
             }
             Long userId = UserContextHolder.getCurrentUserId();
 
@@ -304,7 +312,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
                             amsCommentInfoService.save(amsCommentInfo);
 
-                            //將資料庫中的文章評論數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
+                            //將資料庫中的文章留言數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
 
                             boolean amsStatusIsUpdate = amsArtStatusService.update(
                                     new LambdaUpdateWrapper<AmsArtStatus>()
@@ -312,24 +320,28 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                                             .setSql("comments_count = comments_count + 1")
                             );
                             if(!amsStatusIsUpdate){
-                                throw new CustomBaseException("更新文章評論數失敗");
+//                                throw new CustomRuntimeException("更新文章留言數失敗");
+                                throw BusinessRuntimeException.builder()
+                                        .iErrorCode(ResultCode.COMMENT_UPDATE_FAILED)
+                                        .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
+                                        .build();
                             }
-                            log.info("文章評論數更新成功，文章ID: {}", articleId);
+                            log.info("文章留言數更新成功，文章ID: {}", articleId);
                             // 新增：在事務提交後將 commentInfoId 放入布隆過濾器
                             redisBloomFilterUtils.saveToBloomFilterAfterCommit(
                                     commentId,
                                     RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
                             );
-                            //在事務提交後將 將Redis快取中的文章評論數量++
+                            //在事務提交後將 將Redis快取中的文章留言數量++
                             redisIncrementUtils.afterCommitIncrement(RedisCacheKey.ARTICLE_COMMENTS.format(articleId));
 
 
-                            log.info("評論創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
-                            return R.ok("評論發布成功");
+                            log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
+                            return R.ok("留言發布成功");
                         })
                         .orElseGet(() -> {
-                            log.error("創建評論失敗：評論內容為空或文章ID無效");
-                            return R.error("評論內容不能為空");
+                            log.error("創建留言失敗：留言內容為空或文章ID無效");
+                            return R.error("留言內容不能為空");
                         });
             }else {
                 return Optional.ofNullable(articleId)
@@ -352,7 +364,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             amsCommentInfo.setCreateAt(LocalDateTime.now());
                             amsCommentInfo.setUpdateAt(LocalDateTime.now());
                             amsCommentInfo.setParentCommentId(amsCommentCreateDTO.getParentCommentId());
-                            //透過ParentCommentId去查詢到該父評論的指標,並將其留言數量+1
+                            //透過ParentCommentId去查詢到該父留言的指標,並將其留言數量+1
                             amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
                                     .eq(AmsCommentStatistics::getCommentId, amsCommentCreateDTO.getParentCommentId())
                                     .setSql("replies_count = replies_count + 1")
@@ -363,22 +375,26 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             amsCommentInfo.setAvatar(user.getData().getAvatar());
 
                             this.baseMapper.insert(amsComment);
-                            //儲存新創建的評論
+                            //儲存新創建的留言
                             amsCommentInfoService.save(amsCommentInfo);
 
 
 
-                            //將資料庫中的文章評論數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
+                            //將資料庫中的文章留言數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
                             AmsArtStatus amsArtStatus = amsArtStatusService
                                     .getOne(new LambdaQueryWrapper<AmsArtStatus>()
                                             .eq(AmsArtStatus::getArticleId, articleId));
 
-                            //將資料庫中的評論數++
+                            //將資料庫中的留言數++
                             amsArtStatus.setCommentsCount(amsArtStatus.getCommentsCount()+1);
                             //寫回資料庫
                             boolean statusIsUpdate = amsArtStatusService.updateById(amsArtStatus);
                             if(!statusIsUpdate){
-                                throw new CustomBaseException("更新文章評論數失敗");
+//                                throw new CustomRuntimeException("更新文章留言數失敗");
+                                throw BusinessRuntimeException.builder()
+                                        .iErrorCode(ResultCode.COMMENT_UPDATE_FAILED)
+                                        .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
+                                        .build();
                             }
 
 
@@ -389,15 +405,15 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                                     RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
                             );
 
-                            //在事務提交後將 將Redis快取中的文章評論數量++
+                            //在事務提交後將 將Redis快取中的文章留言數量++
                             redisIncrementUtils.afterCommitIncrement(RedisCacheKey.ARTICLE_COMMENTS.format(articleId));
 
-                            log.info("評論創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
-                            return R.ok("評論發布成功");
+                            log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
+                            return R.ok("留言發布成功");
                         })
                         .orElseGet(() -> {
-                            log.error("創建評論失敗：評論內容為空或文章ID無效");
-                            return R.error("評論內容不能為空");
+                            log.error("創建留言失敗：留言內容為空或文章ID無效");
+                            return R.error("留言內容不能為空");
                         });
             }
 
@@ -405,8 +421,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             log.error("Token 中的 userId 格式錯誤: {}", userIdFromToken, e);
             return R.error("用戶信息格式錯誤");
         } catch (Exception e) {
-            log.info("評論創建失敗，請稍後再試", e);
-            return R.error("評論創建失敗，請稍後再試");
+            log.info("留言創建失敗，請稍後再試", e);
+            return R.error("留言創建失敗，請稍後再試");
         }
     }
 
@@ -418,7 +434,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //        //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
 //        if(amsArticleService.isArticleNotExists(articleId)){
 //            log.warn("文章不存在，articleId={}",articleId);
-//            throw new CustomBaseException("文章不存在");
+//            throw new CustomRuntimeException("文章不存在");
 //        }
 //
 //        //根據該文章的ArticleId查找所有關聯的CommentInfo
@@ -511,34 +527,40 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //    }
 
     /**
-     * 查詢文章中的所有評論
+     * 查詢文章中的所有留言
      * @param articleId
      * @return
      */
     @Override
     public List<AmsArtCommentsVo> getArtComments(Long articleId) {
-        log.info("查詢文章中的所有評論 - articleId: {}", articleId);
+        log.info("查詢文章中的所有留言 - articleId: {}", articleId);
 
         /*
         透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
          */
         if(amsArticleService.isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+//            log.warn("文章不存在，articleId={}",articleId);
+//            throw new CustomRuntimeException("文章不存在");
+
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
         /*
-        獲取文章中評論的靜態資訊
+        獲取文章中留言的靜態資訊
          */
         List<AmsArtCommentStaticVo> staticCommentDetails = self.getStaticCommentDetails(articleId);
         if(staticCommentDetails.isEmpty()){
-            log.warn("文章無評論, articleId:{}", articleId);
+            log.warn("文章無留言, articleId:{}", articleId);
             return Collections.emptyList();
         }
 
 
         log.info("留言的靜態資訊 staticCommentDetails:{}",staticCommentDetails);
         /*
-        獲取文章中評論的動態資訊(點讚數、評論數、書籤數等)
+        獲取文章中留言的動態資訊(點讚數、留言數、書籤數等)
          */
 
         Map<String, Map<Long, Integer>> commentsMetrics = getCommentsMetrics(articleId);
@@ -549,7 +571,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
 
         /*
-        將文章中評論的靜態資訊和動態資訊合併
+        將文章中留言的靜態資訊和動態資訊合併
          */
 
         List<AmsArtCommentsVo> amsArtCommentsVoList = staticCommentDetails.stream().map(item -> {
@@ -571,7 +593,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
 
     /**
-     * 查詢文章中的所有評論
+     * 查詢文章中的所有留言
      * @param articleId
      * @return
      */
@@ -581,8 +603,12 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         log.info("從資料庫中查詢文章中的所有留言, articleId={}",articleId);
         //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
         if(amsArticleService.isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+//            log.warn("文章不存在，articleId={}",articleId);
+//            throw new CustomRuntimeException("文章不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
+                    .build();
         }
 
         List<AmsArtCommentStaticVo> amsArtCommentStaticVos = this.baseMapper.getStaticCommentDetails(articleId);
@@ -591,8 +617,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //        //根據該文章的ArticleId查找所有關聯的CommentInfo
 //        List<AmsCommentInfo> amsCommentInfoList = amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, articleId));
 //        if(amsCommentInfoList.isEmpty()){
-//            //假設文章無評論, 則直接回傳空陣列
-//            log.info("文章無評論, articleId:{}", articleId);
+//            //假設文章無留言, 則直接回傳空陣列
+//            log.info("文章無留言, articleId:{}", articleId);
 //            return Collections.emptyList();
 //        }
 //        List<Long> amsCommentIds = amsCommentInfoList.stream()
@@ -689,12 +715,12 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     public boolean isCommentNotExists(Long commentId) {
 
         if (commentId == null || commentId <= 0) {
-            log.warn("非法評論ID: {}", commentId);
+            log.warn("非法留言ID: {}", commentId);
             return true;
         }
 
         /**
-         * 透過布隆過濾器初步判斷該評論是否存在
+         * 透過布隆過濾器初步判斷該留言是否存在
          */
 
         try {
@@ -703,8 +729,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(commentBloomFilterPattern);
 
             if(!bloomFilter.contains(commentId)){
-                //若果布隆過濾器中不存在該評論ID，表示該評論一定不存在
-                log.info("該評論ID:{}不存在或已被刪除", commentId);
+                //若果布隆過濾器中不存在該留言ID，表示該留言一定不存在
+                log.info("該留言ID:{}不存在或已被刪除", commentId);
                 return true;
             }
         } catch (RedisConnectionException e) {
@@ -720,7 +746,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
 
     /**
-     * 點讚評論
+     * 點讚留言
      * @param articleId
      * @param commentId
      * @return
@@ -730,10 +756,17 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         /// TODO同步點讚數從Redis到資料庫中
 
 
-        //透過布隆過濾器判斷該評論是否不存在, 若不存在則拋出異常
+        //透過布隆過濾器判斷該留言是否不存在, 若不存在則拋出異常
         if(this.isCommentNotExists(commentId)){
-            log.info("評論不存在，commentId={}",commentId);
-            throw new CustomBaseException("評論不存在");
+//            log.info("留言不存在，commentId={}",commentId);
+//            throw new CustomRuntimeException("留言不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.COMMENT_NOT_FOUND)
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId,""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                            ))
+                    .build();
         }
 
         /*
@@ -741,14 +774,23 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         */
 
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
-            log.warn("未取得登入用戶資訊，拒絕對評論按讚");
-            throw new CustomBaseException("未登入或登入狀態已失效");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，拒絕對留言按讚")
+                    .build();
         }
         Long userId = UserContextHolder.getCurrentUserId();
 
         if (userId == null) {
-            log.warn("用戶ID為空，拒絕對評論按讚");
-            throw new CustomBaseException("用戶ID缺失");
+//            log.warn("用戶ID為空，拒絕對留言按讚");
+//            throw new CustomRuntimeException("用戶ID缺失");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_NOT_FOUND)
+                    .data(Map.of(
+                            "articleId",ObjectUtils.defaultIfNull(articleId,""),
+                            "commentId",ObjectUtils.defaultIfNull(commentId,"")
+                            ))
+                    .build();
         }
 
         String userLikedSetKey = RedisCacheKey.COMMENT_LIKED_USERS.format(commentId);
@@ -756,28 +798,36 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
 
         /*
-          判斷該評論是否存在
+          判斷該留言是否存在
         */
         //獲取桶對象
 
         RMap<Long, Integer> commentLikesHash = redissonClient.getMap(commentLikesHashKey);
 
-        //先嘗試從Redis中讀取是否存在該評論的緩存
-        //若快取中不存在該評論ID，則從資料庫中讀取該評論是否存在，若存在則新增至快取中
+        //先嘗試從Redis中讀取是否存在該留言的緩存
+        //若快取中不存在該留言ID，則從資料庫中讀取該留言是否存在，若存在則新增至快取中
         if(!commentLikesHash.containsKey(commentId)){
-            //若不存在則根據commentId從資料庫中讀取該評論是否存在
+            //若不存在則根據commentId從資料庫中讀取該留言是否存在
             Boolean commentIdFromDB = this.existsCommentIdFromDB(commentId);
             if(commentIdFromDB){
 
-                // 從 DB 查詢評論信息（包含點讚數）
+                // 從 DB 查詢留言信息（包含點讚數）
                 AmsCommentStatistics amsCommentStatistics = amsCommentStatisticsService.getOne(new LambdaQueryWrapper<AmsCommentStatistics>().select(AmsCommentStatistics::getCommentId,AmsCommentStatistics::getLikesCount).eq(AmsCommentStatistics::getCommentId, commentId));
 
                 if(amsCommentStatistics == null){
 
-                    throw new CustomBaseException("該評論不存在或已被刪除");
+//                    throw new CustomRuntimeException("該留言不存在或已被刪除");
+                    throw BusinessRuntimeException.builder()
+                            .iErrorCode(ResultCode.COMMENT_NOT_FOUND)
+                            .data(Map.of(
+                                    "articleId",ObjectUtils.defaultIfNull(articleId,""),
+                                    "commentId",ObjectUtils.defaultIfNull(commentId,"")
+
+                                    ))
+                            .build();
                 }
-                // 從 DB 查詢成功得到該評論的資訊
-                // 初始化緩存，將該評論的點讚數加入緩存
+                // 從 DB 查詢成功得到該留言的資訊
+                // 初始化緩存，將該留言的點讚數加入緩存
                 commentLikesHash.put(amsCommentStatistics.getCommentId(), amsCommentStatistics.getLikesCount());
 
             }
@@ -798,12 +848,20 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             );
 
             if (luaResult == null) {
-                log.error("Lua文章中的評論點讚腳本返回null,用戶ID:{},評論ID:{}", userId, commentId);
-                throw new CustomBaseException("系統異常");
+//                log.error("Lua文章中的留言點讚腳本返回null,用戶ID:{},留言ID:{}", userId, commentId);
+//                throw new CustomException("系統異常");
+                throw BusinessException.builder()
+                        .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                        .detailMessage("Lua腳本異常返回null")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId,""),
+                                "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                        ))
+                        .build();
             }
 
             if (luaResult > 0) {
-                log.info("點讚成功,用戶ID:{},評論ID:{},新的按讚數:{}", userId, commentId, luaResult);
+                log.info("點讚成功,用戶ID:{},留言ID:{},新的按讚數:{}", userId, commentId, luaResult);
 
 
                 boolean update = amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
@@ -811,41 +869,75 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                         .set(AmsCommentStatistics::getLikesCount, luaResult));
 
                 if(!update){
-                    log.error("更新資料庫中評論點讚數失敗,用戶ID:{},評論ID:{}", userId, commentId);
-                    throw new CustomBaseException("系統異常");
+//                    log.error("更新資料庫中留言點讚數失敗,用戶ID:{},留言ID:{}", userId, commentId);
+//                    throw new CustomRuntimeException("更新資料庫中留言點讚數失敗");
+
+                    throw BusinessRuntimeException.builder()
+                            .iErrorCode(ResultCode. COMMENT_STATISTICS_UPDATE_FAILED)
+                            .data(Map.of(
+                                    "userId",ObjectUtils.defaultIfNull(userId,""),
+                                    "commentId",ObjectUtils.defaultIfNull(commentId,"")
+                                    ))
+                            .build();
                 }
 
                 // 返回新的按讚數
                 return Math.toIntExact(luaResult);
             } else if (luaResult == -1) {
-                log.warn("重複點讚,用戶ID:{},評論ID:{}", userId, commentId);
-                throw new CustomBaseException("您已經點過讚了");
+//                log.warn("重複點讚,用戶ID:{},留言ID:{}", userId, commentId);
+//                throw new CustomRuntimeException("您已經點過讚了");
+
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.COMMENT_ALREADY_LIKED)
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId,""),
+                                "commentId", ObjectUtils.defaultIfNull(commentId,"")
+
+                        ))
+                        .build();
             } else {
-                log.error("Lua腳本異常返回值:{}", luaResult);
-                throw new CustomBaseException("系統異常");
+//                log.error("Lua腳本異常返回值:{}", luaResult);
+//                throw new CustomRuntimeException("系統異常");
+                throw BusinessException.builder()
+                        .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                        .detailMessage("Lua腳本異常返回值")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId,""),
+                                "commentId", ObjectUtils.defaultIfNull(commentId,""),
+                                "invalidResult", ObjectUtils.defaultIfNull(luaResult, "null")
+                                ))
+                        .build();
             }
         } catch (RedisException e) {
-            log.error("Redis執行異常,用戶ID:{},評論ID:{}", userId, commentId, e);
-            throw new CustomBaseException("服務暫時不可用，請稍後再試");
+//            log.error("Redis執行異常,用戶ID:{},留言ID:{}", userId, commentId, e);
+//            throw new CustomRuntimeException("服務暫時不可用，請稍後再試");
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                    .detailMessage("Lua腳本異常返回值")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId,""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                    ))
+                    .build();
         }
 
 
     }
 
     /**
-     * 從DB中判斷評論是否存在
+     * 從DB中判斷留言是否存在
      * @param commentId
-     * @return {@code true} 如果評論存在且唯一; {@code false} 如果評論ID無效、不存在或已被刪除
+     * @return {@code true} 如果留言存在且唯一; {@code false} 如果留言ID無效、不存在或已被刪除
      */
     @Override
     public Boolean existsCommentIdFromDB(Long commentId) {
         if (commentId == null || commentId <= 0) {
-            log.warn("非法評論ID: {}", commentId);
+            log.warn("非法留言ID: {}", commentId);
             return false;
         }
         Long count = this.baseMapper.selectCount((new LambdaQueryWrapper<AmsComment>().eq(AmsComment::getId, commentId)));
         if(count!=1){
-            log.warn("該評論ID:{}不存在或已被刪除",commentId);
+            log.warn("該留言ID:{}不存在或已被刪除",commentId);
             return false;
         }
 
@@ -854,7 +946,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     }
     
     /**
-     * 取得文章中評論的點讚數聚合（Hash: field=commentId, value=likesCount）
+     * 取得文章中留言的點讚數聚合（Hash: field=commentId, value=likesCount）
      * 先從Redis中取得，如果不存在則從DB中取得，再將DB中的資料加入Redis中進行快取
      * @param articleId
      * @return
@@ -864,8 +956,13 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
         //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
         if(amsArticleService.isArticleNotExists(articleId)){
-            log.warn("文章不存在，articleId={}",articleId);
-            throw new CustomBaseException("文章不存在");
+//            log.warn("文章不存在，articleId={}",articleId);
+//            throw new CustomRuntimeException("文章不存在");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
         
         String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
@@ -951,7 +1048,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             putBatch.execute();
 
             Map<String,Map<Long,Integer>> result = new HashMap<>();
-            //從資料庫中取得該文章的評論點讚數
+            //從資料庫中取得該文章的留言點讚數
 
             //包裝成目標對象, 其中內容包含空快取標記-1L
 
@@ -999,7 +1096,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      */
     public List<AmsCommentStatistics> QueryCommentsMetric(Long articleId)  {
         log.info("開始執行 QueryCommentsMetric - articleId: {}", articleId);
-        //從資料庫中取得該文章的評論點讚數
+        //從資料庫中取得該文章的留言點讚數
 
         return amsCommentStatisticsService.list(new LambdaQueryWrapper<AmsCommentStatistics>()
                 .eq(AmsCommentStatistics::getArticleId, articleId)
@@ -1008,7 +1105,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     }
 
     /**
-     * 從Redis中取得文章中所有留言的評論ID、點讚數、回覆數，並包裝成
+     * 從Redis中取得文章中所有留言的留言ID、點讚數、回覆數，並包裝成
      * @param articleId
      * @return
      */
@@ -1043,8 +1140,13 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             log.info("成功解析文章中所有留言的指標 - articleId: {}, 結果數量: {}",articleId,result.size());
             return result;
         } catch (InterruptedException | ExecutionException e) {
-            log.error("解析文章中所有留言的指標失敗 - articleId: {}", articleId, e);
-            throw new CustomBaseException(e.getMessage());
+//            log.error("解析文章中所有留言的指標失敗 - articleId: {}", articleId, e);
+//            throw new CustomRuntimeException(e.getMessage());
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                    .detailMessage(String.format("解析文章中所有留言的指標失敗 - 文章ID:%s", articleId))
+                    .data(Map.of("articleId",articleId))
+                    .build();
         }
     }
 }

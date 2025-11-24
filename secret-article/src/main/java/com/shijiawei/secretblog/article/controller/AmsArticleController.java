@@ -8,6 +8,7 @@ import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -24,7 +25,6 @@ import org.springframework.web.bind.annotation.*;
  * @Create 2024/8/26 上午12:18
  */
 @Slf4j
-//@RestController("/article")
 @RestController
 @RequestMapping("/article")
 public class AmsArticleController {

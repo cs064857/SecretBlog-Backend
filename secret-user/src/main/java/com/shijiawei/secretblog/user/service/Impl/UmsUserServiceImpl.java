@@ -4,13 +4,17 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.user.entity.*;
 import com.shijiawei.secretblog.user.service.*;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RRateLimiter;
 import org.redisson.api.RateIntervalUnit;
 import org.redisson.api.RateType;
@@ -18,7 +22,6 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -273,7 +276,12 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         //刪除User資料,將deleted欄位改成1
         int deleted = this.baseMapper.deleteByIds(userIdList);
         if(deleted==0){
-            throw new CustomBaseException("500","刪除失敗", HttpStatus.BAD_REQUEST);
+//            throw new CustomRuntimeException("500","刪除失敗");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
+                    .detailMessage("未能獲得用戶基本資料")
+                    .data(Map.of("userIds", ObjectUtils.defaultIfNull(userIdList,"")))
+                    .build();
         }
         // 刪除UserInfo資料
 //        umsUserInfoService.removeByIds(userinfoIdList);
@@ -477,8 +485,11 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         long emailIsExists = umsCredentialsService.count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
         if(emailIsExists>0){
-            /// TODO 修改拋出異常的具體參數
-            throw new CustomBaseException("此電子郵件地址已被註冊");
+//            throw new CustomRuntimeException("此電子郵件地址已被註冊");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_EMAIL_ALREADY_EXIST)
+                    .data(Map.of("email", StringUtils.defaultString(email,"")))
+                    .build();
         }
 
 //        umsUserInfoService.getOne(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName,))
@@ -516,22 +527,26 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         //將user的deleted欄位設置為1(邏輯刪除)
         int deleted = this.baseMapper.deleteById(userId);
         if(deleted == 0){
-            throw new CustomBaseException("500","刪除失敗", HttpStatus.BAD_REQUEST);
+//            throw new CustomRuntimeException("500","刪除失敗");
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_DELETED_FAILED)
+                    .data(Map.of("userId", ObjectUtils.defaultIfNull(userId,"")))
+                    .build();
         }
 //        // 刪除使用者資訊
 //        if (!umsUserInfoService.remove(new LambdaQueryWrapper<UmsUserInfo>()
 //                .eq(UmsUserInfo::getUserId, userId))) {
-//            throw new CustomBaseException("500", "刪除使用者資訊失敗", HttpStatus.BAD_REQUEST);
+//            throw new CustomRuntimeException("500", "刪除使用者資訊失敗", HttpStatus.BAD_REQUEST);
 //        }
 //        // 刪除授權資料
 //        if (!umsAuthsService.remove(new LambdaQueryWrapper<UmsAuths>()
 //                .eq(UmsAuths::getUserId, userId))) {
-//            throw new CustomBaseException("500", "刪除授權資訊失敗", HttpStatus.BAD_REQUEST);
+//            throw new CustomRuntimeException("500", "刪除授權資訊失敗", HttpStatus.BAD_REQUEST);
 //        }
 //        // 刪除憑證資料
 //        if (!umsCredentialsService.remove(new LambdaQueryWrapper<UmsCredentials>()
 //                .eq(UmsCredentials::getUserId, userId))) {
-//            throw new CustomBaseException("500", "刪除憑證資料失敗", HttpStatus.BAD_REQUEST);
+//            throw new CustomRuntimeException("500", "刪除憑證資料失敗", HttpStatus.BAD_REQUEST);
 //        }
         return R.ok();
 

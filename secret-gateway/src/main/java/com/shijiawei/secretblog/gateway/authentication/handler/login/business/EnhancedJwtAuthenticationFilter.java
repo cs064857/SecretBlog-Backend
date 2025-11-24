@@ -1,6 +1,5 @@
 package com.shijiawei.secretblog.gateway.authentication.handler.login.business;
 
-import com.shijiawei.secretblog.common.exception.ExceptionTool;
 import com.shijiawei.secretblog.gateway.authentication.handler.login.UserLoginInfo;
 import com.shijiawei.secretblog.gateway.config.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;

@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.common.myenum;
 
-import com.shijiawei.secretblog.common.exception.CustomBaseException;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import lombok.Getter;
 
 import java.time.Duration;
@@ -55,25 +56,25 @@ public enum RedisCacheKey {
     ARTICLE_COMMENTS_BOOKMARKS("ams:article:comment:%s:bookmarks_count", "文章留言書籤數（計數用）", null),
 
     /**
-     * ===== 評論相關（方案 B：Hash 聚合）=====
+     * ===== 留言相關（方案 B：Hash 聚合）=====
      */
 
-    // 文章的評論列表索引（ZSet，按時間排序）
-//    ARTICLE_COMMENT_IDS("ams:article:comments:%s:comment_ids", "文章評論ID集合(ZSet)", null),
+    // 文章的留言列表索引（ZSet，按時間排序）
+//    ARTICLE_COMMENT_IDS("ams:article:comments:%s:comment_ids", "文章留言ID集合(ZSet)", null),
 
-    // 文章評論的點讚數聚合（Hash: field=commentId, value=likesCount）已使用
-    ARTICLE_COMMENT_LIKES_COUNT_HASH("ams:article:comment:%s:comment_likes", "文章評論點讚數Hash", Duration.ofMinutes(30)),
+    // 文章留言的點讚數聚合（Hash: field=commentId, value=likesCount）已使用
+    ARTICLE_COMMENT_LIKES_COUNT_HASH("ams:article:comment:%s:comment_likes", "文章留言點讚數Hash", Duration.ofMinutes(30)),
     // 文章留言的留言數聚合（Hash: field=commentId, value=replies_count）已使用
-    ARTICLE_COMMENT_REPLIES_COUNT_HASH("ams:article:comment:%s:replies_count", "文章評論的回覆數Hash", Duration.ofMinutes(30)),
+    ARTICLE_COMMENT_REPLIES_COUNT_HASH("ams:article:comment:%s:replies_count", "文章留言的回覆數Hash", Duration.ofMinutes(30)),
 
-    // 文章評論的書籤數聚合（Hash: field=commentId, value=bookmarksCount）
-    ARTICLE_COMMENT_BOOKMARKS_HASH("ams:article:comment:%s:comment_bookmarks", "文章評論書籤數Hash", null),
+    // 文章留言的書籤數聚合（Hash: field=commentId, value=bookmarksCount）
+    ARTICLE_COMMENT_BOOKMARKS_HASH("ams:article:comment:%s:comment_bookmarks", "文章留言書籤數Hash", null),
 
-    // 評論被哪些用戶點讚（Set: 用戶ID集合）已使用
-    COMMENT_LIKED_USERS("ams:comment:%s:liked_users", "評論點讚用戶集合", null),
+    // 留言被哪些用戶點讚（Set: 用戶ID集合）已使用
+    COMMENT_LIKED_USERS("ams:comment:%s:liked_users", "留言點讚用戶集合", null),
 
-    // 評論被哪些用戶書籤（Set: 用戶ID集合）
-    COMMENT_MARKED_USERS("ams:comment:%s:marked_users", "評論書籤用戶集合", null);
+    // 留言被哪些用戶書籤（Set: 用戶ID集合）
+    COMMENT_MARKED_USERS("ams:comment:%s:marked_users", "留言書籤用戶集合", null);
 
 
 
@@ -100,7 +101,11 @@ public enum RedisCacheKey {
     public String format(Object... args) {
         // null 檢查 / 長度檢查
         if(Arrays.stream(args).anyMatch(Objects::isNull)){
-            throw new CustomBaseException("RedisKey模板參數值不可為空");
+//            throw new CustomRuntimeException(ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING.getCode(), ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING.getMessage());
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING)
+                    .build();
+
         }
         return String.format(pattern, args);
     }

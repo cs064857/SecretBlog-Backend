@@ -18,7 +18,7 @@ public class AmsCommentCreateDTO {
 //    @NotNull(message = "主鍵不可為空",groups = {Insert.class,Update.class})
 //    private Long articleId;
 
-    @NotNull(message = "評論內容不可為空",groups = {Insert.class,Update.class})
+    @NotNull(message = "留言內容不可為空",groups = {Insert.class,Update.class})
     private String commentContent;
 
     //可為空

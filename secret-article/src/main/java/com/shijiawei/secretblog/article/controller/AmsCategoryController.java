@@ -10,6 +10,7 @@ import com.shijiawei.secretblog.article.service.AmsCategoryService;
 import com.shijiawei.secretblog.article.vo.AmsCategoryTreeVo;
 import com.shijiawei.secretblog.common.utils.R;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
+@Tag(name = "文章分類管理", description = "文章分類相關的 CRUD 操作")
 @RequestMapping("/article/category")
 public class AmsCategoryController {
     @Autowired

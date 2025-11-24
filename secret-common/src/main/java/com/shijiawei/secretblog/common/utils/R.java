@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
+import java.sql.Timestamp;
 import java.util.HashMap;
 
 /**
@@ -18,10 +19,10 @@ import java.util.HashMap;
 @Data
 
 public class R<T> {
-    private int code;
+    private String code;
     private String msg;
     private T data;
-
+    private Timestamp timestamp;
 //    /**
 //     * 使用JSON返回
 //     * @param data
@@ -44,8 +45,8 @@ public class R<T> {
         return (new R<>(HttpCodeEnum.SUCCESS.getCode(), HttpCodeEnum.SUCCESS.getDescription(), data));
     }
 
-    public static <T> R<T> ok(String message,T data) {
-        return (new R<>(HttpCodeEnum.SUCCESS.getCode(), message, data));
+    public static <T> R<T> ok(String code,T data) {
+        return (new R<>(HttpCodeEnum.SUCCESS.getCode(), code, data));
     }
 
 //    public static <T> R<T> ok(T data) {
@@ -75,12 +76,20 @@ public class R<T> {
     public static <T> R<T> error() {
         return (new R<>(HttpCodeEnum.OPERATION_ERR.getCode(), HttpCodeEnum.OPERATION_ERR.getDescription()));
     }
-    public static <T> R<T> error(int code,String msg){
-        return new R<>(code, msg);
+    public static <T> R<T> error(String code, String msg, Timestamp timestamp){
+        return new R<>(code, msg,null,timestamp);
     }
-    public static <T> R<T> error(String msg) {
-        return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(), msg);
+    public static <T> R<T> error(String code, String msg, Timestamp timestamp,T data){
+        return new R<>(code, msg,data,timestamp);
     }
+    public static <T> R<T> error(String code , Timestamp timestamp) {
+        return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(), code,null,timestamp);
+    }
+
+    public static <T> R<T> error(String code) {
+        return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(), code);
+    }
+
     /**
      * 錯誤,參數為自訂訊息、校驗異常資訊(校驗屬性與錯誤原因)
      *
@@ -88,7 +97,7 @@ public class R<T> {
      * @param <T>
      * @return
      */
-    public static <T> R<T> error(String msg, T errorData) {
+    public static <T> R<T> error(String msg, T errorData, Timestamp timestamp) {
         return new R<T>(HttpCodeEnum.OPERATION_ERR.getCode(), msg, errorData);
     }
 
@@ -99,26 +108,26 @@ public class R<T> {
         this.msg = msg;
     }
 
-    public R(String msg, T data) {
-        this.msg = msg;
-        this.data = data;
-    }
-
-    public R(int code, T data) {
+    public R(String code, T data) {
         this.code = code;
         this.data = data;
     }
 
-    public R(int code, String msg) {
+    public R(String code, String msg) {
         this.code = code;
         this.msg = msg;
     }
 
-    public R(int code, String msg, T data) {
+    public R(String code, String msg, T data) {
         this.code = code;
         this.msg = msg;
         this.data = data;
     }
-
+    public R(String code, String msg, T data, Timestamp timestamp) {
+        this.code = code;
+        this.msg = msg;
+        this.data = data;
+        this.timestamp = timestamp;
+    }
 
 }
