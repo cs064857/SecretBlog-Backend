@@ -21,36 +21,26 @@ public enum ResultCode implements IErrorCode{
     //執行緒被中斷
     THREAD_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,"1003", "系統服務繁忙，請稍後再試"),
     SYSTEM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"1004", "系統服務繁忙，請稍後再試"),
-
+    REPEAT_OPERATION(HttpStatus.BAD_REQUEST, "1005", "請勿重複操作"),
+    //執行修改操作失敗
+    UPDATE_FAILED(HttpStatus.BAD_REQUEST,"1006", "系統服務繁忙，請稍後再試"),
+    //執行新增操作失敗
+    CREATE_FAILED(HttpStatus.BAD_REQUEST,"1007", "系統服務繁忙，請稍後再試"),
+    DELETE_FAILED(HttpStatus.BAD_REQUEST,"1008", "系統服務繁忙，請稍後再試"),
+    NOT_FOUND(HttpStatus.NOT_FOUND,"1008", "系統服務繁忙，請稍後再試"),
     /**
      * 2000~2999 文章模組
      */
-    ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND,"2001", "文章不存在"),
-    //文章已被該用戶點讚
-    ARTICLE_ALREADY_LIKED(HttpStatus.BAD_REQUEST,"2002", "您已經點讚過該文章"),
-    ARTICLE_UPDATE_FAILED(HttpStatus.BAD_REQUEST, "2003", "文章更新失敗"),
     ARTICLE_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "2004", "文章服務內部異常"),
-    ARTICLE_ALREADY_BOOKMARKED(HttpStatus.BAD_REQUEST,"2005", "您已經將該文章加入書籤"),
 
     /**
      * 3000~3999 網關模組
      */
-    //留言更新失敗
-    COMMENT_UPDATE_FAILED(HttpStatus.BAD_REQUEST, "3003", "系統服務繁忙，請稍後再試"),
 
-    //留言創建失敗
-    COMMENT_CREATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "3003", "系統服務繁忙，請稍後再試"),
-    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND,"3004", "留言不存在"),
-    COMMENT_STATISTICS_UPDATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "3005", "操作失敗，請稍後再試"),
-    COMMENT_ALREADY_LIKED(HttpStatus.BAD_REQUEST,"3006", "您已經點讚過該留言"),
-
-
-    ARTTAG_CREATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "3003", "系統服務繁忙，請稍後再試"),
 
     /**
      * 4000~4999 用戶模組
      */
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND,"4001", "用戶不存在"),
     //用戶認證服務異常
     JWT_CONFIG_ERROR(HttpStatus.FORBIDDEN,"4002", "系統服務繁忙，請稍後再試"),
     //尚未登入或登入狀態已失效
@@ -61,8 +51,6 @@ public enum ResultCode implements IErrorCode{
     AUTH_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "4005", "認證服務內部異常"),
     JWT_BLACKLISTED(HttpStatus.UNAUTHORIZED, "4006", "憑證已失效，請重新登入"),
     USER_INTERNAL_ERROR(HttpStatus.NOT_FOUND,"4007", "系統服務繁忙，請稍後再試"),
-    //刪除用戶失敗
-    USER_DELETED_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "4008", "系統服務繁忙，請稍後再試"),
     USER_EMAIL_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "4009", "此電子郵件地址已被註冊"),
 
     /**

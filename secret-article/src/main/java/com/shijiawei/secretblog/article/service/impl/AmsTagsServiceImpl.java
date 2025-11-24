@@ -55,8 +55,8 @@ public class AmsTagsServiceImpl extends ServiceImpl<AmsTagsMapper, AmsTags> impl
 //            log.warn("插入文章標籤失敗,標籤名稱:{}", name);
 //            throw new CustomRuntimeException("系統異常，請稍後再試");
             throw BusinessException.builder()
-                    .iErrorCode(ResultCode.ARTTAG_CREATE_FAILED)
-                    .detailMessage("插入文章標籤失敗")
+                    .iErrorCode(ResultCode.CREATE_FAILED)
+                    .detailMessage("新增文章標籤失敗")
                     .data(Map.of("name",name))
                     .build();
         }

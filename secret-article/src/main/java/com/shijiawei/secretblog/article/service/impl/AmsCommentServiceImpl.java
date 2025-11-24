@@ -322,7 +322,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             if(!amsStatusIsUpdate){
 //                                throw new CustomRuntimeException("更新文章留言數失敗");
                                 throw BusinessRuntimeException.builder()
-                                        .iErrorCode(ResultCode.COMMENT_UPDATE_FAILED)
+                                        .iErrorCode(ResultCode.UPDATE_FAILED)
                                         .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
                                         .build();
                             }
@@ -392,7 +392,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                             if(!statusIsUpdate){
 //                                throw new CustomRuntimeException("更新文章留言數失敗");
                                 throw BusinessRuntimeException.builder()
-                                        .iErrorCode(ResultCode.COMMENT_UPDATE_FAILED)
+                                        .iErrorCode(ResultCode.UPDATE_FAILED)
                                         .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
                                         .build();
                             }
@@ -543,7 +543,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            throw new CustomRuntimeException("文章不存在");
 
             throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .iErrorCode(ResultCode.NOT_FOUND)
                     .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
                     .data(Map.of("articleId",articleId))
                     .build();
@@ -606,7 +606,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            log.warn("文章不存在，articleId={}",articleId);
 //            throw new CustomRuntimeException("文章不存在");
             throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
                     .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
                     .build();
         }
@@ -761,7 +762,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            log.info("留言不存在，commentId={}",commentId);
 //            throw new CustomRuntimeException("留言不存在");
             throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.COMMENT_NOT_FOUND)
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言不存在")
                     .data(Map.of(
                             "articleId", ObjectUtils.defaultIfNull(articleId,""),
                             "commentId", ObjectUtils.defaultIfNull(commentId,"")
@@ -785,7 +787,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            log.warn("用戶ID為空，拒絕對留言按讚");
 //            throw new CustomRuntimeException("用戶ID缺失");
             throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.USER_NOT_FOUND)
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("用戶不存在，拒絕對留言按讚")
                     .data(Map.of(
                             "articleId",ObjectUtils.defaultIfNull(articleId,""),
                             "commentId",ObjectUtils.defaultIfNull(commentId,"")
@@ -818,7 +821,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
 //                    throw new CustomRuntimeException("該留言不存在或已被刪除");
                     throw BusinessRuntimeException.builder()
-                            .iErrorCode(ResultCode.COMMENT_NOT_FOUND)
+                            .iErrorCode(ResultCode.NOT_FOUND)
+                            .data("留言不存在")
                             .data(Map.of(
                                     "articleId",ObjectUtils.defaultIfNull(articleId,""),
                                     "commentId",ObjectUtils.defaultIfNull(commentId,"")
@@ -873,7 +877,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //                    throw new CustomRuntimeException("更新資料庫中留言點讚數失敗");
 
                     throw BusinessRuntimeException.builder()
-                            .iErrorCode(ResultCode. COMMENT_STATISTICS_UPDATE_FAILED)
+                            .iErrorCode(ResultCode.UPDATE_FAILED)
+                            .data("更新文章留言指標失敗")
                             .data(Map.of(
                                     "userId",ObjectUtils.defaultIfNull(userId,""),
                                     "commentId",ObjectUtils.defaultIfNull(commentId,"")
@@ -888,7 +893,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //                throw new CustomRuntimeException("您已經點過讚了");
 
                 throw BusinessRuntimeException.builder()
-                        .iErrorCode(ResultCode.COMMENT_ALREADY_LIKED)
+                        .iErrorCode(ResultCode.REPEAT_OPERATION)
+                        .detailMessage("用戶已經點讚過該留言, 不允許重複點讚")
                         .data(Map.of(
                                 "userId", ObjectUtils.defaultIfNull(userId,""),
                                 "commentId", ObjectUtils.defaultIfNull(commentId,"")
@@ -959,7 +965,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            log.warn("文章不存在，articleId={}",articleId);
 //            throw new CustomRuntimeException("文章不存在");
             throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_NOT_FOUND)
+                    .iErrorCode(ResultCode.NOT_FOUND)
                     .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
                     .data(Map.of("articleId",articleId))
                     .build();

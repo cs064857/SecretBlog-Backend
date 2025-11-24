@@ -529,7 +529,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         if(deleted == 0){
 //            throw new CustomRuntimeException("500","刪除失敗");
             throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.USER_DELETED_FAILED)
+                    .iErrorCode(ResultCode.DELETE_FAILED)
+                    .detailMessage("刪除用戶失敗")
                     .data(Map.of("userId", ObjectUtils.defaultIfNull(userId,"")))
                     .build();
         }
