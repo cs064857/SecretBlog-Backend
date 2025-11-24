@@ -544,8 +544,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
         /*
@@ -607,8 +607,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            throw new CustomRuntimeException("文章不存在");
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -966,8 +966,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            throw new CustomRuntimeException("文章不存在");
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
         
@@ -1150,8 +1150,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            throw new CustomRuntimeException(e.getMessage());
             throw BusinessException.builder()
                     .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                    .detailMessage(String.format("解析文章中所有留言的指標失敗 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("解析文章中所有留言的指標失敗")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
     }

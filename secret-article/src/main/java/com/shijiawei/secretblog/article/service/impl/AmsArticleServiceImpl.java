@@ -160,7 +160,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UNAUTHORIZED)
-                    .detailMessage(String.format("用戶未登入，拒絕發佈文章 - 文章標題:%S",amsSaveArticleVo.getTitle()))
+                    .detailMessage("用戶未登入，拒絕發佈文章")
+                    .data(Map.of("title",StringUtils.defaultString(amsSaveArticleVo.getTitle(),"")))
                     .build();
         }
 
@@ -447,8 +448,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
 
         }
@@ -459,8 +460,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
         Long amsArticleVoId = amsArticleVo.getId();
@@ -468,8 +469,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -551,8 +552,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -579,8 +580,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if(amsArticleVo== null){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -696,8 +697,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if(isArticleNotExists(articleId)){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -762,8 +763,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if(isArticleNotExists(articleId)){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -774,7 +775,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UNAUTHORIZED)
-                    .detailMessage(String.format("用戶未登入，拒絕對文章按讚 - 文章ID:%S",articleId))
+                    .detailMessage("用戶未登入，拒絕對文章按讚")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
         Long userId = UserContextHolder.getCurrentUserId();
@@ -895,8 +897,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if(isArticleNotExists(articleId)){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -1211,8 +1213,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             //假設文章不存在則直接拋出異常
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -1306,8 +1308,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if(!contains){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage(String.format("文章不存在 - 文章ID:%s", articleId))
-                    .data(Map.of("articleId",articleId))
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -1319,7 +1321,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if(amsArticleUpdateDTO==null){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.PARAM_MISSING)
-                    .detailMessage(String.format("修改文章時更新資料為空 - 文章ID:%s", articleId))
+                    .detailMessage("修改文章時更新資料為空")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
 
@@ -1344,7 +1347,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if (userId == null) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UNAUTHORIZED)
-                    .detailMessage(String.format("用戶ID為空，拒絕編輯文章 - 文章ID:%S",articleId))
+                    .detailMessage("用戶ID為空，拒絕編輯文章")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
         log.info("修改文章 - 文章ID: {} , 文章標題:{} , 用戶ID:{}" , articleId ,amsArticleUpdateDTO.getTitle() ,userId);
@@ -1366,7 +1370,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 //不是文章的作者也不是管理員
                 throw BusinessRuntimeException.builder()
                         .iErrorCode(ResultCode.FORBIDDEN)
-                        .detailMessage(String.format("用戶權限不足，無權編輯該文章 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                        .detailMessage("用戶權限不足，無權編輯該文章")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                        ))
                         .build();
             }
 
@@ -1391,7 +1399,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if(articleContentUpdate == 0){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UPDATE_FAILED)
-                    .detailMessage(String.format("編輯文章時更新文章內容失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                    .detailMessage("編輯文章時更新文章內容失敗")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
                     .build();
         }
 
@@ -1408,7 +1420,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UPDATE_FAILED)
-                    .detailMessage(String.format("編輯文章時更新文章分類失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                    .detailMessage("編輯文章時更新文章分類失敗")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
                     .build();
         }
         /**
@@ -1428,8 +1444,12 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 log.info("文章ID:{},刪除舊標籤成功",articleId);
             }else {
                 throw BusinessRuntimeException.builder()
-                        .iErrorCode(ResultCode.UPDATE_FAILED)
-                        .detailMessage(String.format("編輯文章時刪除舊標籤失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                        .iErrorCode(ResultCode.DELETE_FAILED)
+                        .detailMessage("編輯文章時刪除舊標籤失敗")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                        ))
                         .build();
             }
         }
@@ -1469,7 +1489,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 if(!saveBatch){
                     throw BusinessRuntimeException.builder()
                             .iErrorCode(ResultCode.UPDATE_FAILED)
-                            .detailMessage(String.format("編輯文章時增加新標籤失敗 - 用戶ID:%s,文章ID:%s",userId,articleId))
+                            .detailMessage("編輯文章時增加新標籤失敗")
+                            .data(Map.of(
+                                    "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                    "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                            ))
                             .build();
                 }
 
