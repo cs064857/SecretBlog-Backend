@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.Update;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,7 +20,10 @@ import java.time.LocalDateTime;
  * @Create 2025/7/16 上午2:45
  */
 @TableName("ams_artComment")
+@Builder
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class AmsComment {
     //手動設置ID,目的是與ams_comment_info做雙向鏈結
     @TableId(type = IdType.ASSIGN_ID)

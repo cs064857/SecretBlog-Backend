@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * ClassName: AmsCommentStatistics
@@ -15,6 +18,9 @@ import lombok.Data;
  */
 @TableName("ams_comment_statistics")
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class AmsCommentStatistics {
     @TableId(type = IdType.ASSIGN_ID)
     @TableField(value = "id")

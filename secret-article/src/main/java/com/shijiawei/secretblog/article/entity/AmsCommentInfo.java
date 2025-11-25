@@ -3,7 +3,10 @@ package com.shijiawei.secretblog.article.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -15,7 +18,10 @@ import java.time.LocalDateTime;
  */
 
 @TableName("ams_comment_info")
+@Builder
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class AmsCommentInfo {
     ///TODO 僅設置基礎的NOT NULL
     //手動設置ID,目的是與ams_comment做雙向鏈結

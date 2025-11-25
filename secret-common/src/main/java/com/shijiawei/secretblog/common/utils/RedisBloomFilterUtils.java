@@ -1,12 +1,16 @@
 package com.shijiawei.secretblog.common.utils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBloomFilter;
+import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
+import org.redisson.codec.TypedJsonJacksonCodec;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -30,6 +34,9 @@ public class RedisBloomFilterUtils {
     private Long expectedInsertions; // 預期插入的元素數量, 默認值1萬
     @Value("${bloom-filter.article.false-probability:0.01}")
     private Double falseProbability; // 可接受的誤判率, 默認值1%
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public RedisBloomFilterUtils(RedissonClient redissonClient){
         this.redissonClient=redissonClient;
@@ -81,7 +88,14 @@ public class RedisBloomFilterUtils {
         }
     }
 
-    public <T> boolean saveArticleIdToBloomFilter(T obj,String key) {
+    /**
+     * 在事務提交後將對象加入至布隆過濾器中
+     * @param obj 要添加到布隆過濾器的對象
+     * @param key 布隆過濾器的key
+     * @return boolean
+     * @param <T> 對象類型
+     */
+    public <T> boolean saveObjToBloomFilter(T obj,String key) {
 
         RBloomFilter<T> bloomFilter = redissonClient.getBloomFilter(key);
 
@@ -123,7 +137,7 @@ public class RedisBloomFilterUtils {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             log.warn("當前不在事務中，直接執行布隆過濾器操作: key={}, obj={}", key, obj);
             try {
-                saveArticleIdToBloomFilter(obj, key);
+                saveObjToBloomFilter(obj, key);
             } catch (Exception e) {
                 log.error("布隆過濾器添加失敗: key={}, obj={}", key, obj, e);
             }
@@ -136,7 +150,7 @@ public class RedisBloomFilterUtils {
                     @Override
                     public void afterCommit() {
                         try {
-                            saveArticleIdToBloomFilter(obj, key);
+                            saveObjToBloomFilter(obj, key);
                         } catch (Exception e) {
                             // 布隆過濾器出現異常,但不拋出異常，避免影響主流程
                             log.error("事務提交後布隆過濾器添加失敗: key={}, obj={}", key, obj, e);
@@ -145,5 +159,52 @@ public class RedisBloomFilterUtils {
                     }
                 }
         );
+    }
+
+    public <T,R> void saveMapToRMapAfterCommit(String rMapKey , Map<T, R> value , Class<T> keyClass , Class<R> valueClass){
+
+        if(value.isEmpty()){
+            log.error("事務提交後將值添加至Redis失敗, rMapKey:{}",rMapKey);
+        }
+
+        if(!TransactionSynchronizationManager.isActualTransactionActive()){
+            log.warn("當前不在事務中，直接執行布隆過濾器操作: rMapKey={}, mapSize={}", rMapKey, value.size());
+            try {
+                RMap<T, R> rMap = redissonClient.getMap(rMapKey, new TypedJsonJacksonCodec(keyClass, valueClass));
+                updateRedisMap(value, rMap);
+            } catch (Exception e) {
+                log.error("事務提交後同步 Redis 失敗 (DB已提交). rMapKey: {}, MapSize: {}, Error: {}",
+                        rMapKey, value.size(), e.getMessage(), e);
+            }
+            return;
+        }
+        
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){
+            
+            @Override
+            public void afterCommit(){
+                try {
+                    RMap<T, R> rMap = redissonClient.getMap(rMapKey, new TypedJsonJacksonCodec(keyClass, valueClass));
+
+                    updateRedisMap(value, rMap);
+                } catch (Exception e) {
+                    log.error("事務提交後同步 Redis 失敗 (DB已提交). rMapKey: {}, MapSize: {}, Error: {}",
+                            rMapKey, value, e.getMessage(), e);
+                }
+            }
+            
+        } );
+
+    }
+
+    private <T,R> void updateRedisMap(Map<T, R> map, RMap<T, R> rMap) {
+
+
+        if(!rMap.isExists()){
+            log.error("事務提交後同步 Redis 失敗 (DB已提交) , Redis鍵尚未存在. rMapName: {}, MapSize: {}",
+                    rMap.getName(), map);
+        }
+        rMap.putAll(map);
+        log.debug("成功將 Map 資料同步至 Redis: rMapName={}, mapSize={}", rMap.getName(), map.size());
     }
 }

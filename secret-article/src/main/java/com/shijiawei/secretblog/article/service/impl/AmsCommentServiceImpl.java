@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.entity.AmsArtStatus;
 import com.shijiawei.secretblog.article.entity.AmsComment;
@@ -17,7 +18,6 @@ import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
-import com.shijiawei.secretblog.common.codeEnum.HttpCodeEnum;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessException;
@@ -28,10 +28,10 @@ import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import com.shijiawei.secretblog.common.redisutils.RedisLuaScripts;
 import com.shijiawei.secretblog.common.utils.*;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.*;
 import org.redisson.client.RedisConnectionException;
 import org.redisson.client.RedisException;
@@ -40,7 +40,6 @@ import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,6 +93,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     @Autowired
     private AmsCommentStatisticsService amsCommentStatisticsService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
 //    public AmsCommentServiceImpl(RedissonClient redissonClient){
 //        this.redissonClient = redissonClient;
@@ -266,14 +268,21 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
         redisBloomFilterUtils.requireExists(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey(),articleId,"文章不存在");
 
-        log.info("回覆留言 amsCommentCreateDTO:{}",amsCommentCreateDTO);
+//        log.info("回覆留言 amsCommentCreateDTO:{}",amsCommentCreateDTO);
 //        String jwtToken = amsCommentCreateDTO.getJwtToken();
+
+        if(amsCommentCreateDTO.getCommentContent().isBlank()){
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("新增留言時留言內容不可為空")
+                    .build();
+        }
 
         String userIdFromToken = null;
 
         try {
 
-            if(!UserContextHolder.isCurrentUserLoggedIn()){
+            if (!UserContextHolder.isCurrentUserLoggedIn()) {
                 throw BusinessRuntimeException.builder()
                         .iErrorCode(ResultCode.UNAUTHORIZED)
                         .detailMessage("用戶未登入，無法新增留言")
@@ -283,139 +292,101 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
             R<UserBasicDTO> user = userFeignClient.getUserById(userId);
 
-            if(amsCommentCreateDTO.getParentCommentId()==null){
-                return Optional.ofNullable(articleId)
-                        .flatMap(artId -> Optional.ofNullable(amsCommentCreateDTO.getCommentContent()))
-                        .filter(cmt -> !cmt.trim().isEmpty())
-                        .map(cmt -> {
-                            AmsComment amsComment = new AmsComment();
-                            AmsCommentInfo amsCommentInfo = new AmsCommentInfo();
-                            amsCommentInfo.setUserId(userId); // 使用從 Token 解析的 userId
-                            amsCommentInfo.setArticleId(articleId);
-                            amsCommentInfo.setCreateAt(LocalDateTime.now());
+
+            long commentId = IdWorker.getId();
+            long commentInfoId = IdWorker.getId();
+
+            AmsCommentInfo amsCommentInfo = AmsCommentInfo.builder()
+                    .userId(userId)
+                    .articleId(articleId)
+                    .id(commentInfoId)
+                    .commentId(commentId)
+                    .nickName(user.getData().getNickName())
+                    .avatar(user.getData().getAvatar())
+                    .build();
 
 
-                            long commentId = IdWorker.getId(amsComment);
-                            long commentInfoId = IdWorker.getId(amsCommentInfo);
-                            amsComment.setId(commentId);
-                            amsComment.setCommentInfoId(commentInfoId);
+            AmsComment amsComment = AmsComment.builder()
+                    .id(commentId)
+                    .commentInfoId(commentInfoId)
+                    .commentContent(amsCommentCreateDTO.getCommentContent())
+                    .build();
 
-                            amsComment.setCommentContent(amsCommentCreateDTO.getCommentContent());
+            this.baseMapper.insert(amsComment);
 
-                            this.baseMapper.insert(amsComment);
-                            amsCommentInfo.setId(commentInfoId);
-                            amsCommentInfo.setCommentId(commentId);
-                            amsCommentInfo.setUpdateAt(LocalDateTime.now());
+            if (amsCommentCreateDTO.getParentCommentId() != null) {
+                amsCommentInfo.setParentCommentId(amsCommentCreateDTO.getParentCommentId());
+                //透過ParentCommentId去查詢到該父留言的指標,並將其留言數量+1
+                boolean update = amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
+                        .eq(AmsCommentStatistics::getCommentId, amsCommentCreateDTO.getParentCommentId())
+                        .setSql("replies_count = replies_count + 1")
+                );
+                if(!update){
+                    throw BusinessRuntimeException.builder()
+                            .iErrorCode(ResultCode.CREATE_FAILED)
+                            .detailMessage("創建留言時對父留言的留言數指標遞增時出現錯誤")
+                            .data(Map.of(
+                                            "articleId",articleId,
+                                            "parentCommentId",amsCommentCreateDTO.getParentCommentId(),
+                                            "commentId",commentId
+                            ))
+                            .build();
 
-                            amsCommentInfo.setNickName(user.getData().getNickName());
-                            amsCommentInfo.setAvatar(user.getData().getAvatar());
-
-                            amsCommentInfoService.save(amsCommentInfo);
-
-                            //將資料庫中的文章留言數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
-
-                            boolean amsStatusIsUpdate = amsArtStatusService.update(
-                                    new LambdaUpdateWrapper<AmsArtStatus>()
-                                            .eq(AmsArtStatus::getArticleId, articleId)
-                                            .setSql("comments_count = comments_count + 1")
-                            );
-                            if(!amsStatusIsUpdate){
-//                                throw new CustomRuntimeException("更新文章留言數失敗");
-                                throw BusinessRuntimeException.builder()
-                                        .iErrorCode(ResultCode.UPDATE_FAILED)
-                                        .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
-                                        .build();
-                            }
-                            log.info("文章留言數更新成功，文章ID: {}", articleId);
-                            // 新增：在事務提交後將 commentInfoId 放入布隆過濾器
-                            redisBloomFilterUtils.saveToBloomFilterAfterCommit(
-                                    commentId,
-                                    RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
-                            );
-                            //在事務提交後將 將Redis快取中的文章留言數量++
-                            redisIncrementUtils.afterCommitIncrement(RedisCacheKey.ARTICLE_COMMENTS.format(articleId));
-
-
-                            log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
-                            return R.ok("留言發布成功");
-                        })
-                        .orElseGet(() -> {
-                            log.error("創建留言失敗：留言內容為空或文章ID無效");
-                            return R.error("留言內容不能為空");
-                        });
-            }else {
-                return Optional.ofNullable(articleId)
-                        .flatMap(artId -> Optional.ofNullable(amsCommentCreateDTO.getCommentContent()))
-                        .filter(cmt -> !cmt.trim().isEmpty())
-                        .map(cmt -> {
-                            AmsComment amsComment = new AmsComment();
-                            AmsCommentInfo amsCommentInfo = new AmsCommentInfo();
-
-                            long commentId = IdWorker.getId();
-                            long commentInfoId = IdWorker.getId();
-
-                            amsComment.setId(commentId);
-                            amsComment.setCommentInfoId(commentInfoId);
-                            amsCommentInfo.setId(commentInfoId);
-                            amsCommentInfo.setCommentId(commentId);
-                            amsCommentInfo.setUserId(userId); // 使用從 Token 解析的 userId
-                            amsCommentInfo.setArticleId(articleId);
-                            amsComment.setCommentContent(amsCommentCreateDTO.getCommentContent());
-                            amsCommentInfo.setCreateAt(LocalDateTime.now());
-                            amsCommentInfo.setUpdateAt(LocalDateTime.now());
-                            amsCommentInfo.setParentCommentId(amsCommentCreateDTO.getParentCommentId());
-                            //透過ParentCommentId去查詢到該父留言的指標,並將其留言數量+1
-                            amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
-                                    .eq(AmsCommentStatistics::getCommentId, amsCommentCreateDTO.getParentCommentId())
-                                    .setSql("replies_count = replies_count + 1")
-                            );
-
-
-                            amsCommentInfo.setNickName(user.getData().getNickName());
-                            amsCommentInfo.setAvatar(user.getData().getAvatar());
-
-                            this.baseMapper.insert(amsComment);
-                            //儲存新創建的留言
-                            amsCommentInfoService.save(amsCommentInfo);
-
-
-
-                            //將資料庫中的文章留言數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
-                            AmsArtStatus amsArtStatus = amsArtStatusService
-                                    .getOne(new LambdaQueryWrapper<AmsArtStatus>()
-                                            .eq(AmsArtStatus::getArticleId, articleId));
-
-                            //將資料庫中的留言數++
-                            amsArtStatus.setCommentsCount(amsArtStatus.getCommentsCount()+1);
-                            //寫回資料庫
-                            boolean statusIsUpdate = amsArtStatusService.updateById(amsArtStatus);
-                            if(!statusIsUpdate){
-//                                throw new CustomRuntimeException("更新文章留言數失敗");
-                                throw BusinessRuntimeException.builder()
-                                        .iErrorCode(ResultCode.UPDATE_FAILED)
-                                        .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
-                                        .build();
-                            }
-
-
-
-                            //在事務提交後將 commentInfoId 放入布隆過濾器
-                            redisBloomFilterUtils.saveToBloomFilterAfterCommit(
-                                    commentId,
-                                    RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
-                            );
-
-                            //在事務提交後將 將Redis快取中的文章留言數量++
-                            redisIncrementUtils.afterCommitIncrement(RedisCacheKey.ARTICLE_COMMENTS.format(articleId));
-
-                            log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
-                            return R.ok("留言發布成功");
-                        })
-                        .orElseGet(() -> {
-                            log.error("創建留言失敗：留言內容為空或文章ID無效");
-                            return R.error("留言內容不能為空");
-                        });
+                }
             }
+            amsCommentInfoService.save(amsCommentInfo);
+
+            //初始化留言指標
+            AmsCommentStatistics amsCommentStatistics = AmsCommentStatistics.builder()
+                    .articleId(articleId)
+                    .commentId(commentId)
+                    .likesCount(0)
+                    .repliesCount(0)
+                    .build();
+
+            amsCommentStatisticsService.save(amsCommentStatistics);
+
+            //將資料庫中的文章留言數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
+
+            boolean amsStatusIsUpdate = amsArtStatusService.update(
+                    new LambdaUpdateWrapper<AmsArtStatus>()
+                            .eq(AmsArtStatus::getArticleId, articleId)
+                            .setSql("comments_count = comments_count + 1")
+            );
+            if(!amsStatusIsUpdate){
+//                                throw new CustomRuntimeException("更新文章留言數失敗");
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.UPDATE_FAILED)
+                        .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId,"")))
+                        .build();
+            }
+            log.info("文章留言數更新成功，文章ID: {}", articleId);
+
+
+
+
+            String commentLikesKey= String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+            String commentRepliesKey= String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
+            Map<Long, Integer> initStatistics = Map.of(commentId, 0);
+
+            redisBloomFilterUtils.saveMapToRMapAfterCommit(commentLikesKey,initStatistics, Long.class, Integer.class);
+            redisBloomFilterUtils.saveMapToRMapAfterCommit(commentRepliesKey,initStatistics, Long.class, Integer.class);
+
+
+            // 新增：在事務提交後將 commentInfoId 放入布隆過濾器
+            redisBloomFilterUtils.saveToBloomFilterAfterCommit(
+                    commentId,
+                    RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
+            );
+            //在事務提交後將 將Redis快取中的文章留言數量++
+            redisIncrementUtils.afterCommitIncrement(RedisCacheKey.ARTICLE_COMMENTS.format(articleId));
+
+
+            log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
+
+
+
+
 
         } catch (NumberFormatException e) {
             log.error("Token 中的 userId 格式錯誤: {}", userIdFromToken, e);
@@ -424,6 +395,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             log.info("留言創建失敗，請稍後再試", e);
             return R.error("留言創建失敗，請稍後再試");
         }
+        return R.ok();
     }
 
 //    @OpenCache(prefix = "AmsComments",key = "articleId_#{#articleId}",time = 30,chronoUnit = ChronoUnit.MINUTES)
