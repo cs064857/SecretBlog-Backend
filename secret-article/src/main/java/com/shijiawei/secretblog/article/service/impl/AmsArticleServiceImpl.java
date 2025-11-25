@@ -92,6 +92,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Autowired
     private RedisCacheLoaderUtils redisCacheLoaderUtils;
 
+    @Autowired
+    private AmsArtActionService amsArtActionService;
+
+
     private final RedisRateLimiterUtils redisRateLimiterUtils;
 
     @Autowired
@@ -785,6 +789,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("用戶文章點讚文章, 用戶ID:{} , 文章ID:{}", userId, articleId);
+
+
+
+
         /**
          * 點讚限流
          */
@@ -805,9 +813,35 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         /// TODO(可選)根據IP、UA、Cookie等資訊限制同一用戶在短時間內多次刷新導致瀏覽數異常增長
 
+        /**
+         *  記錄/更新使用者對該文章的點讚狀態至 AmsArtAction
+         */
+        try {
+            AmsArtAction action = AmsArtAction.builder()
+                    .articleId(articleId)
+                    .userId(userId)
+                    .isLiked((byte) 1)
+                    //不改動isBookmarked,新增時默認為0
+                    .build();
+            amsArtActionService.saveOrUpdate(action);
+
+        } catch (Exception e) {
+            log.error("同步使用者點讚行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                    .detailMessage("同步使用者點讚行為至 AmsArtAction 失敗")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "userId", ObjectUtils.defaultIfNull(userId, "")
+                    ))
+                    .build();
+        }
 
         /**
-         * 檢查該用戶是否已經點讚過該文章，若未點過則修改紀錄成已經點過，防止重複點讚
+         * Redis操作
+         * 1、將用戶ID加入到該文章的點讚用戶集合中
+         * 2、增加該文章的點讚數
+         * 會檢查該用戶是否已經點讚過該文章，若未點過則修改紀錄成已經點過，防止重複點讚
          */
 
         final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
@@ -826,66 +860,32 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                         "end";
 
         RScript script = redissonClient.getScript(StringCodec.INSTANCE);
-        Long result = script.eval(
-                RScript.Mode.READ_WRITE,
-                luaScript,
-                RScript.ReturnType.INTEGER,
-                Arrays.asList(userLikeKey, articleStatusKey),
-                userId.toString()
-        );
-
-        if (result == -1) {
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.REPEAT_OPERATION)
-                    .detailMessage("用戶已經點讚過該文章, 不允許重複點讚")
-                    .data(Map.of(
-                            "userId", ObjectUtils.defaultIfNull(userId, ""),
-                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
-                    ))
-                    .build();
+        Long result = null;
+        if (userId != null) {
+            result = script.eval(
+                    RScript.Mode.READ_WRITE,
+                    luaScript,
+                    RScript.ReturnType.INTEGER,
+                    Arrays.asList(userLikeKey, articleStatusKey),
+                    userId.toString()
+            );
+            if (result == -1) {
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.REPEAT_OPERATION)
+                        .detailMessage("用戶已經點讚過該文章, 不允許重複點讚")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                        ))
+                        .build();
+            }
         }
 
+
+
+
+
         log.info("文章點讚數增加完成，文章ID:{}，新的文章點讚數:{}", articleId, result);
-
-
-
-//        final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
-//
-//        RSet<Long> set = redissonClient.getSet(userLikeKey);
-//        boolean add = set.add(userId);
-//        if(!add){
-//            log.warn("用戶 {} 已經點讚過該文章 {}",userId,articleId);
-//            throw new CustomRuntimeException("您已經點讚過該文章，請勿重複點讚");
-//        }
-//        /**
-//         * 同步點讚數從Redis到資料庫中
-//         */
-//        //例如：ams:article:likes:1965494783750287361
-//        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
-//        //獲取桶對象, 注意原子性因此採用RAtomicLong
-//
-//
-//
-//        /// TODO排程定時將Redis中的瀏覽數同步到資料庫中
-//
-//        RAtomicLong likesCounter = redissonClient.getAtomicLong(redisKey);
-//
-//        //設置該文章點讚人數值為++ , 注意原子性
-//        long newLikes = likesCounter.incrementAndGet();
-//
-//        if (newLikes == 1) {
-//            likesCounter.clearExpire(); // 移除任何可能存在的 TTL
-//            log.info("文章 {} 產生第一次瀏覽，已確保 Key 為持久化", articleId);
-//        }
-//        /**
-//         * 紀錄該用戶已成功點讚該文章
-//         */
-//
-//
-//
-//
-//        log.debug("newLikes:{}",newLikes);
-
 
         return result;
     }
@@ -898,7 +898,6 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Override
     public Long incrementArticleBooksMarket(Long articleId) {
         log.info("開始對文章加入書籤，articleId:{}", articleId);
-
 
         if(isArticleNotExists(articleId)){
             throw BusinessRuntimeException.builder()
@@ -946,32 +945,66 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
         /**
-         * 檢查該用戶是否已經點讚過該文章，若未點過則修改紀錄成已經點過，防止重複點讚
+         * Redis操作
+         * 1、將用戶ID加入到該文章的收藏用戶集合中
+         * 2、增加該文章的收藏數
+         * 會檢查該用戶是否已經收藏過該文章，若未收藏過則修改紀錄成已經收藏，防止重複收藏
          */
 
         final String userBookMarksKey = RedisCacheKey.ARTICLE_MARKED_USERS.format(articleId);
-        final String likesCountKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
 
-        log.debug("用戶書籤快取鍵:{}, 文章書籤數快取鍵:{}", userBookMarksKey, likesCountKey);
+        /**
+         *  記錄/更新使用者對該文章的點讚狀態至 AmsArtAction
+         */
+        try {
+            AmsArtAction action = AmsArtAction.builder()
+                    .articleId(articleId)
+                    .userId(userId)
+                    //不改動isLiked,新增時默認為0
+                    .isBookmarked((byte) 1)
+                    .build();
+            amsArtActionService.saveOrUpdate(action);
+
+        } catch (Exception e) {
+            log.error("同步使用者點讚行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                    .detailMessage("同步使用者點讚行為至 AmsArtAction 失敗")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "userId", ObjectUtils.defaultIfNull(userId, "")
+                    ))
+                    .build();
+        }
+        /**
+         *
+         */
+
+
+        String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        log.debug("用戶書籤快取鍵:{}, 文章指標快取鍵:{}", userBookMarksKey, articleStatusKey);
 
         // Lua 腳本保證原子性
         String luaScript =
                 "local added = redis.call('SADD', KEYS[1], ARGV[1]) \n" +
                         "if added == 1 then \n" +
-                        "    local count = redis.call('INCR', KEYS[2]) \n" +
+                        "    local count = redis.call('HINCRBY', KEYS[2] , 'bookmarksCount' , 1) \n" +
                         "    return count \n" +
                         "else \n" +
                         "    return -1 \n" +
                         "end";
 
         RScript script = redissonClient.getScript(StringCodec.INSTANCE);
+
         Long result = script.eval(
                 RScript.Mode.READ_WRITE,
                 luaScript,
                 RScript.ReturnType.INTEGER,
-                Arrays.asList(userBookMarksKey, likesCountKey),
+                Arrays.asList(userBookMarksKey, articleStatusKey),
                 userId.toString()
         );
+
+
 
         if (result == -1) {
 //            log.warn("用戶ID:{} 已經對該文章:{} 加入書籤 , 不允許重複加入書籤",userId,articleId);
@@ -982,6 +1015,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                             "articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
+
+
 
         log.info("文章加入用戶的書籤完成, 用戶ID:{}, 文章ID:{}, 新的文章書籤數:{}",userId, articleId, result);
         return result;
