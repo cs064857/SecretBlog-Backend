@@ -101,7 +101,7 @@ public class AmsArticleController {
     }
 //
     /**
-     * 根據categoryId與routerPage分頁查詢文章列表
+     * 根據categoryId與routerPage分頁查詢文章預覽列表
      * @param categoryId
      * @param routePage
      * @return

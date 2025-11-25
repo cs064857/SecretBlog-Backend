@@ -74,7 +74,6 @@ public class RedisBloomFilterUtils {
         RBloomFilter<T> filter = redissonClient.getBloomFilter(key);
         //判斷值是否存在於布隆過濾器中
         if (!filter.contains(value)) {
-            //值絕對不存在於布隆過濾器中的情況下，拋出異常
 //            log.warn("布隆過濾器確認該值不存在: key={}, value={} , errorMessage:{}", key, value ,errorMessage);
 //            throw new CustomRuntimeException(ResultCode.BLOOM_FILTER_KEY_NOT_FOUND.getCode(), ResultCode.BLOOM_FILTER_KEY_NOT_FOUND.getMessage());
 

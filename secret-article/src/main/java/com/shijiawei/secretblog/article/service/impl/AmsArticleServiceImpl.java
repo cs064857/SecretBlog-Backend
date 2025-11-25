@@ -31,6 +31,7 @@ import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import com.shijiawei.secretblog.common.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.expression.LongValue;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.*;
@@ -45,6 +46,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -488,10 +490,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            log.warn("無法獲取文章瀏覽人數，可能是Redis服務");
 //        }
 
-
+        long newViews = 0L;
         try {
-            long views = incrementArticleViewsCount(amsArticleVoId);
-            log.debug("文章瀏覽數累加成功，文章ID:{}，views:{}", amsArticleVoId, views);
+            newViews = incrementArticleViewsCount(amsArticleVoId);
+            log.debug("文章瀏覽數累加成功，文章ID:{}，views:{}", amsArticleVoId, newViews);
 
             // 建議 VO 改為 long，避免溢位
 //            amsArticleVo.setViewsCount(Math.toIntExact(views));
@@ -517,6 +519,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         AmsArticleStatusVo articleStatus = getArticleStatusVo(articleId);
         BeanUtils.copyProperties(articleStatus, amsArticleVo);
+
+        amsArticleVo.setViewsCount(Math.toIntExact(newViews));
 
         log.info("獲取帶指標的文章詳情成功，文章ID:{}，views:{}，likes:{}，bookmarks:{}，comments:{}",
                 articleId,
@@ -807,13 +811,15 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          */
 
         final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
-        final String likesCountKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
+//        final String likesCountKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
+
+        String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
 
         // Lua 腳本保證原子性
         String luaScript =
                 "local added = redis.call('SADD', KEYS[1], ARGV[1]) \n" +
                         "if added == 1 then \n" +
-                        "    local count = redis.call('INCR', KEYS[2]) \n" +
+                        "    local count = redis.call('HINCRBY', KEYS[2] , 'likesCount' , 1) \n" +
                         "    return count \n" +
                         "else \n" +
                         "    return -1 \n" +
@@ -824,7 +830,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 RScript.Mode.READ_WRITE,
                 luaScript,
                 RScript.ReturnType.INTEGER,
-                Arrays.asList(userLikeKey, likesCountKey),
+                Arrays.asList(userLikeKey, articleStatusKey),
                 userId.toString()
         );
 
@@ -1109,7 +1115,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         statusMap.put("likesCount", likes);
         statusMap.put("bookmarksCount", bookmarks);
         statusMap.put("commentsCount", comments);
-
+        Duration statusTtl = RedisCacheKey.ARTICLE_STATUS.getTtl();
+        if(statusTtl!=null){
+            statusMap.expire(statusTtl);
+        }
         /*
         假設成功從Redis快取中獲取文章的指標則直接進行包裝並回傳
          */
