@@ -61,7 +61,7 @@ public class AmsTagsServiceImpl extends ServiceImpl<AmsTagsMapper, AmsTags> impl
                     .build();
         }
         //清除快取
-        String redisKey = RedisCacheKey.ARTICLE_TAGS.getPattern();
+        final String redisKey = RedisCacheKey.ARTICLE_TAGS.getPattern();
         log.info("清除文章標籤快取 - redisKey: {}", redisKey);
         boolean delete = redissonClient.getMap(redisKey).delete();
         if(delete){
@@ -83,7 +83,7 @@ public class AmsTagsServiceImpl extends ServiceImpl<AmsTagsMapper, AmsTags> impl
     public Map<Long, AmsTags> getArtTagsByIds(Set<Long> set) {
         log.info("開始執行 getArtTagsByIds - set: {}", set);
 
-        String redisKey = RedisCacheKey.ARTICLE_TAGS.getPattern();
+        final String redisKey = RedisCacheKey.ARTICLE_TAGS.getPattern();
         log.info("redisKey: {}", redisKey);
 
         //嘗試從Redis取得文章的指標

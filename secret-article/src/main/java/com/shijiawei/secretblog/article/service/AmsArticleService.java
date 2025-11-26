@@ -32,9 +32,11 @@ public interface AmsArticleService extends IService<AmsArticle> {
 
     Long incrementArticleBooksMarket(Long articleId);
 
-    boolean isArticleNotExists(Long articleId);
+    void isArticleNotExists(Long articleId);
 
     void updateArticle(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO);
+
+    Long decrementArticleLikes(Long articleId);
 
 //
 //

@@ -42,6 +42,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -445,20 +446,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public AmsArticleVo getAmsArticleVoWithStatus(Long articleId){
         log.info("開始獲取帶指標的文章詳情 - 文章ID:{}", articleId);
 
-        if(isArticleNotExists(articleId)){
-//            log.warn("文章不存在，articleId={}",articleId);
-//            throw new CustomRuntimeException("文章不存在");
-            AmsArticleVo amsArticleVo = new AmsArticleVo();
-            amsArticleVo.setAvatar("testAvattt");
-            amsArticleVo.setCategoryName("testCat");
-
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-
-        }
+        isArticleNotExists(articleId);
 
         AmsArticleVo amsArticleVo = amsArticleService.getAmsArticleVo(articleId);
 //        AmsArticleVo amsArticleVo = getAmsArticleVo(articleId);
@@ -556,14 +544,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public AmsArticleVo getAmsArticleVo(Long articleId) {
         log.info("獲取文章詳情，articleId={}",articleId);
 
-        if(isArticleNotExists(articleId)){
-
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
+        isArticleNotExists(articleId);
 
 
 //
@@ -702,13 +683,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public Long incrementArticleViewsCount(Long articleId) {
         log.info("開始累加文章瀏覽數，文章ID={}",articleId);
 
-        if(isArticleNotExists(articleId)){
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
+        isArticleNotExists(articleId);
 
 
 //        /*
@@ -768,13 +743,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public Long incrementArticleLikes(Long articleId) {
         log.info("開始累加文章點讚數，文章ID={}",articleId);
 
-        if(isArticleNotExists(articleId)){
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
+        isArticleNotExists(articleId);
 
         /*
           檢查用戶是否登入
@@ -814,20 +783,93 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         /// TODO(可選)根據IP、UA、Cookie等資訊限制同一用戶在短時間內多次刷新導致瀏覽數異常增長
 
         /**
+         * 檢查用戶是否已經點讚過該文章
+         * 先檢查Redis中的點讚用戶集合
+         */
+        final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
+        RSet<String> likedUsersSet = redissonClient.getSet(userLikeKey, StringCodec.INSTANCE);
+
+        if (likedUsersSet.contains(userId.toString())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶已經點讚過該文章, 不允許重複點讚")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        }
+
+        /**
          *  記錄/更新使用者對該文章的點讚狀態至 AmsArtAction
          */
         try {
-            AmsArtAction action = AmsArtAction.builder()
-                    .articleId(articleId)
-                    .userId(userId)
-                    .isLiked((byte) 1)
-                    //不改動isBookmarked,新增時默認為0
-                    .build();
-            amsArtActionService.saveOrUpdate(action);
+//            AmsArtAction action = AmsArtAction.builder()
+//                    .articleId(articleId)
+//                    .userId(userId)
+//                    .isLiked((byte) 1)
+//                    //不改動isBookmarked,新增時默認為0
+//                    .build();
+//            amsArtActionService.saveOrUpdate(action);
 
-        } catch (Exception e) {
-            log.error("同步使用者點讚行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
+            // 1. 先根據 業務唯一鍵 (articleId + userId) 查詢資料庫
+            LambdaQueryWrapper<AmsArtAction> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(AmsArtAction::getArticleId, articleId)
+                    .eq(AmsArtAction::getUserId, userId);
+
+            AmsArtAction existingAction = amsArtActionService.getOne(queryWrapper);
+
+            if (existingAction != null) {
+                // 2. 如果存在 -> 執行 Update
+
+                // 更新狀態
+                existingAction.setIsLiked((byte) 1);
+                // updateAt 會由 MP 自動填充
+                boolean update = amsArtActionService.updateById(existingAction);
+                if(!update){
+                    throw BusinessRuntimeException.builder()
+                            .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                            .detailMessage("更新用戶點讚狀態失敗")
+                            .data(Map.of(
+                                    "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                    "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                            ))
+                            .build();
+                }
+            } else {
+                // 3. 如果不存在 -> 執行 Insert
+                AmsArtAction newAction = AmsArtAction.builder()
+                        .articleId(articleId)
+                        .userId(userId)
+                        .isLiked((byte) 1)
+                        // .isBookmarked((byte) 0) // 預設值，視需求
+                        .build();
+                boolean save = amsArtActionService.save(newAction);
+                if(!save){
+                    throw BusinessRuntimeException.builder()
+                            .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                            .detailMessage("新增用戶點讚狀態失敗")
+                            .data(Map.of(
+                                    "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                    "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                            ))
+                            .build();
+                }
+            }
+
+
+        } catch (DuplicateKeyException e)   {
             throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶已經點讚過該文章, 不允許重複點讚")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        } catch (Exception e) {
+//            log.error("同步使用者點讚行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
+            throw BusinessException.builder()
                     .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
                     .detailMessage("同步使用者點讚行為至 AmsArtAction 失敗")
                     .data(Map.of(
@@ -844,12 +886,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * 會檢查該用戶是否已經點讚過該文章，若未點過則修改紀錄成已經點過，防止重複點讚
          */
 
-        final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
 //        final String likesCountKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
 
-        String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        final String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
 
-        // Lua 腳本保證原子性
+        // Lua 腳本：將用戶加入點讚集合並增加點讚數
         String luaScript =
                 "local added = redis.call('SADD', KEYS[1], ARGV[1]) \n" +
                         "if added == 1 then \n" +
@@ -860,35 +901,157 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                         "end";
 
         RScript script = redissonClient.getScript(StringCodec.INSTANCE);
-        Long result = null;
-        if (userId != null) {
-            result = script.eval(
-                    RScript.Mode.READ_WRITE,
-                    luaScript,
-                    RScript.ReturnType.INTEGER,
-                    Arrays.asList(userLikeKey, articleStatusKey),
-                    userId.toString()
-            );
-            if (result == -1) {
-                throw BusinessRuntimeException.builder()
-                        .iErrorCode(ResultCode.REPEAT_OPERATION)
-                        .detailMessage("用戶已經點讚過該文章, 不允許重複點讚")
-                        .data(Map.of(
-                                "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                "articleId", ObjectUtils.defaultIfNull(articleId, "")
-                        ))
-                        .build();
-            }
+        Long result = script.eval(
+                RScript.Mode.READ_WRITE,
+                luaScript,
+                RScript.ReturnType.INTEGER,
+                Arrays.asList(userLikeKey, articleStatusKey),
+                userId.toString()
+        );
+        if (result == -1) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶已經點讚過該文章, 不允許重複點讚")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
         }
-
-
-
 
 
         log.info("文章點讚數增加完成，文章ID:{}，新的文章點讚數:{}", articleId, result);
 
         return result;
     }
+
+    /**
+     * 用戶對文章取消點讚
+     * @param articleId 文章ID
+     * @return 新的文章點讚數
+     */
+    @Override
+    public Long decrementArticleLikes(Long articleId) {
+        log.info("開始取消文章點讚數，文章ID={}", articleId);
+
+        isArticleNotExists(articleId);
+
+        /*
+          檢查用戶是否登入
+        */
+
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，拒絕取消文章按讚")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("用戶取消文章點讚, 用戶ID:{} , 文章ID:{}", userId, articleId);
+
+        /**
+         * 檢查用戶是否已經點讚過該文章
+         * 先檢查Redis中的點讚用戶集合
+         */
+        final String userLikeKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
+        RSet<String> likedUsersSet = redissonClient.getSet(userLikeKey, StringCodec.INSTANCE);
+
+        if (!likedUsersSet.contains(userId.toString())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶尚未點讚該文章, 無法取消點讚")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        }
+
+        /**
+         *  更新使用者對該文章的點讚狀態至 AmsArtAction
+         */
+        try {
+//            AmsArtAction action = AmsArtAction.builder()
+//                    .articleId(articleId)
+//                    .userId(userId)
+//                    .isLiked((byte) 0)
+//                    //不改動isBookmarked,新增時默認為0
+//                    .build();
+//            amsArtActionService.saveOrUpdate(action);
+
+            LambdaUpdateWrapper<AmsArtAction> updateWrapper = new LambdaUpdateWrapper<AmsArtAction>()
+                    .eq(AmsArtAction::getArticleId, articleId)
+                    .eq(AmsArtAction::getUserId, userId)
+                    .set(AmsArtAction::getIsLiked, (byte) 0);
+
+            boolean update = amsArtActionService.update(updateWrapper);
+            if(!update){
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                        .detailMessage("同步使用者取消點讚行為至 AmsArtAction 失敗")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                        ))
+                        .build();
+            }
+
+
+        } catch (Exception e) {
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                    .detailMessage("同步使用者取消點讚行為至 AmsArtAction 失敗")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "userId", ObjectUtils.defaultIfNull(userId, "")
+                    ))
+                    .build();
+        }
+
+        /**
+         * Redis操作
+         * 1、將用戶ID從該文章的點讚用戶集合中移除
+         * 2、減少該文章的點讚數
+         * 會檢查該用戶是否已經點讚過該文章，若已點過則修改紀錄成未點過，防止重複取消點讚
+         */
+
+        final String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+
+        // Lua 腳本：將用戶從點讚集合移除並減少點讚數
+        String luaScript =
+                "local removed = redis.call('SREM', KEYS[1], ARGV[1]) \n" +
+                        "if removed == 1 then \n" +
+                        "    local count = redis.call('HINCRBY', KEYS[2] , 'likesCount' , -1) \n" +
+                        "    return count \n" +
+                        "else \n" +
+                        "    return -1 \n" +
+                        "end";
+
+        RScript script = redissonClient.getScript(StringCodec.INSTANCE);
+        Long result = script.eval(
+                RScript.Mode.READ_WRITE,
+                luaScript,
+                RScript.ReturnType.INTEGER,
+                Arrays.asList(userLikeKey, articleStatusKey),
+                userId.toString()
+        );
+        if (result == -1) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶尚未點讚該文章, 無法取消點讚")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        }
+
+        log.info("文章點讚數減少完成，文章ID:{}，新的文章點讚數:{}", articleId, result);
+
+        return result;
+    }
+
 
     /**
      * 用戶對文章加入書籤
@@ -899,13 +1062,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     public Long incrementArticleBooksMarket(Long articleId) {
         log.info("開始對文章加入書籤，articleId:{}", articleId);
 
-        if(isArticleNotExists(articleId)){
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
+        isArticleNotExists(articleId);
 
 
         /*
@@ -951,8 +1108,23 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * 會檢查該用戶是否已經收藏過該文章，若未收藏過則修改紀錄成已經收藏，防止重複收藏
          */
 
+        /**
+         * 檢查用戶是否已經點讚過該文章
+         * 先檢查Redis中的點讚用戶集合
+         */
         final String userBookMarksKey = RedisCacheKey.ARTICLE_MARKED_USERS.format(articleId);
+        RSet<String> bookmarkedUsersSet = redissonClient.getSet(userBookMarksKey, StringCodec.INSTANCE);
 
+        if (bookmarkedUsersSet.contains(userId.toString())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶已經加入書籤過該文章, 不允許重複加入")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        }
         /**
          *  記錄/更新使用者對該文章的點讚狀態至 AmsArtAction
          */
@@ -966,10 +1138,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             amsArtActionService.saveOrUpdate(action);
 
         } catch (Exception e) {
-            log.error("同步使用者點讚行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
+            log.error("同步使用者加入書籤行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                    .detailMessage("同步使用者點讚行為至 AmsArtAction 失敗")
+                    .detailMessage("同步使用者加入書籤行為至 AmsArtAction 失敗")
                     .data(Map.of(
                             "articleId", ObjectUtils.defaultIfNull(articleId, ""),
                             "userId", ObjectUtils.defaultIfNull(userId, "")
@@ -981,7 +1153,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          */
 
 
-        String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        final String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
         log.debug("用戶書籤快取鍵:{}, 文章指標快取鍵:{}", userBookMarksKey, articleStatusKey);
 
         // Lua 腳本保證原子性
@@ -1144,7 +1316,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         int bookmarks = (articleStatusFromDB == null)? -1 : articleStatusFromDB.getBookmarksCount();
         int comments = (articleStatusFromDB == null)? -1 : articleStatusFromDB.getCommentsCount();
 
-        String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        final String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
         RMap<String, Integer> statusMap = redissonClient.getMap(redisKey);
         statusMap.put("viewsCount", views);
         statusMap.put("likesCount", likes);
@@ -1174,7 +1346,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
      */
     private AmsArticleStatusVo parseArticleStatusVoFromRedis(long articleId) {
         //嘗試從Redis取得文章的指標
-        String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        final String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
 
         RMap<String, Integer> statusMap = redissonClient.getMap(redisKey);
 
@@ -1252,18 +1424,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         log.info("開始執行 getArticleStatusVo - articleId: {}", articleId);
 
         //先判斷是否存在該文章
-        boolean articleNotExists = isArticleNotExists(articleId);
-        if(articleNotExists){
-            //假設文章不存在則直接拋出異常
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
+        isArticleNotExists(articleId);
+
 
         //嘗試從Redis取得文章的指標
-        String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        final String redisKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
         log.info("redisKey: {}", redisKey);
         //初步嘗試從Redis中讀取文章的指標
         AmsArticleStatusVo articleStatusVo = this.parseArticleStatusVoFromRedis(articleId);
@@ -1304,11 +1469,15 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
      * @return 布林值, true 表示文章不存在，false 表示文章存在
      */
     @Override
-    public boolean isArticleNotExists(Long articleId) {
+    public void isArticleNotExists(Long articleId) {
 
         if (articleId == null || articleId <= 0) {
-            log.warn("非法文章ID: {}", articleId);
-            return true;
+//            log.warn("非法文章ID: {}", articleId);
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("非法文章ID")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
         }
 
         /**
@@ -1322,16 +1491,26 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
             if(!bloomFilter.contains(articleId)){
                 //若果布隆過濾器中不存在該文章ID，表示該文章一定不存在
-                log.info("該文章ID:{}不存在或已被刪除", articleId);
-                return true;
+//                log.warn("該文章ID:{}不存在或已被刪除", articleId);
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.NOT_FOUND)
+                        .detailMessage("該文章ID不存在於布隆過濾器中")
+                        .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                        .build();
             }
         } catch (RedisConnectionException e) {
-            log.error("Redis 連線異常，跳過布隆過濾器檢查，articleId={}", articleId, e);
-            return isArticleNotExistsFromDB(articleId);
+//            log.error("Redis 連線異常，跳過布隆過濾器檢查，articleId={}", articleId, e);
+            boolean articleNotExistsFromDB = isArticleNotExistsFromDB(articleId);
+            if(articleNotExistsFromDB){
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.NOT_FOUND)
+                        .detailMessage("該文章ID不存在於資料庫中")
+                        .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                        .build();
+            }
 
         }
 
-        return false;
     }
 
     /**
@@ -1551,6 +1730,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 amsArticleUpdateDTO.getCategoryId(),
                 newArtTagsIdList != null ? newArtTagsIdList.size() : 0);
     }
+
 
     /**
      * 判斷文章是否不存在，透過查詢資料庫確認

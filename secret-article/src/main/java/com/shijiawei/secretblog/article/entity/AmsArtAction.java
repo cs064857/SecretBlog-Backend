@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.article.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,14 +27,21 @@ import java.time.LocalDateTime;
 public class AmsArtAction implements Serializable {
     @Serial
     private static final long serialVersionUID = 6115612611515648248L;
+
     @Schema(description = "主鍵(雪花算法,不可為空)")
     @TableId(value = "id", type = IdType.ASSIGN_ID)
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+
     private Long id;
+
     @Schema(description = "文章id")
     @TableField("article_id")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long articleId;
+
     @Schema(description = "用戶id")
     @TableField("user_id")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long userId;
     /**
      * 是否點讚 (0:未點讚, 1:已點讚)

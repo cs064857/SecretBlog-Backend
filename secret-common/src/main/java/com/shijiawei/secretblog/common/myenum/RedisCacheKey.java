@@ -38,9 +38,9 @@ public enum RedisCacheKey {
 
 
     //紀錄用戶是否以及點讚過該文章 已使用
-    ARTICLE_LIKED_USERS("ams:article:%s:liked", "文章點讚用戶集合", null),
+    ARTICLE_LIKED_USERS("ams:article:%s:liked", "文章點讚用戶集合", Duration.ofMinutes(30)),
     //紀錄用戶是否以及書籤過該文章 已使用
-    ARTICLE_MARKED_USERS("ams:article:%s:marked", "文章書籤用戶集合", null),
+    ARTICLE_MARKED_USERS("ams:article:%s:marked", "文章書籤用戶集合", Duration.ofMinutes(30)),
 
     /**
      * 用於記錄用戶點讚、瀏覽、收藏的文章ID集合，方便快速查詢用戶行為

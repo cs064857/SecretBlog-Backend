@@ -365,8 +365,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
 
 
-            String commentLikesKey= String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
-            String commentRepliesKey= String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
+            final String commentLikesKey= String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+            final String commentRepliesKey= String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
             Map<Long, Integer> initStatistics = Map.of(commentId, 0);
 
             redisBloomFilterUtils.saveMapToRMapAfterCommit(commentLikesKey,initStatistics, Long.class, Integer.class);
@@ -510,16 +510,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         /*
         透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
          */
-        if(amsArticleService.isArticleNotExists(articleId)){
-//            log.warn("文章不存在，articleId={}",articleId);
-//            throw new CustomRuntimeException("文章不存在");
-
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
+        amsArticleService.isArticleNotExists(articleId);
         /*
         獲取文章中留言的靜態資訊
          */
@@ -574,18 +565,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     public List<AmsArtCommentStaticVo> getStaticCommentDetails(Long articleId) {
         log.info("從資料庫中查詢文章中的所有留言, articleId={}",articleId);
         //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
-        if(amsArticleService.isArticleNotExists(articleId)){
-//            log.warn("文章不存在，articleId={}",articleId);
-//            throw new CustomRuntimeException("文章不存在");
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
+        amsArticleService.isArticleNotExists(articleId);
 
         List<AmsArtCommentStaticVo> amsArtCommentStaticVos = this.baseMapper.getStaticCommentDetails(articleId);
-
 
 //        //根據該文章的ArticleId查找所有關聯的CommentInfo
 //        List<AmsCommentInfo> amsCommentInfoList = amsCommentInfoService.list(new LambdaQueryWrapper<AmsCommentInfo>().eq(AmsCommentInfo::getArticleId, articleId));
@@ -768,8 +750,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     .build();
         }
 
-        String userLikedSetKey = RedisCacheKey.COMMENT_LIKED_USERS.format(commentId);
-        String commentLikesHashKey = RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.format(articleId);
+        final String userLikedSetKey = RedisCacheKey.COMMENT_LIKED_USERS.format(commentId);
+        final String commentLikesHashKey = RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.format(articleId);
 
 
         /*
@@ -933,18 +915,10 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         log.info("開始執行 getCommentsMetrics - articleId: {}", articleId);
 
         //透過布隆過濾器判斷文章id是否不存在, 若不存在則拋出異常
-        if(amsArticleService.isArticleNotExists(articleId)){
-//            log.warn("文章不存在，articleId={}",articleId);
-//            throw new CustomRuntimeException("文章不存在");
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("文章不存在")
-                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
-                    .build();
-        }
-        
-        String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
-        String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
+        amsArticleService.isArticleNotExists(articleId);
+
+        final String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+        final String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
 
         //先嘗試從Redis中讀取文章中所有留言的指標資料
         Map<String, Map<Long, Integer>> commentsMetricMap = this.parseCommentsMetric(articleId);
@@ -994,8 +968,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         log.debug("執行資料庫查詢 - articleId: {}", articleId);
         List<AmsCommentStatistics> amsCommentStatistics = QueryCommentsMetric(articleId);
         log.info("資料庫查詢完成 - articleId: {}, 留言數量: {}", articleId, amsCommentStatistics.size());
-        String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
-        String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
+        final String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+        final String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
 
         log.debug("Redis Key 資訊 - likesKey: {}, repliesKey: {}", likesCountBucketName, repliesCountBucketName);
         //判斷是否成功從資料庫中取得該文章所有留言的指標
@@ -1091,8 +1065,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         log.info("開始從 Redis 解析文章中所有留言的指標 - articleId: {}", articleId);
 
         try {
-            String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
-            String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
+            final String likesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getPattern(),articleId);
+            final String repliesCountBucketName = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(),articleId);
 
             log.debug("Redis Key 資訊 - likesKey: {}, repliesKey: {}", likesCountBucketName, repliesCountBucketName);
 

@@ -81,7 +81,14 @@ public class AmsArticleController {
         return R.ok(likes);
     }
 
-
+    /**
+     * 移除文章點讚
+     */
+    @PostMapping("/articles/{articleId}/unlike")
+    public R <Long> decrementArticleLikes(@PathVariable Long articleId) {
+        Long likes = amsArticleService.decrementArticleLikes(articleId);
+        return R.ok(likes);
+    }
     /**
      * 根據articleId獲取文章內容以及資訊
      * @param articleId
