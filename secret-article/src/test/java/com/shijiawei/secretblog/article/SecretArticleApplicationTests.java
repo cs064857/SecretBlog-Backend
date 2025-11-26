@@ -4,8 +4,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
+import com.shijiawei.secretblog.article.service.AmsCommentActionService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
+import com.shijiawei.secretblog.article.vo.AmsCommentActionVo;
+import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
@@ -26,6 +30,8 @@ class SecretArticleApplicationTests {
     @Autowired
     private AmsArticleMapper amsArticleMapper;
 
+    @Autowired
+    private AmsCommentActionService amsCommentActionService;
     @Test
     void testGetArticlesByCategoryIdAndPage(){
 //        Page<AmsArticlePreviewVo> page =
@@ -55,6 +61,17 @@ class SecretArticleApplicationTests {
         // 例如:
         // assertTrue(result.getCommentCount() >= 0, "留言數量應該大於等於0");
     }
+
+//    @Test
+//    void TestGetCommentActionStatusVos(){
+//        AmsCommentActionVo commentActionStatusVos = amsCommentActionService.getCommentActionStatusVos(1965494783750287361L);
+//        log.info("commentActionStatusVos:{}",commentActionStatusVos);
+//        System.out.println("commentActionStatusVos:"+commentActionStatusVos);
+//
+//    }
+
+
+
 
 //	@Autowired
 //	private RedissonClient redissonClient;
