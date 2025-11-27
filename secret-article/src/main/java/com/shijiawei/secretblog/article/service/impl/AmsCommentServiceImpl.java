@@ -257,7 +257,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      * 創建文章留言
      * @param articleId 文章ID
      * @param amsCommentCreateDTO 留言內容DTO
-     * @return
+     * @return 留言創建結果
      */
     @Transactional(rollbackFor = Exception.class)
     @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX,key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY)
@@ -350,6 +350,16 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     .build();
 
             amsCommentStatisticsService.save(amsCommentStatistics);
+
+            //初始化留言互動記錄
+            AmsCommentAction amsCommentAction = AmsCommentAction.builder()
+                    .commentId(commentId)
+                    .articleId(articleId)
+                    .userId(userId)
+                    .isLiked((byte) 0)
+                    .isBookmarked((byte) 0)
+                    .build();
+            amsCommentActionService.save(amsCommentAction);
 
             //將資料庫中的文章留言數增加, 異步雙寫(DB為主、Redis為輔(可能存在與DB不一致))
 
@@ -505,8 +515,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     /**
      * 查詢文章中的所有留言
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 包含文章中所有留言的靜態資訊的列表
      */
     @Override
     public List<AmsArtCommentsVo> getArtComments(Long articleId) {
@@ -562,8 +572,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     /**
      * 查詢文章中的所有留言
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 包含文章中所有留言的靜態資訊的列表
      */
     @OpenCache(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX, key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY, time = 30, chronoUnit = ChronoUnit.MINUTES)//
     @Override
@@ -669,8 +679,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     /**
      * 判斷文章是否不存在，透過布隆過濾器以及資料庫雙重確認，非分佈式鎖版本
-     * @param commentId
-     * @return
+     * @param commentId 留言ID
+     * @return 是否文章不存在 , 若不存在則返回true;若存在則返回false
      */
     public boolean isCommentNotExists(Long commentId) {
 
@@ -707,10 +717,11 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     /**
      * 點讚留言
-     * @param articleId
-     * @param commentId
-     * @return
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return 按讚數
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public Integer likeComment(Long articleId,Long commentId) {
         /// TODO同步點讚數從Redis到資料庫中
@@ -763,9 +774,33 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
          * 檢查用戶是否已經點讚過該留言
          * 先檢查Redis中的點讚用戶集合
          */
-        RSet<String> likedUsersSet = redissonClient.getSet(userLikedSetKey, StringCodec.INSTANCE);
 
-        if (likedUsersSet.contains(userId.toString())) {
+
+
+//        RSet<String> likedUsersSet = redissonClient.getSet(userLikedSetKey);
+//
+//        if (likedUsersSet.contains(userId.toString())) {
+//            throw BusinessRuntimeException.builder()
+//                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+//                    .detailMessage("用戶已經點讚過該留言, 不允許重複點讚")
+//                    .data(Map.of(
+//                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+//                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+//                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+//                    ))
+//                    .build();
+//        }
+
+        RScript containsRScript = redissonClient.getScript(StringCodec.INSTANCE);
+
+        Long contains = containsRScript.eval(
+                RScript.Mode.READ_ONLY,
+                RedisLuaScripts.CHECK_VALUE_IN_SET_SCRIPT,
+                RScript.ReturnType.INTEGER,
+                List.of(userLikedSetKey),
+                userId.toString()
+        );
+        if(contains == 0){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.REPEAT_OPERATION)
                     .detailMessage("用戶已經點讚過該留言, 不允許重複點讚")
@@ -776,7 +811,6 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     ))
                     .build();
         }
-
 
         /*
           判斷該留言是否存在
@@ -979,8 +1013,234 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     }
 
     /**
+     * 取消點讚留言
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return 新的點讚數
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public Integer unlikeComment(Long articleId, Long commentId) {
+        log.info("開始取消留言點讚，文章ID={}，留言ID={}", articleId, commentId);
+
+        //透過布隆過濾器判斷該留言是否不存在, 若不存在則拋出異常
+        if(this.isCommentNotExists(commentId)){
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言不存在")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId,""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                    ))
+                    .build();
+        }
+
+        /*
+          檢查用戶是否登入
+        */
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，拒絕取消留言按讚")
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("用戶不存在，拒絕取消留言按讚")
+                    .data(Map.of(
+                            "articleId",ObjectUtils.defaultIfNull(articleId,""),
+                            "commentId",ObjectUtils.defaultIfNull(commentId,"")
+                    ))
+                    .build();
+        }
+
+        log.info("用戶取消留言點讚, 用戶ID:{} , 文章ID:{}, 留言ID:{}", userId, articleId, commentId);
+
+        final String userLikedSetKey = RedisCacheKey.COMMENT_LIKED_USERS.format(commentId);
+        final String commentLikesHashKey = RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.format(articleId);
+
+        /**
+         * 檢查用戶是否已經點讚過該留言
+         * 先檢查Redis中的點讚用戶集合
+         */
+//        RSet<String> likedUsersSet = redissonClient.getSet(userLikedSetKey, StringCodec.INSTANCE);
+//
+//        if (!likedUsersSet.contains(userId.toString())) {
+//            throw BusinessRuntimeException.builder()
+//                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+//                    .detailMessage("用戶尚未點讚該留言, 無法取消點讚")
+//                    .data(Map.of(
+//                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+//                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+//                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+//                    ))
+//                    .build();
+//        }
+
+
+        /**
+         *  檢查用戶是否已經點讚過該留言
+         */
+        RScript containsRScript = redissonClient.getScript(StringCodec.INSTANCE);
+
+        Long contains = containsRScript.eval(
+                RScript.Mode.READ_ONLY,
+                RedisLuaScripts.CHECK_VALUE_IN_SET_SCRIPT,
+                RScript.ReturnType.INTEGER,
+                List.of(userLikedSetKey),
+                userId.toString()
+        );
+
+        if (contains == null) {
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                    .detailMessage("Lua腳本異常返回null")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId,""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                    ))
+                    .build();
+        } else if (contains == 0) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶尚未點讚該留言, 無法取消點讚")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+                    ))
+                    .build();
+        }
+
+
+        log.debug("用戶曾經點讚過該留言,userId: {}, articleId:{} , commentId:{}",userId,articleId,commentId);
+
+
+        /**
+         *  更新使用者對該留言的點讚狀態至 AmsCommentAction
+         */
+        try {
+            LambdaUpdateWrapper<AmsCommentAction> updateWrapper = new LambdaUpdateWrapper<AmsCommentAction>()
+                    .eq(AmsCommentAction::getCommentId, commentId)
+                    .eq(AmsCommentAction::getUserId, userId)
+                    .set(AmsCommentAction::getIsLiked, (byte) 0);
+
+            boolean updateAction = amsCommentActionService.update(updateWrapper);
+            if(!updateAction){
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.UPDATE_FAILED)
+                        .detailMessage("同步使用者取消留言點讚行為至 AmsCommentAction 失敗")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId, ""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                                "commentId", ObjectUtils.defaultIfNull(commentId, "")
+                        ))
+                        .build();
+            }
+
+        } catch (Exception e) {
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+                    .detailMessage("同步使用者取消留言點讚行為至 AmsCommentAction 失敗")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+                    ))
+                    .build();
+        }
+
+        /**
+         * Redis操作
+         * 執行 Lua 腳本：將用戶從點讚集合移除並減少點讚數
+         */
+        try {
+            RScript rScript = redissonClient.getScript(StringCodec.INSTANCE);
+
+            Long luaResult = rScript.eval(
+                    RScript.Mode.READ_WRITE,
+                    RedisLuaScripts.UNLIKE_COMMENT_SCRIPT,
+                    RScript.ReturnType.INTEGER,
+                    Arrays.asList(userLikedSetKey, commentLikesHashKey),
+                    userId.toString(),
+                    commentId.toString()
+            );
+
+            if (luaResult == null) {
+                throw BusinessException.builder()
+                        .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                        .detailMessage("Lua腳本異常返回null")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId,""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId,""),
+                                "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                        ))
+                        .build();
+            }
+
+            if (luaResult >= 0) {
+                log.info("取消點讚成功,用戶ID:{},留言ID:{},新的按讚數:{}", userId, commentId, luaResult);
+
+                boolean update = amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
+                        .eq(AmsCommentStatistics::getCommentId, commentId)
+                        .set(AmsCommentStatistics::getLikesCount, luaResult));
+
+                if(!update){
+                    throw BusinessRuntimeException.builder()
+                            .iErrorCode(ResultCode.UPDATE_FAILED)
+                            .detailMessage("更新文章留言指標失敗")
+                            .data(Map.of(
+                                    "userId",ObjectUtils.defaultIfNull(userId,""),
+                                    "articleId",ObjectUtils.defaultIfNull(articleId,""),
+                                    "commentId",ObjectUtils.defaultIfNull(commentId,"")
+                            ))
+                            .build();
+                }
+
+                // 返回新的按讚數
+                return Math.toIntExact(luaResult);
+            } else if (luaResult == -1) {
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.REPEAT_OPERATION)
+                        .detailMessage("用戶尚未點讚該留言, 無法取消點讚")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId,""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId,""),
+                                "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                        ))
+                        .build();
+            } else {
+                throw BusinessException.builder()
+                        .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                        .detailMessage("Lua腳本異常返回值")
+                        .data(Map.of(
+                                "userId", ObjectUtils.defaultIfNull(userId,""),
+                                "articleId", ObjectUtils.defaultIfNull(articleId,""),
+                                "commentId", ObjectUtils.defaultIfNull(commentId,""),
+                                "invalidResult", ObjectUtils.defaultIfNull(luaResult, "null")
+                        ))
+                        .build();
+            }
+        } catch (RedisException e) {
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                    .detailMessage("Redis執行異常")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId,""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId,""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId,"")
+                    ))
+                    .build();
+        }
+    }
+
+    /**
      * 從DB中判斷留言是否存在
-     * @param commentId
+     * @param commentId 留言ID
      * @return {@code true} 如果留言存在且唯一; {@code false} 如果留言ID無效、不存在或已被刪除
      */
     @Override
@@ -1002,8 +1262,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     /**
      * 取得文章中留言的點讚數聚合（Hash: field=commentId, value=likesCount）
      * 先從Redis中取得，如果不存在則從DB中取得，再將DB中的資料加入Redis中進行快取
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 包含留言ID到按讚數和回覆數的映射
      */
     public Map<String, Map<Long, Integer>> getCommentsMetrics(Long articleId) {
         log.info("開始執行 getCommentsMetrics - articleId: {}", articleId);
@@ -1053,8 +1313,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     /**
      * 從資料庫中獲取文章中所有留言的指標，並寫入至快取中
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 包含留言ID到按讚數和回覆數的映射
      */
     public Map<String,Map<Long,Integer>> loadCommentsMetric(Long articleId){
         log.info("開始執行獲取文章中所有留言的指標 loadCommentsMetric - articleId: {}", articleId);
@@ -1137,8 +1397,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     /**
      * 從資料庫中取得文章中所有留言的留言ID、點讚數、回覆數
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 包含留言ID到按讚數和回覆數的映射
      */
     public List<AmsCommentStatistics> QueryCommentsMetric(Long articleId)  {
         log.info("開始執行 QueryCommentsMetric - articleId: {}", articleId);
@@ -1152,8 +1412,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     /**
      * 從Redis中取得文章中所有留言的留言ID、點讚數、回覆數，並包裝成
-     * @param articleId
-     * @return
+     * @param articleId 文章ID
+     * @return 包含留言ID到按讚數和回覆數的映射
      */
     public Map<String,Map<Long,Integer>> parseCommentsMetric(Long articleId){
         log.info("開始從 Redis 解析文章中所有留言的指標 - articleId: {}", articleId);

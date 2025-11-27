@@ -53,4 +53,17 @@ public class RedisLuaScripts {
                     "else " +
                     "  return -1 " + //取消按讚數失敗, 可能是本來就沒有點讚過該留言, 或者是已經對該留言點過讚, 返回-1
                     "end";
+
+    /**
+     * 判斷值是否在集合中 Lua 腳本
+     * KEYS[1] = 集合鍵名
+     * ARGV[1] = 要檢查的值
+     *
+     * 返回值：
+     * 1 = 值存在於集合中
+     * 0 = 值不存在於集合中
+     */
+    public static final String CHECK_VALUE_IN_SET_SCRIPT =
+            "local contains = redis.call('SISMEMBER',KEYS[1], ARGV[1]) \n" +
+                    "return contains";
 }

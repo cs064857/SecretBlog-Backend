@@ -72,14 +72,28 @@ public class AmsCommentController {
     }
     /**
      * 點讚留言
-     * @param commentId
-     * @return
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return 新的點讚數
      */
-
     @PostMapping("/{articleId}/comments/{commentId}/likes")
     public R<Integer> likeComment(@NotNull @PathVariable(value = "articleId")  Long articleId,@NotNull @PathVariable(value = "commentId") Long commentId){
-        log.debug("commentId:{}",commentId);
+        log.debug("likeComment - articleId:{}, commentId:{}", articleId, commentId);
         Integer newLikes = amsCommentService.likeComment(articleId,commentId);
+
+        return R.ok(newLikes);
+    }
+
+    /**
+     * 取消點讚留言
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return 新的點讚數
+     */
+    @PostMapping("/{articleId}/comments/{commentId}/unlikes")
+    public R<Integer> unlikeComment(@NotNull @PathVariable(value = "articleId")  Long articleId,@NotNull @PathVariable(value = "commentId") Long commentId){
+        log.debug("unlikeComment - articleId:{}, commentId:{}", articleId, commentId);
+        Integer newLikes = amsCommentService.unlikeComment(articleId, commentId);
 
         return R.ok(newLikes);
     }
