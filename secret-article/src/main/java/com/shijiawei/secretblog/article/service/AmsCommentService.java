@@ -32,4 +32,6 @@ public interface AmsCommentService extends IService<AmsComment> {
     Integer unlikeComment(Long articleId, Long commentId);
 
     Boolean existsCommentIdFromDB(Long commentId);
+
+    R deleteComment(Long articleId, Long commentId);
 }

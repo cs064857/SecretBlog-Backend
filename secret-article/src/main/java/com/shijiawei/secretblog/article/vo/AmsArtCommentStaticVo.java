@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
  */
 @Data
 public class AmsArtCommentStaticVo {
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    private Long userId;
+
     private String nickName;
     private String commentContent;
 

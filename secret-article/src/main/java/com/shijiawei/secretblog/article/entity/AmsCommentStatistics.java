@@ -40,4 +40,7 @@ public class AmsCommentStatistics {
 
     @TableField(value = "replies_count")
     private Integer repliesCount;
+
+    @TableField(value = "deleted")
+    private Integer deleted;
 }

@@ -1051,8 +1051,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     .iErrorCode(ResultCode.NOT_FOUND)
                     .detailMessage("用戶不存在，拒絕取消留言按讚")
                     .data(Map.of(
-                            "articleId",ObjectUtils.defaultIfNull(articleId,""),
-                            "commentId",ObjectUtils.defaultIfNull(commentId,"")
+                            "articleId", ObjectUtils.defaultIfNull(articleId,""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId,"")
                     ))
                     .build();
         }
@@ -1258,7 +1258,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         return true;
 
     }
-    
+
     /**
      * 取得文章中留言的點讚數聚合（Hash: field=commentId, value=likesCount）
      * 先從Redis中取得，如果不存在則從DB中取得，再將DB中的資料加入Redis中進行快取
@@ -1454,6 +1454,208 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
                     .build();
         }
+    }
+
+    /**
+     * 刪除留言
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return 刪除結果
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX, key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY)
+    @Override
+    public R deleteComment(Long articleId, Long commentId) {
+        log.info("開始邏輯刪除留言 - articleId: {}, commentId: {}", articleId, commentId);
+
+        //驗證文章是否存在
+        redisBloomFilterUtils.requireExists(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey(), articleId, "文章不存在");
+
+        //驗證留言是否存在
+        if (this.isCommentNotExists(commentId)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言不存在")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+                    ))
+                    .build();
+        }
+
+        //檢查用戶是否登入
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，無法刪除留言")
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+
+        //驗證用戶權限：只有留言作者才能刪除
+        AmsCommentInfo commentInfo = amsCommentInfoService.getOne(
+                new LambdaQueryWrapper<AmsCommentInfo>()
+                        .eq(AmsCommentInfo::getCommentId, commentId)
+        );
+
+        if (commentInfo == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言信息不存在")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        //檢查留言是否已被刪除
+        if (commentInfo.getDeleted() != null && commentInfo.getDeleted() == 1) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.DELETE_FAILED)
+                    .detailMessage("留言已被刪除")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        if (!commentInfo.getUserId().equals(userId)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("無權限刪除他人留言")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "commentOwnerId", ObjectUtils.defaultIfNull(commentInfo.getUserId(), "")
+                    ))
+                    .build();
+        }
+
+        //執行邏輯刪除 - 更新 deleted 字段為 1 , 代表刪除
+        boolean logicalDelete = amsCommentInfoService.update(
+                new LambdaUpdateWrapper<AmsCommentInfo>()
+                        .eq(AmsCommentInfo::getCommentId, commentId)
+                        .set(AmsCommentInfo::getDeleted, 1)
+                        .set(AmsCommentInfo::getUpdateAt, LocalDateTime.now())
+        );
+
+        if (!logicalDelete) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UPDATE_FAILED)
+                    .detailMessage("邏輯刪除留言失敗")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        //邏輯刪除留言統計數據 - 更新 AmsCommentStatistics 的 deleted 字段為 1
+        boolean deleteStatistics = amsCommentStatisticsService.update(
+                new LambdaUpdateWrapper<AmsCommentStatistics>()
+                        .eq(AmsCommentStatistics::getCommentId, commentId)
+                        .set(AmsCommentStatistics::getDeleted, 1)
+        );
+        if (!deleteStatistics) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UPDATE_FAILED)
+                    .detailMessage("邏輯刪除留言統計數據失敗")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        //邏輯刪除留言互動記錄 - 更新 AmsCommentAction 的 deleted 字段為 1
+        boolean deleteActions = amsCommentActionService.update(
+                new LambdaUpdateWrapper<AmsCommentAction>()
+                        .eq(AmsCommentAction::getCommentId, commentId)
+                        .set(AmsCommentAction::getDeleted, 1)
+        );
+        if (!deleteActions) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UPDATE_FAILED)
+                    .detailMessage("邏輯刪除留言互動記錄失敗")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        //查詢該留言的回覆數量（用於更新文章留言總數）
+        AmsCommentStatistics commentStatistics = amsCommentStatisticsService.getOne(
+                new LambdaQueryWrapper<AmsCommentStatistics>()
+                        .eq(AmsCommentStatistics::getCommentId, commentId)
+                        .select(AmsCommentStatistics::getRepliesCount)
+        );
+        Long repliesCount = (commentStatistics != null && commentStatistics.getRepliesCount() != null)
+                ? commentStatistics.getRepliesCount()
+                : 0L;
+
+        //如果有父留言，需要更新父留言的回覆數
+        if (commentInfo.getParentCommentId() != null) {
+            boolean updateParent = amsCommentStatisticsService.update(
+                    new LambdaUpdateWrapper<AmsCommentStatistics>()
+                            .eq(AmsCommentStatistics::getCommentId, commentInfo.getParentCommentId())
+                            .setSql("replies_count = GREATEST(replies_count - 1, 0)")
+            );
+            if (!updateParent) {
+//                log.warn("更新父留言回覆數失敗 - parentCommentId: {}", commentInfo.getParentCommentId());
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.UPDATE_FAILED)
+                        .detailMessage("更新父留言回覆數失敗")
+                        .data(Map.of("parentCommentId", ObjectUtils.defaultIfNull(commentInfo.getParentCommentId(), "")))
+                        .build();
+            }
+        }
+
+        //更新文章留言總數（需要減去該留言及其所有子留言）
+        int totalDeleteCount = 1 + repliesCount.intValue();
+        boolean updateArticleCommentCount = amsArtStatusService.update(
+                new LambdaUpdateWrapper<AmsArtStatus>()
+                        .eq(AmsArtStatus::getArticleId, articleId)
+                        .setSql("comments_count = GREATEST(comments_count - " + totalDeleteCount + ", 0)")
+        );
+        if (!updateArticleCommentCount) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UPDATE_FAILED)
+                    .detailMessage("更新文章留言數失敗")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        /**
+         * 清理 Redis 中的留言相關快取
+         * Redis 操作失敗不影響資料庫邏輯刪除，但需要記錄日誌
+         */
+
+        try {
+            final String likedUsersKey = RedisCacheKey.COMMENT_LIKED_USERS.format(commentId);
+            final String markedUsersKey = RedisCacheKey.COMMENT_MARKED_USERS.format(commentId);
+            final String commentLikesHashKey = RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.format(articleId);
+            final String commentRepliesHashKey = RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.format(articleId);
+
+            RScript rScript = redissonClient.getScript(StringCodec.INSTANCE);
+            Long luaResult = rScript.eval(
+                    RScript.Mode.READ_WRITE,
+                    RedisLuaScripts.DELETE_COMMENT_SCRIPT,
+                    RScript.ReturnType.INTEGER,
+                    Arrays.asList(likedUsersKey, markedUsersKey, commentLikesHashKey, commentRepliesHashKey),
+                    commentId.toString()
+            );
+
+            if (luaResult == null || luaResult != 1) {
+                log.warn("Lua 腳本清理留言 Redis 數據返回異常 - commentId: {}, result: {}", commentId, luaResult);
+
+            } else {
+                log.info("成功清理留言 Redis 緩存數據 - commentId: {}", commentId);
+            }
+
+            // 11. 更新 Redis 中的文章留言總數
+            redisIncrementUtils.afterCommitDecrement(
+                    RedisCacheKey.ARTICLE_COMMENTS.format(articleId),
+                    totalDeleteCount
+            );
+
+        } catch (RedisException e) {
+            log.error("清理留言 Redis 緩存失敗 - commentId: {}", commentId, e);
+
+
+        }
+
+        //無法從留言的布隆過濾器中移除留言, 需要注意, 仍然會保留在布隆過濾器中, 但是, 由於布隆過濾器的特性, 不會影響到其他操作
+
+        log.info("留言邏輯刪除成功 - articleId: {}, commentId: {}, 影響留言數: {}", articleId, commentId, totalDeleteCount);
+
+        return R.ok();
     }
 }
 

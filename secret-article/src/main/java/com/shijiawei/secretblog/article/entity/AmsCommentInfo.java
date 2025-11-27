@@ -66,4 +66,10 @@ public class AmsCommentInfo {
     @TableField(value = "avatar")
     private String avatar;
 
+    /**
+     * 邏輯刪除標記：0-未刪除，1-已刪除
+     */
+    @TableField(value = "deleted")
+    private Integer deleted;
+
 }

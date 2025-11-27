@@ -51,4 +51,40 @@ public class RedisIncrementUtils {
 
     }
 
+    /**
+     * 在事務提交後執行Redis數值遞減操作
+     * @param key Redis鍵
+     */
+    public void afterCommitDecrement(String key){
+        afterCommitDecrement(key, 1);
+    }
+
+    /**
+     * 在事務提交後執行Redis數值遞減操作
+     * @param key Redis鍵
+     * @param delta 遞減的數量
+     */
+    public void afterCommitDecrement(String key, long delta){
+        //先判斷是否在事務中
+        boolean synchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
+        if(!synchronizationActive){
+            log.warn("當前不在事務中，直接執行數值遞減操作: key={}, delta={}",key, delta);
+            try {
+                //不在事務中, 直接減少值
+                redissonClient.getAtomicLong(key).addAndGet(-delta);
+            } catch (Exception e) {
+                log.error("數值遞減操作失敗: key={}, delta={}", key, delta, e);
+            }
+            return;
+        }
+
+        //註冊事務同步回調
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redissonClient.getAtomicLong(key).addAndGet(-delta);
+            }
+        });
+    }
+
 }

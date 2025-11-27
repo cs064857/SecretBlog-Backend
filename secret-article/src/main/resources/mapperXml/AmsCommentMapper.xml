@@ -11,6 +11,7 @@
     <select id="getStaticCommentDetails" parameterType="long" resultType="com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo">
 
         SELECT
+            ci.user_id AS userId,
             ci.nick_name AS nickName,
             ci.avatar AS avatar,
             c.comment_content AS commentContent,
@@ -20,7 +21,8 @@
             c.id AS commentId
         FROM ams_comment_info AS ci
         INNER JOIN ams_art_comment AS c ON c.comment_info_id = ci.id
-        WHERE ci.article_id = #{articleId};
+        WHERE ci.article_id = #{articleId}
+          AND (ci.deleted IS NULL OR ci.deleted = 0);
 
 
     </select>

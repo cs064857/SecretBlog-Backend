@@ -14,13 +14,17 @@ import java.util.List;
  */
 @Data
 public class AmsArtCommentsVo {
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    private Long userId;
+
     private String nickName;
     private String commentContent;
     private Integer likesCount;
     private Integer repliesCount;
 
     private LocalDateTime createAt;
-    private LocalDateTime  updateAt;
+    private LocalDateTime updateAt;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long parentCommentId;

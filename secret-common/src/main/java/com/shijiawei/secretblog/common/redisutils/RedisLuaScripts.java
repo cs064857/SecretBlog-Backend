@@ -66,4 +66,33 @@ public class RedisLuaScripts {
     public static final String CHECK_VALUE_IN_SET_SCRIPT =
             "local contains = redis.call('SISMEMBER',KEYS[1], ARGV[1]) \n" +
                     "return contains";
+
+    /**
+     * 刪除留言相關的 Redis 數據 Lua 腳本
+     * KEYS[1] = ams:comment:{commentId}:liked_users (點讚用戶集合)
+     * KEYS[2] = ams:comment:{commentId}:marked_users (收藏用戶集合)
+     * KEYS[3] = ams:article:{articleId}:comment_likes (點讚數 Hash)
+     * KEYS[4] = ams:article:{articleId}:comment_replies (回覆數 Hash)
+     * ARGV[1] = commentId
+     *
+     * 刪除留言
+     *    ↓
+     * 刪除點讚用戶集合
+     *    ↓
+     * 刪除收藏用戶集合
+     *    ↓
+     * 從點讚數 Hash 移除該留言
+     *    ↓
+     * 從回覆數 Hash 移除該留言
+     *    ↓
+     * 返回 1 (成功)
+     */
+    public static final String DELETE_COMMENT_SCRIPT =
+            "redis.call('DEL', KEYS[1]) " + // 刪除點讚用戶集合
+            "redis.call('DEL', KEYS[2]) " + // 刪除收藏用戶集合
+            "redis.call('HDEL', KEYS[3], ARGV[1]) " + // 從點讚數 Hash 移除
+            "redis.call('HDEL', KEYS[4], ARGV[1]) " + // 從回覆數 Hash 移除
+            "return 1";
 }
+
+

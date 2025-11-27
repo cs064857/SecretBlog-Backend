@@ -67,4 +67,8 @@ public class AmsCommentAction implements Serializable {
     @TableField(value = "update_at", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateAt;
 
+    @Schema(description = "邏輯刪除 (0:未刪除, 1:已刪除)")
+    @TableField("deleted")
+    private Integer deleted;
+
 }

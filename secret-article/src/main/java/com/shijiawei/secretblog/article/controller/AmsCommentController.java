@@ -98,4 +98,19 @@ public class AmsCommentController {
 
         return R.ok(newLikes);
     }
+
+    /**
+     * 刪除留言
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return 刪除結果
+     */
+
+    @PostMapping("/{articleId}/comments/{commentId}")
+    public R deleteComment(@NotNull @PathVariable(value = "articleId") Long articleId,
+                          @NotNull @PathVariable(value = "commentId") Long commentId)
+    {
+        log.debug("deleteComment - articleId:{}, commentId:{}", articleId, commentId);
+        return amsCommentService.deleteComment(articleId, commentId);
+    }
 }

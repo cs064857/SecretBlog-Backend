@@ -16,8 +16,10 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.server.Cookie;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.authentication.AbstractAuthenticationTargetUrlRequestHandler;
@@ -67,13 +69,36 @@ public class LoginSuccessHandler extends
     String token = generateToken(currentUser); // TEMP 取得 token 以便下方設置 Cookie
     responseData.put("token", token);
     responseData.put("refreshToken", generateRefreshToken(currentUser));
+    responseData.put("userId",currentUser.getUserId());
+
+
 
     // TEMP Set-Cookie: 將 JWT 寫入 HttpOnly Cookie (測試用途, 之後可改為 Secure; SameSite 設為 Lax 避免 csrf 基本攻擊)
 
       /**
        * 將jwtToken寫入Cookie中
        */
-    response.addHeader("Set-Cookie", "jwtToken=" + token + "; Path=/; Max-Age=60000; HttpOnly; SameSite=Lax");
+    final long jwtExpirationSeconds = 3600; // 假設 JWT 有效 1 小時
+//    response.addHeader("Set-Cookie", "jwtToken=" + token + "; Path=/; Max-Age="+jwtExpirationSeconds+"; HttpOnly; SameSite=Lax");
+//    response.addHeader("Set-Cookie", "userId=" + currentUser.getUserId() + "; Path=/; Max-Age="+jwtExpirationSeconds+"; HttpOnly; SameSite=Lax");
+
+      ResponseCookie jwtCookie = ResponseCookie.from("jwtToken", token)
+              .path("/")
+              .maxAge(jwtExpirationSeconds)
+              .httpOnly(true)//不允許前端JavaScript訪問Cookie
+              .secure(true)
+              .sameSite("Lax")
+              .build();
+      ResponseCookie userIdCookie = ResponseCookie.from("userId", String.valueOf(currentUser.getUserId()))
+              .path("/")
+              .maxAge(jwtExpirationSeconds)
+              .httpOnly(false)
+              .secure(true)
+              .sameSite("Lax")
+              .build();
+      response.addHeader("Set-Cookie", jwtCookie.toString());
+      response.addHeader("Set-Cookie", userIdCookie.toString());
+
 
     // 一些特殊的登錄參數。比如三方登錄，需要額外返回一個字段是否需要跳轉的綁定已有賬號頁面
     Object details = authentication.getDetails();
