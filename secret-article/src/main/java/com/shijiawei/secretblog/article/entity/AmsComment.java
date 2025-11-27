@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
  *
  * @Create 2025/7/16 上午2:45
  */
-@TableName("ams_artComment")
+@TableName("ams_art_comment")
 @Builder
 @Data
 @AllArgsConstructor

@@ -30,8 +30,9 @@ public class AmsCommentController {
     AmsCommentService amsCommentService;
     /**
      * 創建留言
-     * @param amsCommentCreateDTO
-     * @return
+     * @param articleId 文章ID
+     * @param amsCommentCreateDTO 留言創建DTO
+     * @return 留言創建結果
      */
 //    @PostMapping("/comment/create")
     @PostMapping("/{articleId}/comments")

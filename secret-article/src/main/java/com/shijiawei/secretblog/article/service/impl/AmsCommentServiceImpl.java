@@ -800,7 +800,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                 List.of(userLikedSetKey),
                 userId.toString()
         );
-        if(contains == 0){
+        if(contains != 0){
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.REPEAT_OPERATION)
                     .detailMessage("用戶已經點讚過該留言, 不允許重複點讚")
