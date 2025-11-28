@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
+import com.shijiawei.secretblog.common.utils.R;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 
@@ -37,6 +38,13 @@ public interface AmsArticleService extends IService<AmsArticle> {
     void updateArticle(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO);
 
     Long decrementArticleLikes(Long articleId);
+
+    /**
+     * 刪除文章（邏輯刪除）
+     * @param articleId 文章ID
+     * @return 刪除結果
+     */
+    R<Void> deleteArticle(Long articleId);
 
 //
 //

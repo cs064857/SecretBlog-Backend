@@ -53,6 +53,17 @@ public class AmsArticleController {
         return R.ok();
     }
 
+    /**
+     * 刪除文章（邏輯刪除）
+     * @param articleId 文章ID
+     * @return 刪除結果
+     */
+    @PostMapping("/delete/{articleId}")
+    public R<Void> deleteArticle(@NotNull @PathVariable(value = "articleId") Long articleId) {
+        log.info("deleteArticle - articleId:{}", articleId);
+        return amsArticleService.deleteArticle(articleId);
+    }
+
 
 ////    @GetMapping("/list")
 ////    public R<List<AmsArticle>> listArticle() {

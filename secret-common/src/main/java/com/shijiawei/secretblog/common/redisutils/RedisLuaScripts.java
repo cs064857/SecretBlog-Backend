@@ -93,6 +93,44 @@ public class RedisLuaScripts {
             "redis.call('HDEL', KEYS[3], ARGV[1]) " + // 從點讚數 Hash 移除
             "redis.call('HDEL', KEYS[4], ARGV[1]) " + // 從回覆數 Hash 移除
             "return 1";
+
+    /**
+     * 刪除文章相關的 Redis 數據 Lua 腳本
+     * KEYS[1] = ams:article:likes:{articleId} (文章點讚數)
+     * KEYS[2] = ams:article:views:{articleId} (文章瀏覽數)
+     * KEYS[3] = ams:article:comments:{articleId} (文章留言數)
+     * KEYS[4] = ams:article:bookmarks:{articleId} (文章書籤數)
+     * KEYS[5] = ams:article:status:{articleId} (文章指標 Hash)
+     * KEYS[6] = ams:article:{articleId}:liked (文章點讚用戶集合)
+     * KEYS[7] = ams:article:{articleId}:marked (文章書籤用戶集合)
+     *
+     * 刪除文章
+     *    ↓
+     * 刪除文章點讚數
+     *    ↓
+     * 刪除文章瀏覽數
+     *    ↓
+     * 刪除文章留言數
+     *    ↓
+     * 刪除文章書籤數
+     *    ↓
+     * 刪除文章指標 Hash
+     *    ↓
+     * 刪除文章點讚用戶集合
+     *    ↓
+     * 刪除文章書籤用戶集合
+     *    ↓
+     * 返回 1 (成功)
+     */
+    public static final String DELETE_ARTICLE_SCRIPT =
+            "redis.call('DEL', KEYS[1]) " + // 刪除文章點讚數
+            "redis.call('DEL', KEYS[2]) " + // 刪除文章瀏覽數
+            "redis.call('DEL', KEYS[3]) " + // 刪除文章留言數
+            "redis.call('DEL', KEYS[4]) " + // 刪除文章書籤數
+            "redis.call('DEL', KEYS[5]) " + // 刪除文章指標 Hash
+            "redis.call('DEL', KEYS[6]) " + // 刪除文章點讚用戶集合
+            "redis.call('DEL', KEYS[7]) " + // 刪除文章書籤用戶集合
+            "return 1";
 }
 
 

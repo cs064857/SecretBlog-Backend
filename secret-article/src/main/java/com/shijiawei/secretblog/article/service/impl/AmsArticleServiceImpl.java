@@ -28,6 +28,7 @@ import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
+import com.shijiawei.secretblog.common.redisutils.RedisLuaScripts;
 import com.shijiawei.secretblog.common.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -2009,5 +2010,157 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        log.debug("newLikes:{}",newLikes);
 //        return newLikes;
 //    }
+
+    /**
+     * 刪除文章（邏輯刪除）
+     * 只需將 AmsArtinfo.deleted 設置為 1，其他關聯資料會因為無法通過 AmsArtinfo 查詢而自然不可訪問
+     *
+     * @param articleId 文章ID
+     * @return 刪除結果
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_PREFIX,
+            key = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_KEY)
+    @Override
+    public R<Void> deleteArticle(Long articleId) {
+        log.info("開始邏輯刪除文章 - articleId: {}", articleId);
+
+        // 1. 驗證文章是否存在
+        isArticleNotExists(articleId);
+
+        // 2. 檢查用戶是否登入
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，無法刪除文章")
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("用戶嘗試刪除文章 - userId: {}, articleId: {}", userId, articleId);
+
+        // 3. 獲取文章資訊（AmsArtinfo），同時驗證是否已被刪除
+        AmsArtinfo artinfo = amsArtinfoService.getOne(
+                new LambdaQueryWrapper<AmsArtinfo>()
+                        .eq(AmsArtinfo::getArticleId, articleId)
+        );
+
+        if (artinfo == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("文章資訊不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        // 4. 檢查文章是否已被刪除
+        if (artinfo.getDeleted() != null && artinfo.getDeleted() == 1) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.DELETE_FAILED)
+                    .detailMessage("文章已被刪除")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        // 5. 權限驗證：只有作者或管理員可刪除
+        boolean isAuthor = artinfo.getUserId().equals(userId);
+        boolean isAdmin = UserContextHolder.isCurrentUserAdmin();
+
+        if (!isAuthor && !isAdmin) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("無權限刪除此文章，只有作者或管理員可以刪除")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleOwnerId", ObjectUtils.defaultIfNull(artinfo.getUserId(), "")
+                    ))
+                    .build();
+        }
+
+        // 6. 邏輯刪除 AmsArtinfo（設置 deleted = 1）
+        boolean deleteArtinfo = amsArtinfoService.update(
+                new LambdaUpdateWrapper<AmsArtinfo>()
+                        .eq(AmsArtinfo::getArticleId, articleId)
+                        .set(AmsArtinfo::getDeleted, 1)
+        );
+
+        if (!deleteArtinfo) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.DELETE_FAILED)
+                    .detailMessage("刪除文章失敗")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        // 7. 清理 Redis 快取
+        try {
+            cleanArticleRedisCache(articleId, artinfo.getCategoryId());
+        } catch (Exception e) {
+            log.error("清理文章 Redis 緩存失敗 - articleId: {}", articleId, e);
+            // 快取清理失敗不影響主流程，僅記錄日誌
+        }
+
+        log.info("文章邏輯刪除成功 - articleId: {}, userId: {}", articleId, userId);
+        return R.ok();
+    }
+
+    /**
+     * 清理文章相關的 Redis 快取
+     *
+     * @param articleId  文章ID
+     * @param categoryId 分類ID
+     */
+    private void cleanArticleRedisCache(Long articleId, Long categoryId) {
+        log.info("開始清理文章 Redis 快取 - articleId: {}, categoryId: {}", articleId, categoryId);
+
+        // 1. 使用 Lua 腳本原子清除文章計數相關快取
+        final String likesKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
+        final String viewsKey = RedisCacheKey.ARTICLE_VIEWS.format(articleId);
+        final String commentsKey = RedisCacheKey.ARTICLE_COMMENTS.format(articleId);
+        final String bookmarksKey = RedisCacheKey.ARTICLE_BOOKMARKS.format(articleId);
+        final String statusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        final String likedUsersKey = RedisCacheKey.ARTICLE_LIKED_USERS.format(articleId);
+        final String markedUsersKey = RedisCacheKey.ARTICLE_MARKED_USERS.format(articleId);
+
+        RScript rScript = redissonClient.getScript(StringCodec.INSTANCE);
+        Long luaResult = rScript.eval(
+                RScript.Mode.READ_WRITE,
+                RedisLuaScripts.DELETE_ARTICLE_SCRIPT,
+                RScript.ReturnType.INTEGER,
+                Arrays.asList(likesKey, viewsKey, commentsKey, bookmarksKey,
+                        statusKey, likedUsersKey, markedUsersKey)
+        );
+
+        if (luaResult == null || luaResult != 1) {
+            log.warn("Lua 腳本清理文章 Redis 數據返回異常 - articleId: {}, result: {}",
+                    articleId, luaResult);
+        } else {
+            log.info("成功清理文章計數/集合快取 - articleId: {}", articleId);
+        }
+
+        // 2. 清除分類文章預覽列表快取（使用模式匹配）
+        if (categoryId != null) {
+            String categoryPattern = "AmsArticles:categoryId_" + categoryId + "*";
+            RKeys keys = redissonClient.getKeys();
+            Iterable<String> keysToDelete = keys.getKeysByPattern(categoryPattern);
+            long count = 0;
+            for (String key : keysToDelete) {
+                redissonClient.getBucket(key).delete();
+                count++;
+            }
+            log.info("清除分類文章列表快取 - categoryId: {}, 刪除鍵數量: {}", categoryId, count);
+        }
+
+        // 3. 清除文章留言相關快取
+        String commentPattern = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX
+                + ":" + articleId + "*";
+        RKeys commentKeys = redissonClient.getKeys();
+        Iterable<String> commentKeysToDelete = commentKeys.getKeysByPattern(commentPattern);
+        long commentCount = 0;
+        for (String key : commentKeysToDelete) {
+            redissonClient.getBucket(key).delete();
+            commentCount++;
+        }
+        log.info("清除文章留言快取 - articleId: {}, 刪除鍵數量: {}", articleId, commentCount);
+    }
 
 }

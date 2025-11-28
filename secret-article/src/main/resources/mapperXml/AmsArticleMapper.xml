@@ -190,7 +190,7 @@
                  INNER JOIN ams_category AS ac ON ac.id = ai.category_id
                  INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id
                  INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id
-        WHERE ai.category_id = #{categoryId}
+        WHERE ai.category_id = #{categoryId} AND ai.deleted = 0
         ORDER BY ai.update_time DESC
 
     </select>
