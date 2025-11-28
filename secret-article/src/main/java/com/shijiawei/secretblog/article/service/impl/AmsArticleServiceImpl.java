@@ -1639,7 +1639,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         artInfoUpdateWrapper.eq(AmsArtinfo::getArticleId, articleId);
         artInfoUpdateWrapper.set(AmsArtinfo::getCategoryId,amsArticleUpdateDTO.getCategoryId());
         boolean artInfoUpdate = amsArtinfoService.update(artInfoUpdateWrapper);
-        if(artInfoUpdate){
+        if(!artInfoUpdate){
 
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UPDATE_FAILED)
