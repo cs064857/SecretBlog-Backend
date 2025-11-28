@@ -3,14 +3,14 @@ spring:
     name: secret-user
   cloud:
     nacos:
-      server-addr: 127.0.0.1:8848
-#      server-addr: 178.92.75.5:11346
+#      server-addr: 127.0.0.1:8848
+      server-addr: 92.113.117.22:10846
 
 #      password: nacos
 #      username: nacos
       discovery:
-        server-addr: 127.0.0.1:8848
-#        server-addr: 178.92.75.5:11346
+#        server-addr: 127.0.0.1:8848
+        server-addr: 92.113.117.22:10846
       config:
         timeout: 300000
   config:

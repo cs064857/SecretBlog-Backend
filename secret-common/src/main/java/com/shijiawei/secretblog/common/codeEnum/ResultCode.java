@@ -31,7 +31,9 @@ public enum ResultCode implements IErrorCode{
     //執行新增操作失敗
     CREATE_FAILED(HttpStatus.BAD_REQUEST,"1007", "系統服務繁忙，請稍後再試"),
     DELETE_FAILED(HttpStatus.BAD_REQUEST,"1008", "系統服務繁忙，請稍後再試"),
-    NOT_FOUND(HttpStatus.NOT_FOUND,"1008", "系統服務繁忙，請稍後再試"),
+    NOT_FOUND(HttpStatus.NOT_FOUND,"1009", "系統服務繁忙，請稍後再試"),
+    EDIT_FAILED(HttpStatus.BAD_REQUEST,"1010", "編輯失敗"),
+    EDIT_TIME_EXPIRED(HttpStatus.BAD_REQUEST,"1011", "編輯時間已過期"),
     /**
      * 2000~2999 文章模組
      */

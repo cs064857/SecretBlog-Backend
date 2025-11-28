@@ -5,6 +5,7 @@ import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
+import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.utils.R;
 
@@ -33,5 +34,7 @@ public interface AmsCommentService extends IService<AmsComment> {
 
     Boolean existsCommentIdFromDB(Long commentId);
 
-    R deleteComment(Long articleId, Long commentId);
+    R<Void> deleteComment(Long articleId, Long commentId);
+
+    R<Void> editComment(Long articleId, AmsCommentEditDTO amsCommentEditDTO);
 }

@@ -18,6 +18,7 @@ import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
+import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
@@ -40,6 +41,7 @@ import org.redisson.client.codec.StringCodec;
 import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -102,6 +104,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     @Autowired
     private AmsCommentActionService amsCommentActionService;
 
+    @Value("${comment.edit-window-minutes:15}")
+    private Integer editWindowMinutes;
+
 //    public AmsCommentServiceImpl(RedissonClient redissonClient){
 //        this.redissonClient = redissonClient;
 //    }
@@ -136,6 +141,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //            userIdFromToken = (String) hashMap.get("userId");
 //            if (userIdFromToken == null) {
 //                log.error("Token 中未找到 userId 信息");
+//                return R.error("Token 中缺少用戶信息");
 //                return R.error("Token 中缺少用戶信息");
 //            }
 //
@@ -1465,7 +1471,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     @Transactional(rollbackFor = Exception.class)
     @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX, key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY)
     @Override
-    public R deleteComment(Long articleId, Long commentId) {
+    public R<Void> deleteComment(Long articleId, Long commentId) {
         log.info("開始邏輯刪除留言 - articleId: {}, commentId: {}", articleId, commentId);
 
         //驗證文章是否存在
@@ -1654,6 +1660,143 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         //無法從留言的布隆過濾器中移除留言, 需要注意, 仍然會保留在布隆過濾器中, 但是, 由於布隆過濾器的特性, 不會影響到其他操作
 
         log.info("留言邏輯刪除成功 - articleId: {}, commentId: {}, 影響留言數: {}", articleId, commentId, totalDeleteCount);
+
+        return R.ok();
+    }
+
+    /**
+     * 編輯留言
+     * @param articleId 文章ID
+     * @param amsCommentEditDTO 編輯留言DTO
+     * @return 編輯結果
+     */
+    @Override
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX,
+            key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY)
+    @Transactional(rollbackFor = Exception.class)
+    public R<Void> editComment(Long articleId, AmsCommentEditDTO amsCommentEditDTO) {
+        Long commentId = amsCommentEditDTO.getCommentId();
+        String newContent = amsCommentEditDTO.getCommentContent();
+
+        log.info("開始編輯留言 - articleId: {}, commentId: {}", articleId, commentId);
+        if(newContent.isBlank()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("留言內容不能為空")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+
+        //驗證文章是否存在
+        redisBloomFilterUtils.requireExists(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey(), articleId, "文章不存在");
+
+        //驗證留言是否存在
+        if (this.isCommentNotExists(commentId)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言不存在")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+                    ))
+                    .build();
+        }
+
+        //檢查用戶是否登入
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，無法編輯留言")
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+        boolean isAdmin = UserContextHolder.isCurrentUserAdmin();
+
+        //獲取留言信息
+        AmsCommentInfo commentInfo = amsCommentInfoService.getOne(
+                new LambdaQueryWrapper<AmsCommentInfo>()
+                        .eq(AmsCommentInfo::getCommentId, commentId)
+        );
+
+        if (commentInfo == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言信息不存在")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        //檢查留言是否已被刪除（必須為未刪除狀態）
+        if (commentInfo.getDeleted() != null && commentInfo.getDeleted() == 1) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.EDIT_FAILED)
+                    .detailMessage("已刪除的留言無法編輯")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        //驗證用戶權限：只有留言作者可以編輯
+        if (!commentInfo.getUserId().equals(userId)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("無權限編輯他人留言")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "commentOwnerId", ObjectUtils.defaultIfNull(commentInfo.getUserId(), "")
+                    ))
+                    .build();
+        }
+
+        //檢查時間窗限制（管理員可繞過）
+        if (!isAdmin) {
+            LocalDateTime createAt = commentInfo.getCreateAt();
+            LocalDateTime now = LocalDateTime.now();
+            long minutesElapsed = Duration.between(createAt, now).toMinutes();
+
+            if (minutesElapsed > editWindowMinutes) {
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.EDIT_TIME_EXPIRED)
+                        .detailMessage("留言編輯時間已過期，僅可在建立後 " + editWindowMinutes + " 分鐘內編輯")
+                        .data(Map.of(
+                                "commentId", ObjectUtils.defaultIfNull(commentId, ""),
+                                "createAt", ObjectUtils.defaultIfNull(createAt, ""),
+                                "minutesElapsed", minutesElapsed,
+                                "editWindowMinutes", editWindowMinutes
+                        ))
+                        .build();
+            }
+        } else {
+            log.info("管理員繞過時間窗限制 - userId: {}, commentId: {}", userId, commentId);
+        }
+
+        //更新留言內容
+        boolean updateSuccess = this.update(
+                new LambdaUpdateWrapper<AmsComment>()
+                        .eq(AmsComment::getId, commentId)
+                        .set(AmsComment::getCommentContent, newContent)
+        );
+
+        if (!updateSuccess) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UPDATE_FAILED)
+                    .detailMessage("更新留言內容失敗")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        //更新留言信息的更新時間
+        boolean updateInfoTime = amsCommentInfoService.update(
+                new LambdaUpdateWrapper<AmsCommentInfo>()
+                        .eq(AmsCommentInfo::getCommentId, commentId)
+                        .set(AmsCommentInfo::getUpdateAt, LocalDateTime.now())
+        );
+
+        if (!updateInfoTime) {
+            log.warn("更新留言信息的更新時間失敗 - commentId: {}", commentId);
+        }
+
+        log.info("留言編輯成功 - articleId: {}, commentId: {}, userId: {}", articleId, commentId, userId);
 
         return R.ok();
     }
