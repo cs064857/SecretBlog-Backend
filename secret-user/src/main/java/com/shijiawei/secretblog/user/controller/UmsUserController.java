@@ -9,6 +9,7 @@ import com.shijiawei.secretblog.common.utils.TimeTool;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo; // TEMP 新增
 import com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService; // TEMP 新增
 import com.shijiawei.secretblog.user.entity.UmsUser;
@@ -254,5 +255,11 @@ public class UmsUserController {
         }
 
         return R.ok("已登入", null);
+    }
+
+    @GetMapping("/summary/{id}")
+    public R<UmsUserSummaryDTO> getUserSummary(@PathVariable Long id) {
+        UmsUserSummaryDTO userSummary = umsUserService.getUserSummary(id);
+        return R.ok(userSummary);
     }
 }

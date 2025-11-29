@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.user.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.user.entity.UmsUser;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -16,6 +17,8 @@ import org.apache.ibatis.annotations.Param;
 public interface UmsUserMapper extends BaseMapper<UmsUser> {
 
     List<UserBasicDTO> selectUserBasicInfoByIds(@Param("ids") List<Long> ids);
+
+    UmsUserSummaryDTO selectUserSummaryById(@Param("id") Long id);
 
 //    int updateBatch(List<UmsUser> list);
 //

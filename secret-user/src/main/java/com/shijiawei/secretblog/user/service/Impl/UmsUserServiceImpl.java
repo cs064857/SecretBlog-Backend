@@ -35,6 +35,7 @@ import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.user.enumValue.Role;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
@@ -551,6 +552,11 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 //        }
         return R.ok();
 
+    }
+
+    @Override
+    public UmsUserSummaryDTO getUserSummary(Long id) {
+        return this.baseMapper.selectUserSummaryById(id);
     }
 
 

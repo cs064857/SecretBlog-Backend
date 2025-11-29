@@ -7,6 +7,7 @@ import com.shijiawei.secretblog.article.mapper.AmsArtActionMapper;
 import com.shijiawei.secretblog.article.service.AmsArtActionService;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.vo.AmsArtActionVo;
+import com.shijiawei.secretblog.article.vo.UserLikedArticleVo;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
@@ -24,6 +25,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -232,5 +234,18 @@ public class AmsArtActionServiceImpl extends ServiceImpl<AmsArtActionMapper, Ams
             log.warn("快取預熱失敗（忽略） - articleId: {}, userId: {}, error: {}",
                     articleId, userIdStr, e.getMessage());
         }
+    }
+
+    @Override
+    public List<UserLikedArticleVo> getLikedArticlesByUserId(Long userId) {
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("查詢的目標用戶ID不存在")
+                    .build();
+        }
+
+        log.info("查詢用戶點讚文章列表 - userId: {}", userId);
+        return baseMapper.selectLikedArticlesByUserId(userId);
     }
 }

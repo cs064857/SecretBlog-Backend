@@ -8,6 +8,7 @@ import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
+import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
@@ -71,4 +72,6 @@ public interface UmsUserService extends IService<UmsUser>{
     List<UserBasicDTO> selectUserBasicInfoByIds(List<Long> ids);
 
     R deleteUserDetailsById(Long userId);
+
+    UmsUserSummaryDTO getUserSummary(Long id);
 }

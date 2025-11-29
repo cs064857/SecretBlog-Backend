@@ -35,6 +35,21 @@
           AND u.deleted = 0
     </select>
 
+    <select id="selectUserSummaryById" resultType="com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO">
+        SELECT
+            u.id,
+            u.nick_name,
+            u.avatar,
+            u.role_id,
+            u.create_at,
+            u.update_at,
+            ui.gender
+        FROM ums_user u
+        INNER JOIN ums_userInfo ui ON ui.user_id = u.id
+        WHERE u.id = #{id}
+    </select>
+
+
 
 
 
