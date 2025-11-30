@@ -46,6 +46,21 @@ public interface AmsArticleService extends IService<AmsArticle> {
      */
     R<Void> deleteArticle(Long articleId);
 
+    /**
+     * 更新文章作者資訊(頭像、暱稱)
+     * @param userId
+     * @param nickName
+     * @param avatar
+     */
+    void updateAuthorInfo(Long userId, String nickName, String avatar);
+
+    /**
+     * 更新文章作者頭像
+     * @param userId
+     * @param avatar
+     */
+    void updateAuthorAvatar(Long userId, String avatar);
+
 //
 //
 ////    Page<AmsArticle> getLatestArticles();

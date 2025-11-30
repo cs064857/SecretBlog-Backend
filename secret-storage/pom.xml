@@ -34,6 +34,17 @@
             <groupId>com.shijiawei.secretblog</groupId>
             <artifactId>secret-common</artifactId>
             <version>0.0.1-SNAPSHOT</version>
+            <exclusions>
+                <!-- 排除 Redis 相關依賴 -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-data-redis</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.redisson</groupId>
+                    <artifactId>redisson-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

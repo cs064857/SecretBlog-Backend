@@ -15,9 +15,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class MinioConfig {
 
-    @Value("${var.secretblog.accessKey}")
+    @Value("${var.secretblog.bucket.pub.accessKey}")
     private String accessKey;
-    @Value("${var.secretblog.secretKey}")
+    @Value("${var.secretblog.bucket.pub.secretKey}")
     private String secretKey;
     @Value("${var.endPoint}")
     private String endPoint;

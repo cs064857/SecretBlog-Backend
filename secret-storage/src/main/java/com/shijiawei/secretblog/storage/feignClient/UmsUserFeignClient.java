@@ -1,11 +1,11 @@
 package com.shijiawei.secretblog.storage.feignClient;
 
 import com.shijiawei.secretblog.common.utils.R;
+import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 
 /**
  * ClassName: UmsUserFeignClient
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(name = "secret-user")
 public interface UmsUserFeignClient {
 
-    @PutMapping("/ums/user")
-    void updateUmsUserAvatar(@RequestParam String imgUrl,@RequestParam String userId);
+    @PutMapping("/ums/user/update-avatar")
+    R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto);
 
 }

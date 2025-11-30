@@ -50,4 +50,12 @@ class SecretStorageApplicationTests {
             System.out.println("成功生成預簽名 URL:"+presignedObjectUrl);
         }
     }
+
+
+    @Test
+    public void testExtension() {
+        String fileContentType = "image/jpeg";
+        String extension = fileContentType.substring(fileContentType.lastIndexOf("/") + 1);
+        System.out.println(extension);
+    }
 }

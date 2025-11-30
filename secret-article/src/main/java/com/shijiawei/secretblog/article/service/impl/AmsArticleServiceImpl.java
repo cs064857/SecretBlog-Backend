@@ -2163,4 +2163,55 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         log.info("清除文章留言快取 - articleId: {}, 刪除鍵數量: {}", articleId, commentCount);
     }
 
+    @Override
+    public void updateAuthorInfo(Long userId, String nickName, String avatar) {
+        // 更新文章作者資訊
+        LambdaUpdateWrapper<AmsArtinfo> artInfoWrapper = new LambdaUpdateWrapper<>();
+        artInfoWrapper.eq(AmsArtinfo::getUserId, userId);
+        if (nickName != null) {
+            artInfoWrapper.set(AmsArtinfo::getNickName, nickName);
+        }
+        if (avatar != null) {
+            artInfoWrapper.set(AmsArtinfo::getAvatar, avatar);
+        }
+        amsArtinfoService.update(artInfoWrapper);
+
+        // 更新評論作者資訊
+        LambdaUpdateWrapper<AmsCommentInfo> commentInfoWrapper = new LambdaUpdateWrapper<>();
+        commentInfoWrapper.eq(AmsCommentInfo::getUserId, userId);
+        if (nickName != null) {
+            commentInfoWrapper.set(AmsCommentInfo::getNickName, nickName);
+        }
+        if (avatar != null) {
+            commentInfoWrapper.set(AmsCommentInfo::getAvatar, avatar);
+        }
+        amsCommentInfoService.update(commentInfoWrapper);
+    }
+
+    @Override
+    public void updateAuthorAvatar(Long userId, String avatar) {
+        if(userId == null){
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage("userId is required")
+                    .build();
+        }
+        if(avatar == null){
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage("avatar is required")
+                    .build();
+        }
+
+        // 更新文章作者頭像
+        amsArtinfoService.update(new LambdaUpdateWrapper<AmsArtinfo>()
+                .eq(AmsArtinfo::getUserId, userId)
+                .set(AmsArtinfo::getAvatar, avatar));
+
+        // 更新評論作者頭像
+        amsCommentInfoService.update(new LambdaUpdateWrapper<AmsCommentInfo>()
+                .eq(AmsCommentInfo::getUserId, userId)
+                .set(AmsCommentInfo::getAvatar, avatar));
+    }
+
 }

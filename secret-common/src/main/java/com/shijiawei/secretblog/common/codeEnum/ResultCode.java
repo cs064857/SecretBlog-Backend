@@ -76,9 +76,18 @@ public enum ResultCode implements IErrorCode{
 
 
     //布隆過濾器鍵不存在
-    BLOOM_FILTER_KEY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR,"6003", "系統服務繁忙，請稍後再試");
+    BLOOM_FILTER_KEY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR,"6003", "系統服務繁忙，請稍後再試"),
     //    BLOOM_FILTER_MISSING("2002", "缺少必要參數"),
 //    BLOOM_FILTER_KEY_NOT_FOUND("2005", "布隆過濾器鍵不存在");
+
+    /**
+     * 6000-6999 儲存模組
+     */
+    UPLOAD_FILE_EMPTY(HttpStatus.BAD_REQUEST,"6000", "上傳文件不能為空"),
+    UPLOAD_FILE_INVALID(HttpStatus.BAD_REQUEST,"6001", "上傳文件格式無效"),
+    UPLOAD_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST,"6002", "上傳文件大小超過限制"),
+    UPLOAD_FILE_TYPE_INVALID(HttpStatus.BAD_REQUEST,"6003", "上傳文件類型無效"),
+    UPLOAD_SYSTEM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"6005", "上傳文件類型無效");
 
     private final HttpStatus httpStatus;
     private final String code;

@@ -6,6 +6,8 @@ import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.JwtService; // TEMP 新增
 import com.shijiawei.secretblog.common.utils.TimeTool;
+import com.shijiawei.secretblog.common.utils.UserContextHolder;
+import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
@@ -18,6 +20,7 @@ import com.shijiawei.secretblog.user.service.UmsUserService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import com.shijiawei.secretblog.user.converter.UserConverter;
+import com.shijiawei.secretblog.user.enumValue.Gender;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -130,10 +133,28 @@ public class UmsUserController {
         return R.ok();
     }
 
-    @PutMapping
-    public void updateUmsUserAvatar(@RequestParam String imgUrl,@RequestParam String userId){
-        log.info("imgUrl:{}",imgUrl);
-        umsUserService.updateUmsUserAvatar(imgUrl,userId);
+    @PutMapping("/{userId}/avatar")
+    public R<Void> updateAvatar(@PathVariable Long userId, @RequestParam String avatar) {
+        umsUserService.updateAvatar(userId, avatar);
+        return R.ok();
+    }
+
+    @PutMapping("/{userId}/nickname")
+    public R<Void> updateNickname(@PathVariable Long userId, @RequestParam String nickname) {
+        umsUserService.updateNickname(userId, nickname);
+        return R.ok();
+    }
+
+    @PutMapping("/{userId}/gender")
+    public R<Void> updateGender(@PathVariable Long userId, @RequestParam Integer gender) {
+        umsUserService.updateGender(userId, gender);
+        return R.ok();
+    }
+
+    @PutMapping("/update-avatar")
+    public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
+        log.info("updateUmsUserAvatar dto:{}", dto);
+        return umsUserService.updateUmsUserAvatar(dto.getAvatar(), dto.getUserId().toString());
     }
     /**
      * 獲取所有使用者

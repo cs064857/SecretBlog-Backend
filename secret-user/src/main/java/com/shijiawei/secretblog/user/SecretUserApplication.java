@@ -2,9 +2,11 @@ package com.shijiawei.secretblog.user;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
+@EnableFeignClients(basePackages = "com.shijiawei.secretblog.user.feign")
 @ComponentScan(basePackages = {"com.shijiawei.secretblog.user", "com.shijiawei.secretblog.common"})
 
 public class SecretUserApplication {

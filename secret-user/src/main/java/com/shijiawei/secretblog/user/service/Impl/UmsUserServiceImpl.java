@@ -8,10 +8,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+import com.shijiawei.secretblog.common.utils.UserContextHolder;
 import com.shijiawei.secretblog.user.entity.*;
+import com.shijiawei.secretblog.user.enumValue.Gender;
+import com.shijiawei.secretblog.user.feign.ArticleFeignClient;
 import com.shijiawei.secretblog.user.service.*;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -76,6 +80,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Autowired
     private UmsAuthsService umsAuthsService;
+
+    @Autowired
+    private ArticleFeignClient articleFeignClient;
 
     @Override
     public R userLogin(UmsUserLoginDTO umsUserLoginDTO) {
@@ -379,12 +386,63 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     }
 
     @Override
-    public void updateUmsUserAvatar(String imgUrl, String userId) {
+    public R<Void> updateUmsUserAvatar(String imgUrl, String userId) {
         UmsUser umsUser = this.baseMapper.selectById(userId);
         if(!umsUser.isEmpty()){
             umsUser.setAvatar(imgUrl);
-            this.baseMapper.updateById(umsUser);
+            int update = this.baseMapper.updateById(umsUser);
+            if(update > 0){
+                return R.ok();
+            }
         }
+        throw BusinessRuntimeException.builder()
+                .detailMessage("用戶資料不存在")
+                .iErrorCode(ResultCode.NOT_FOUND)
+                .data(Map.of("userId", StringUtils.defaultString("userId", userId)))
+                .build();
+    }
+
+    @Override
+    public void updateAvatar(Long userId, String avatar) {
+        checkPermission(userId);
+        UmsUser user = new UmsUser();
+        user.setId(userId);
+        user.setAvatar(avatar);
+        this.updateById(user);
+
+        // 同步更新文章模組的作者資訊
+        /// TODO: 使用 RabbitMQ 異步處理
+        try {
+            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, avatar));
+        } catch (Exception e) {
+            log.error("Failed to sync avatar to article service", e);
+        }
+    }
+
+    @Override
+    public void updateNickname(Long userId, String nickName) {
+        checkPermission(userId);
+        UmsUser user = new UmsUser();
+        user.setId(userId);
+        user.setNickName(nickName);
+        this.updateById(user);
+
+        // 同步更新文章模組的作者資訊
+        /// TODO: 使用 RabbitMQ 異步處理
+        try {
+            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, nickName, null));
+        } catch (Exception e) {
+            log.error("Failed to sync nickname to article service", e);
+        }
+    }
+
+    @Override
+    public void updateGender(Long userId, Integer gender) {
+        checkPermission(userId);
+        LambdaUpdateWrapper<UmsUserInfo> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(UmsUserInfo::getUserId, userId)
+                .set(UmsUserInfo::getGender, gender);
+        umsUserInfoService.update(updateWrapper);
     }
 
     /**
@@ -559,5 +617,20 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         return this.baseMapper.selectUserSummaryById(id);
     }
 
+    private void checkPermission(Long userId) {
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入")
+                    .build();
+        }
+        Long currentUserId = UserContextHolder.getCurrentUserId();
+        if (!userId.equals(currentUserId) && !UserContextHolder.isCurrentUserAdmin()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("無權修改該用戶資料")
+                    .build();
+        }
+    }
 
 }
