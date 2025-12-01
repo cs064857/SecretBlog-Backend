@@ -2163,6 +2163,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         log.info("清除文章留言快取 - articleId: {}, 刪除鍵數量: {}", articleId, commentCount);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateAuthorInfo(Long userId, String nickName, String avatar) {
         // 更新文章作者資訊

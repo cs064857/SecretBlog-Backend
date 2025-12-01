@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.user.service;
 import java.util.List;
 
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
+import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
@@ -30,7 +31,7 @@ public interface UmsUserService extends IService<UmsUser>{
      * @param userId
      * @param avatar
      */
-    void updateAvatar(Long userId, String avatar);
+//    void updateAvatar(Long userId, String avatar);
 
     /**
      * 修改用戶暱稱
@@ -59,7 +60,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId);
 
-    R<Void> updateUmsUserAvatar(String imgUrl, String userId);
+    R<Void> updateUmsUserAvatar(UmsUserAvatarUpdateDTO dto);
 
     R UmsUserRegister(UmsUserRegisterDTO umsUserRegisterDTO);
 

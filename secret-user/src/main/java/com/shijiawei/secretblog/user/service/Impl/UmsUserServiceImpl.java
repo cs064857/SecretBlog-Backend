@@ -12,10 +12,13 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
+import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
+import com.shijiawei.secretblog.user.rabbit.consumer.AuthorInfoUpdateConsumer;
 import com.shijiawei.secretblog.user.entity.*;
-import com.shijiawei.secretblog.user.enumValue.Gender;
 import com.shijiawei.secretblog.user.feign.ArticleFeignClient;
+import com.shijiawei.secretblog.user.rabbit.producer.AuthorInfoUpdateProducer;
 import com.shijiawei.secretblog.user.service.*;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -23,6 +26,7 @@ import org.redisson.api.RRateLimiter;
 import org.redisson.api.RateIntervalUnit;
 import org.redisson.api.RateType;
 import org.redisson.api.RedissonClient;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -83,6 +87,10 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Autowired
     private ArticleFeignClient articleFeignClient;
+
+
+    @Autowired
+    private AuthorInfoUpdateProducer authorInfoUpdateProducer;
 
     @Override
     public R userLogin(UmsUserLoginDTO umsUserLoginDTO) {
@@ -386,38 +394,86 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     }
 
     @Override
-    public R<Void> updateUmsUserAvatar(String imgUrl, String userId) {
+    public R<Void> updateUmsUserAvatar(UmsUserAvatarUpdateDTO dto) {
+        log.info("updateUmsUserAvatar imgUrl:{} userId:{}", dto.getAvatar(), dto.getUserId());
+
+
+        String imgUrl = dto.getAvatar();
+        Long userId = dto.getUserId();
+
+        if(userId == null){
+            throw BusinessRuntimeException.builder()
+                    .detailMessage("用戶id不存在")
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .data(Map.of("userId",ObjectUtils.defaultIfNull(userId, "")))
+                    .build();
+        }
+        if(imgUrl == null){
+            throw BusinessRuntimeException.builder()
+                    .detailMessage("用戶頭像不存在")
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .data(Map.of("avatar",ObjectUtils.defaultIfNull(imgUrl, ""),
+                            "userId",ObjectUtils.defaultIfNull(userId, "")))
+                    .build();
+        }
+
+
         UmsUser umsUser = this.baseMapper.selectById(userId);
-        if(!umsUser.isEmpty()){
+        if(umsUser!=null && !umsUser.isEmpty()){
             umsUser.setAvatar(imgUrl);
             int update = this.baseMapper.updateById(umsUser);
             if(update > 0){
+                try {
+                    AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, imgUrl , System.currentTimeMillis());
+                    authorInfoUpdateProducer.sendAuthorInfoUpdateNotification(authorInfoUpdateMessage);
+
+                    //                    rabbitTemplate.convertAndSend("commentActionDirectExchange","info", authorInfoUpdateMessage);
+//                    log.info("Sent author info update message to queue: {}", authorInfoUpdateMessage);
+                    //            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, avatar));
+                } catch (Exception e) {
+                    log.error("Failed to sync avatar to article service", e);
+                    //嘗試直接更新文章模組的作者資訊
+                    R<Void> updated = articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, imgUrl));
+                    if(updated.getCode().equals("200")){
+                        log.info("Successfully updated author info in article service for user: {}", userId);
+                    }else {
+                        log.error("Failed to update author info in article service for user: {}", userId);
+                        throw BusinessRuntimeException.builder()
+                                .detailMessage("更新文章模組用戶頭像失敗")
+                                .iErrorCode(ResultCode.RABBITMQ_INTERNAL_ERROR)
+                                .data(Map.of("userId",ObjectUtils.defaultIfNull(userId, "")))
+                                .build();
+                    }
+                }
                 return R.ok();
             }
         }
         throw BusinessRuntimeException.builder()
                 .detailMessage("用戶資料不存在")
                 .iErrorCode(ResultCode.NOT_FOUND)
-                .data(Map.of("userId", StringUtils.defaultString("userId", userId)))
+                .data(Map.of("userId",ObjectUtils.defaultIfNull(userId, "")))
                 .build();
     }
 
-    @Override
-    public void updateAvatar(Long userId, String avatar) {
-        checkPermission(userId);
-        UmsUser user = new UmsUser();
-        user.setId(userId);
-        user.setAvatar(avatar);
-        this.updateById(user);
-
-        // 同步更新文章模組的作者資訊
-        /// TODO: 使用 RabbitMQ 異步處理
-        try {
-            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, avatar));
-        } catch (Exception e) {
-            log.error("Failed to sync avatar to article service", e);
-        }
-    }
+//    @Override
+//    public void updateAvatar(Long userId, String avatar) {
+//        checkPermission(userId);
+//        UmsUser user = new UmsUser();
+//        user.setId(userId);
+//        user.setAvatar(avatar);
+//        this.updateById(user);
+//
+//        // 同步更新文章模組的作者資訊
+//        /// TODO: 使用 RabbitMQ 異步處理
+//        try {
+//            AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, avatar , System.currentTimeMillis());
+//            rabbitTemplate.convertAndSend("Auth Notification Queue", authorInfoUpdateMessage);
+//            log.info("Sent author info update message to queue: {}", authorInfoUpdateMessage);
+//            //            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, avatar));
+//        } catch (Exception e) {
+//            log.error("Failed to sync avatar to article service", e);
+//        }
+//    }
 
     @Override
     public void updateNickname(Long userId, String nickName) {
