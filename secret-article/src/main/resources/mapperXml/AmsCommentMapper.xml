@@ -27,4 +27,23 @@
 
     </select>
 
+    <select id="selectUserComments" parameterType="long" resultType="com.shijiawei.secretblog.article.vo.AmsUserCommentVo">
+        SELECT
+            ci.article_id AS articleId,
+            ci.comment_id AS commentId,
+            ci.create_at AS createAt,
+            ci.update_at AS updateAt,
+            ac.comment_content AS commentContent,
+            a.title AS articleTitle
+        FROM
+            ams_comment_info ci
+                LEFT JOIN ams_art_comment ac ON ci.comment_id = ac.id
+                LEFT JOIN ams_article a ON ci.article_id = a.id
+        WHERE
+            ci.user_id = #{userId}
+          AND (ci.deleted IS NULL OR ci.deleted = 0)
+        ORDER BY
+            ci.create_at DESC
+    </select>
+
 </mapper>

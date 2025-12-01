@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.article.controller;
 
 import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
+import com.shijiawei.secretblog.article.vo.AmsUserCommentVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.utils.R;
@@ -75,6 +76,22 @@ public class AmsCommentController {
         log.debug("articleId:{}",articleId);
         List<AmsArtCommentsVo> amsArtCommentsVo = amsCommentService.getArtComments(articleId);
         return R.ok(amsArtCommentsVo);
+
+    }
+
+    /**
+     * 取得用戶的留言列表
+     * @param userId 用戶ID
+     * @return 用戶留言列表
+     */
+    @Operation(summary = "獲取用戶的留言列表", description = "根據用戶ID查詢該用戶的留言紀錄")
+    @ApiResponse(responseCode = "200", description = "成功取得用戶留言列表")
+    @GetMapping("/user/{userId}/comments")
+    public R<List<AmsUserCommentVo>> getUserComments(@PathVariable("userId") Long userId){
+
+        log.debug("查詢用戶留言列表 - userId:{}",userId);
+        List<AmsUserCommentVo> userComments = amsCommentService.getUserCommentsByUserId(userId);
+        return R.ok(userComments);
 
     }
     /**

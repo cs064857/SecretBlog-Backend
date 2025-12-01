@@ -288,6 +288,7 @@ public Optional<UmsUserLoginDTO> getUserFromDB(String usernameOrEmail) {
     loginUser.setRoleId(user.getRoleId());
     loginUser.setPassword(auths.getPassword());
     loginUser.setEmail(credentials.getEmail());
+    loginUser.setAvatar(user.getAvatar());
     log.debug("[createUserLoginDTO] done userId={}, account='{}'", loginUser.getUserId(), loginUser.getAccountName());
     return loginUser;
   }

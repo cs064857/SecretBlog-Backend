@@ -81,6 +81,7 @@ public class UsernameAuthenticationProvider implements AuthenticationProvider {
     userLoginInfo.setUserId(umsUserLoginDTO.getUserId());
     userLoginInfo.setNickname(umsUserLoginDTO.getAccountName());
     userLoginInfo.setRoleId(umsUserLoginDTO.getRoleId().toString());
+    userLoginInfo.setAvatar(umsUserLoginDTO.getAvatar());
     token.setCurrentUser(userLoginInfo);
     token.setAuthenticated(true); // 認證通過，這裡一定要設成true
     log.debug("userLoginInfo:{}",userLoginInfo);

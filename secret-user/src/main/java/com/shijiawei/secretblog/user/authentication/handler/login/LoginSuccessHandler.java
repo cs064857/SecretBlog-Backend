@@ -96,8 +96,16 @@ public class LoginSuccessHandler extends
               .secure(true)
               .sameSite("Lax")
               .build();
+      ResponseCookie avatarCookie = ResponseCookie.from("avatar", currentUser.getAvatar())
+              .path("/")
+              .maxAge(jwtExpirationSeconds)
+              .httpOnly(false)
+              .secure(true)
+              .sameSite("Lax")
+              .build();
       response.addHeader("Set-Cookie", jwtCookie.toString());
       response.addHeader("Set-Cookie", userIdCookie.toString());
+      response.addHeader("Set-Cookie", avatarCookie.toString());
 
 
     // 一些特殊的登錄參數。比如三方登錄，需要額外返回一個字段是否需要跳轉的綁定已有賬號頁面

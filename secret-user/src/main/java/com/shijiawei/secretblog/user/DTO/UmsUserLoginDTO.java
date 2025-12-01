@@ -25,5 +25,8 @@ public class UmsUserLoginDTO {
 
     @Schema(description = "用戶ID")
     private Long userId;
+
+    @Schema(description = "用戶頭像")
+    private String avatar;
 }
 

@@ -17,6 +17,7 @@ import com.shijiawei.secretblog.article.service.*;
 
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
+import com.shijiawei.secretblog.article.vo.AmsUserCommentVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
@@ -573,6 +574,24 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         log.info("文章中所有留言合併完成,留言內容:{}",amsArtCommentsVoList);
         return amsArtCommentsVoList;
 
+    }
+
+    /**
+     * 依據用戶ID查詢該用戶所有留言
+     * @param userId 用戶ID
+     * @return 用戶留言列表
+     */
+    @Override
+    public List<AmsUserCommentVo> getUserCommentsByUserId(Long userId) {
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("查詢的目標用戶ID不存在")
+                    .build();
+        }
+
+        log.info("查詢用戶留言列表 - userId: {}", userId);
+        return this.baseMapper.selectUserComments(userId);
     }
 
 

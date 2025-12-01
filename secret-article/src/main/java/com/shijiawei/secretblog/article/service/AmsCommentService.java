@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
+import com.shijiawei.secretblog.article.vo.AmsUserCommentVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
@@ -24,6 +25,8 @@ public interface AmsCommentService extends IService<AmsComment> {
     R createComment(Long articleId,AmsCommentCreateDTO amsCommentCreateDTO);
 
     List<AmsArtCommentsVo> getArtComments(Long articleId);
+
+    List<AmsUserCommentVo> getUserCommentsByUserId(Long userId);
 
     @OpenCache(prefix = "AmsComments", key = "articleId_#{#articleId}", time = 30, chronoUnit = ChronoUnit.MINUTES)
     List<AmsArtCommentStaticVo> getStaticCommentDetails(Long articleId);

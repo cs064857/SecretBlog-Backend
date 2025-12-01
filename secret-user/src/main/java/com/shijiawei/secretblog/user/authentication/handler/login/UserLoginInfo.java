@@ -1,14 +1,20 @@
 package com.shijiawei.secretblog.user.authentication.handler.login;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * 用戶信息登陸後的信息，會序列化到Jwt的payload
  */
+@Getter
+@Setter
 public class UserLoginInfo {
 
   private String sessionId; // 會話id，全局唯一
   private Long userId;
   private String nickname; // 昵稱
   private String roleId;
+  private String avatar; // 用戶頭像
 
   private Long expiredTime; // 過期時間
 
