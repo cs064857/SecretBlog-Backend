@@ -132,12 +132,12 @@ public class UmsUserController {
         umsUserService.saveUmsUser(umsSaveUserVo);
         return R.ok();
     }
-
-    @PutMapping("/{userId}/avatar")
-    public R<Void> updateAvatar(@PathVariable Long userId, @RequestParam String avatar) {
-        umsUserService.updateAvatar(userId, avatar);
-        return R.ok();
-    }
+//
+//    @PutMapping("/{userId}/avatar")
+//    public R<Void> updateAvatar(@PathVariable Long userId, @RequestParam String avatar) {
+//        umsUserService.updateAvatar(userId, avatar);
+//        return R.ok();
+//    }
 
     @PutMapping("/{userId}/nickname")
     public R<Void> updateNickname(@PathVariable Long userId, @RequestParam String nickname) {
@@ -154,8 +154,16 @@ public class UmsUserController {
     @PutMapping("/update-avatar")
     public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
         log.info("updateUmsUserAvatar dto:{}", dto);
-        return umsUserService.updateUmsUserAvatar(dto.getAvatar(), dto.getUserId().toString());
+        return umsUserService.updateUmsUserAvatar(dto);
+
     }
+
+//    @PutMapping("/update-avatar")
+//    public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
+//        log.info("updateUmsUserAvatar dto:{}", dto);
+//        return umsUserService.updateUmsUserAvatar(dto.getAvatar(), dto.getUserId().toString());
+//    }
+
     /**
      * 獲取所有使用者
      *

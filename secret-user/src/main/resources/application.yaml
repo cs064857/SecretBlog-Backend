@@ -20,6 +20,17 @@ spring:
       idle-timeout: 600000
   application:
     name: secret-user
+  rabbitmq:
+    host: cgk1.clusters.zeabur.com
+    port: 26082
+    username: admin
+    password: 2z9Bgnd65U3EfRja0e8741OqZrCWiDyL
+    listener:
+      simple:
+        retry:
+          max-attempts: 3
+          enabled: true
+          initial-interval: 1000ms
   cloud:
     nacos:
 #      server-addr: 127.0.0.1:8848

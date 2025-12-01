@@ -87,7 +87,16 @@ public enum ResultCode implements IErrorCode{
     UPLOAD_FILE_INVALID(HttpStatus.BAD_REQUEST,"6001", "上傳文件格式無效"),
     UPLOAD_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST,"6002", "上傳文件大小超過限制"),
     UPLOAD_FILE_TYPE_INVALID(HttpStatus.BAD_REQUEST,"6003", "上傳文件類型無效"),
-    UPLOAD_SYSTEM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"6005", "上傳文件類型無效");
+    UPLOAD_SYSTEM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"6005", "上傳文件類型無效"),
+
+
+    /**
+     * 7000-7999 RabbitMQ模組
+     */
+    //RabbitMQ異常
+    RABBITMQ_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"7001", "系統服務繁忙，請稍後再試");
+
+
 
     private final HttpStatus httpStatus;
     private final String code;
