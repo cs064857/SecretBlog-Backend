@@ -47,6 +47,12 @@ spring:
       username: default
       ssl:
         enabled: true
+  rabbitmq:
+    host: cgk1.clusters.zeabur.com
+    port: 26082
+    username: admin
+    password: 2z9Bgnd65U3EfRja0e8741OqZrCWiDyL
+
 #  cache:
 #    redis:
 #      #以下配置為配合SpringCache使用時
