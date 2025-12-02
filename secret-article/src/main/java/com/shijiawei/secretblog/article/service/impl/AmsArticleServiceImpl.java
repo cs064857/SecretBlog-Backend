@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
+import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
 import com.shijiawei.secretblog.article.entity.*;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
@@ -321,48 +322,50 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     /**
      * 獲取文章預覽列表分頁
-     * @param categoryId 分類ID
-     * @param routePage 分頁頁碼
+
      * @return 文章預覽列表分頁VO
      */
     //    @OpenLog
 //    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")
     @Override
-    public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Long categoryId, Integer routePage) {
-        log.info("開始取得文章預覽列表 - categoryId: {}, routePage: {}", categoryId, routePage);
+    public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage,Long categoryId,List<Long> tagsId) {
+        log.debug("開始取得文章預覽列表 - categoryId: {}, routePage: {} ,tagsId.size: {}",categoryId, routePage,tagsId!=null?tagsId.size():0);
 
-        Page<AmsArticlePreviewVo> page = new Page<>(routePage, 20);
+        final int pageSize = 20;
 
-        IPage<AmsArticlePreviewVo> resultPage = this.baseMapper.getArticlesPreviewPage(page, categoryId);
-        log.info("文章預覽查詢完成，總條數:{}，當前頁:{}，每頁數量:{}", resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize());
+        Page<AmsArticlePreviewVo> page = new Page<>(routePage, pageSize);
+
+//        //測試
+//        if (tagsId == null) {
+//            tagsId = new ArrayList<>();
+//        }
+//
+//        tagsId.add(1950619174177013762L);
+//        tagsId.add(1950621768463069185L);
+
+
+        IPage<AmsArticlePreviewVo> resultPage = this.baseMapper.getArticlesPreviewPage(page, routePage,categoryId,tagsId);
+
+
+
+        log.debug("文章預覽查詢完成，總條數:{}，當前頁:{}，每頁數量:{}", resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize());
 
         //目標是重新包裝其中的amsArtTagList欄位
         List<AmsArticlePreviewVo> articles = resultPage.getRecords();
         if(articles.isEmpty()){
-//            log.warn("文章預覽結果為空，categoryId:{}，routePage:{}", categoryId, routePage);
-//            throw new CustomRuntimeException("系統異常，請稍後再試");
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                    .detailMessage("獲取文章預覽時結果為空")
-                    .data(Map.of("categoryId",ObjectUtils.defaultIfNull(categoryId, ""),
-                            "routePage", ObjectUtils.defaultIfNull(routePage, "")))
-                    .build();
+            //不拋出異常只記錄
+            log.warn("獲取文章預覽時結果為空, categoryId:{} , routerPage:{} ,tagsId.size:{}",categoryId,routePage,tagsId!=null?tagsId.size():0);
+            //返回空的資料
+            return new Page<>();
+//            throw BusinessRuntimeException.builder()
+//                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+//                    .detailMessage("獲取文章預覽時結果為空")
+//                    .data(Map.of("categoryId",ObjectUtils.defaultIfNull(categoryId, ""),
+//                            "routePage", ObjectUtils.defaultIfNull(routePage, "")))
+//                    .build();
         }
         //獲取文章所需的標籤IDS，目標是取得標籤的名稱等資訊
 
-
-//        List<Long> articleIdList = articles.stream().map(AmsArticlePreviewVo::getArticleId).toList();
-//
-//        List<AmsArtTag> amsArtTagList = amsArtTagService.list(new LambdaQueryWrapper<AmsArtTag>()
-//                .in(AmsArtTag::getArticleId, articleIdList)
-//        );
-
-//        Set<Long> tagsIdSet = amsArtTagList.stream().map(AmsArtTag::getTagsId).collect(Collectors.toSet());
-
-//        Stream<Set<Long>> setStream = articles.stream().map(item -> {
-//            Set<Long> collect = item.getAmsArtTagList().stream().map(AmsArtTagsVo::getId).collect(Collectors.toSet());
-//            return ;
-//        }).;
 
         Stream<AmsArtTagsVo> amsArtTagsVoStream = articles.stream().flatMap(item -> item.getAmsArtTagList().stream());
         Set<Long> tagsIdSet = amsArtTagsVoStream.map(AmsArtTagsVo::getId).collect(Collectors.toSet());
@@ -384,15 +387,6 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                             }
                         });
 
-
-
-//        Stream<AmsArtTagsVo> artTagsVoStream = articles.stream().flatMap(item -> item.getAmsArtTagList().stream());
-//        artTagsVoStream.forEach(
-//                AmsArtTagsVo->{
-//            AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
-//            AmsArtTagsVo.setName(tags.getName());
-//        });
-
         articles.stream().forEach(item->{
             List<AmsArtTagsVo> amsArtTagList = item.getAmsArtTagList();
             if (amsArtTagList == null) {
@@ -407,33 +401,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             });
         });
 
-
-        // 將標籤ID映射到標籤名稱
-
-//         需要按 articleId 分組後再轉換
-//        Map<Long, List<AmsArtTagsVo>> artTagsVoMap = amsArtTagList.stream()
-//                .collect(Collectors.groupingBy(
-//                        AmsArtTag::getArticleId,
-//                        Collectors.mapping(item -> {
-//                            AmsArtTagsVo vo = new AmsArtTagsVo();
-//                            vo.setId(item.getTagsId());  // 使用 tagsId
-//                            AmsTags tags = tagsList.get(item.getTagsId());
-//                            if(tags!=null){
-//                                vo.setName(tags.getName());
-//
-//                            }
-//
-//                            return vo;
-//                        }, Collectors.toList())
-//                ));
-//
-//        articles.forEach(article -> {
-//            article.setAmsArtTagList(artTagsVoMap.get(article.getArticleId()));
-//        });
-//
-//        resultPage.setRecords(articles);
         log.debug("文章預覽標籤填充完成，categoryId:{}，routePage:{}", categoryId, routePage);
-        log.info("文章預覽結果返回，records:{}，total:{}", resultPage.getRecords().size(), resultPage.getTotal());
+        log.debug("文章預覽結果返回，records:{}，total:{}", resultPage.getRecords().size(), resultPage.getTotal());
         return resultPage;
 
     }

@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.article.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
+import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
@@ -14,9 +15,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.query.Param;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * ClassName: AmsArticleController
@@ -118,20 +122,45 @@ public class AmsArticleController {
         return ok;
     }
 //
+
+
+//    /**
+//     * 根據categoryId與routerPage分頁查詢文章預覽列表
+//     * @param categoryId
+//     * @param routePage
+//     * @return
+//     */
+//
+//    @GetMapping("/categories/{categoryId}/articles")
+//    public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
+//        log.info("categoryId:{}",categoryId);
+//        log.info("routePage:{}",routePage);
+//        IPage<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesPreviewPage(categoryId,routePage);
+//        return R.ok(Page);
+//    }
+
+
+
     /**
      * 根據categoryId與routerPage分頁查詢文章預覽列表
-     * @param categoryId
+
      * @param routePage
      * @return
      */
 
-    @GetMapping("/categories/{categoryId}/articles")
-    public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(@PathVariable Long categoryId, @RequestParam(name = "routePage") Integer routePage) {
-        log.info("categoryId:{}",categoryId);
-        log.info("routePage:{}",routePage);
-        IPage<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesPreviewPage(categoryId,routePage);
+    @GetMapping("/categories/articles")
+    public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(
+            @RequestParam(value = "routePage" , required = true) Integer routePage,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "tagsId", required = false) List<Long> tagsId
+            ) {
+        IPage<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesPreviewPage(routePage,categoryId,tagsId);
         return R.ok(Page);
     }
+
+
+
+
 //    /**
 //     * 獲得最新文章的文章列表(按照日期遞減排序顯示文章)
 //     */

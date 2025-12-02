@@ -190,7 +190,23 @@
                  INNER JOIN ams_category AS ac ON ac.id = ai.category_id
                  INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id
                  INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id
-        WHERE ai.category_id = #{categoryId} AND ai.deleted = 0
+
+        WHERE ai.deleted = 0
+        <if test="categoryId != null">
+        AND ai.category_id = #{categoryId}
+        </if>
+
+        <if test="tagsId != null and tagsId.size() > 0">
+            AND ai.article_id IN (
+            SELECT t.article_id
+            FROM ams_art_tag t
+            WHERE t.tags_id IN
+            <foreach collection="tagsId" item="tagId" open="(" separator="," close=")">
+                #{tagId}
+            </foreach>
+            )
+        </if>
+
         ORDER BY ai.update_time DESC
 
     </select>
