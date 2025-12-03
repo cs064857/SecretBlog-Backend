@@ -18,4 +18,6 @@ public interface AmsArtTagService extends IService<AmsArtTag> {
     void unassociateTagsToArticle(AssociateTagsToArticleDTO associateTagsToArticleDTO);
 
     List<AmsArtTag> getAssociationsById(Long articleId);
+
+    List<AmsArtTag> getAllDistinctTagIds();
 }

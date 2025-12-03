@@ -168,48 +168,116 @@
         </collection>
     </resultMap>
 
+<!--    <select id="getArticlesPreviewPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
+
+<!--        SELECT-->
+<!--            a.title AS title,-->
+<!--            ai.article_id AS article_id,-->
+<!--            ai.nick_name AS nick_name,-->
+<!--            ai.user_id AS user_id,-->
+<!--            ai.avatar AS avatar,-->
+<!--            ac.category_name AS category_name,-->
+<!--            ai.category_id AS category_id,-->
+<!--            ai.create_time AS create_time,-->
+<!--            ai.update_time AS update_time,-->
+<!--            aas.views_count AS views_count,-->
+<!--            aas.likes_count AS likes_count,-->
+<!--            aas.bookmarks_count AS bookmarks_count,-->
+<!--            aas.comments_count AS comments_count,-->
+<!--            tag.tags_id AS tag_id-->
+<!--        FROM ams_artInfo AS ai-->
+<!--                 INNER JOIN ams_article AS a ON a.id = ai.article_id-->
+<!--                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id-->
+<!--                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
+<!--                 INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id-->
+
+<!--        WHERE ai.deleted = 0-->
+<!--        <if test="categoryId != null">-->
+<!--        AND ai.category_id = #{categoryId}-->
+<!--        </if>-->
+
+<!--        <if test="tagsId != null and tagsId.size() > 0">-->
+<!--            AND ai.article_id IN (-->
+<!--            SELECT t.article_id-->
+<!--            FROM ams_art_tag t-->
+<!--            WHERE t.tags_id IN-->
+<!--            <foreach collection="tagsId" item="tagId" open="(" separator="," close=")">-->
+<!--                #{tagId}-->
+<!--            </foreach>-->
+<!--            )-->
+<!--        </if>-->
+
+<!--        ORDER BY ai.update_time DESC-->
+
+<!--    </select>-->
+
     <select id="getArticlesPreviewPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >
 
         SELECT
-            a.title AS title,
-            ai.article_id AS article_id,
-            ai.nick_name AS nick_name,
-            ai.user_id AS user_id,
-            ai.avatar AS avatar,
-            ac.category_name AS category_name,
-            ai.category_id AS category_id,
-            ai.create_time AS create_time,
-            ai.update_time AS update_time,
-            aas.views_count AS views_count,
-            aas.likes_count AS likes_count,
-            aas.bookmarks_count AS bookmarks_count,
-            aas.comments_count AS comments_count,
-            tag.tags_id AS tag_id
+        a.title AS title,
+        ai.article_id AS article_id,
+        ai.nick_name AS nick_name,
+        ai.user_id AS user_id,
+        ai.avatar AS avatar,
+        ac.category_name AS category_name,
+        ai.category_id AS category_id,
+        ai.create_time AS create_time,
+        ai.update_time AS update_time,
+        aas.views_count AS views_count,
+        aas.likes_count AS likes_count,
+        aas.bookmarks_count AS bookmarks_count,
+        aas.comments_count AS comments_count,
+        tag.tags_id AS tag_id
         FROM ams_artInfo AS ai
-                 INNER JOIN ams_article AS a ON a.id = ai.article_id
-                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id
-                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id
-                 INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id
+        INNER JOIN ams_article AS a ON a.id = ai.article_id
+        INNER JOIN ams_category AS ac ON ac.id = ai.category_id
+        INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id
+        INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id
 
         WHERE ai.deleted = 0
         <if test="categoryId != null">
-        AND ai.category_id = #{categoryId}
-        </if>
-
-        <if test="tagsId != null and tagsId.size() > 0">
-            AND ai.article_id IN (
-            SELECT t.article_id
-            FROM ams_art_tag t
-            WHERE t.tags_id IN
-            <foreach collection="tagsId" item="tagId" open="(" separator="," close=")">
-                #{tagId}
-            </foreach>
-            )
+            AND ai.category_id = #{categoryId}
         </if>
 
         ORDER BY ai.update_time DESC
 
     </select>
 
+
+
+
+<!--    Zset/set交集查詢文章預覽列表-->
+<!--    <select id="getArticlesPreviewPageByArticleIds" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
+
+<!--        SELECT-->
+<!--        a.title AS title,-->
+<!--        ai.article_id AS article_id,-->
+<!--        ai.nick_name AS nick_name,-->
+<!--        ai.user_id AS user_id,-->
+<!--        ai.avatar AS avatar,-->
+<!--        ac.category_name AS category_name,-->
+<!--        ai.category_id AS category_id,-->
+<!--        ai.create_time AS create_time,-->
+<!--        ai.update_time AS update_time,-->
+<!--        aas.views_count AS views_count,-->
+<!--        aas.likes_count AS likes_count,-->
+<!--        aas.bookmarks_count AS bookmarks_count,-->
+<!--        aas.comments_count AS comments_count,-->
+<!--        tag.tags_id AS tag_id-->
+<!--        FROM ams_artInfo AS ai-->
+<!--        LEFT JOIN ams_article AS a ON a.id = ai.article_id-->
+<!--        LEFT JOIN ams_category AS ac ON ac.id = ai.category_id-->
+<!--        LEFT JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
+<!--        LEFT JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id-->
+
+<!--        WHERE ai.deleted = 0-->
+<!--        AND ai.article_id IN-->
+<!--        <foreach collection="articleIds" item="articleId" open="(" separator="," close=")">-->
+<!--            #{articleId}-->
+<!--        </foreach>-->
+
+
+
+<!--    </select>-->
 
 </mapper>

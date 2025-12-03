@@ -49,7 +49,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
+import java.sql.Timestamp;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -327,24 +328,22 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
      */
     //    @OpenLog
 //    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")
+    @OpenCache(
+            prefix = "AmsArticles",
+            key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:tags_#{#tagsId == null || #tagsId.isEmpty() ? 'NONE' : #tagsId.toString()}",
+            time = 3,
+            chronoUnit = ChronoUnit.MINUTES /// TODO暫時將快取TTL設置為3分鐘
+    )
     @Override
-    public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage,Long categoryId,List<Long> tagsId) {
-        log.debug("開始取得文章預覽列表 - categoryId: {}, routePage: {} ,tagsId.size: {}",categoryId, routePage,tagsId!=null?tagsId.size():0);
+    public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage,Long categoryId) {
+        log.debug("開始取得文章預覽列表 - categoryId: {}, routePage: {} ",categoryId, routePage);
 
         final int pageSize = 20;
 
         Page<AmsArticlePreviewVo> page = new Page<>(routePage, pageSize);
 
-//        //測試
-//        if (tagsId == null) {
-//            tagsId = new ArrayList<>();
-//        }
-//
-//        tagsId.add(1950619174177013762L);
-//        tagsId.add(1950621768463069185L);
 
-
-        IPage<AmsArticlePreviewVo> resultPage = this.baseMapper.getArticlesPreviewPage(page, routePage,categoryId,tagsId);
+        IPage<AmsArticlePreviewVo> resultPage = this.baseMapper.getArticlesPreviewPage(page, routePage,categoryId);
 
 
 
@@ -354,7 +353,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         List<AmsArticlePreviewVo> articles = resultPage.getRecords();
         if(articles.isEmpty()){
             //不拋出異常只記錄
-            log.warn("獲取文章預覽時結果為空, categoryId:{} , routerPage:{} ,tagsId.size:{}",categoryId,routePage,tagsId!=null?tagsId.size():0);
+            log.warn("獲取文章預覽時結果為空, categoryId:{} , routerPage:{}",categoryId,routePage);
             //返回空的資料
             return new Page<>();
 //            throw BusinessRuntimeException.builder()
@@ -406,6 +405,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         return resultPage;
 
     }
+
+
 
     /**
      * 獲取帶指標的文章詳情
@@ -2184,4 +2185,207 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 .set(AmsCommentInfo::getAvatar, avatar));
     }
 
+    /**
+     * 獲取正被文章使用的所有標籤ID列表
+     * @return 所有正被文章使用的標籤ID列表
+     */
+    public List<AmsArticle> getAllDistinctArticleIds(){
+
+        LambdaQueryWrapper<AmsArticle> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(AmsArticle::getId);
+        queryWrapper.groupBy(AmsArticle::getId);
+
+        return this.baseMapper.selectList(queryWrapper);
+
+    }
+
+    /**
+     * 獲取文章預覽列表支持tag查詢
+     */
+//    @Override
+//    public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage,Long categoryId,List<Long> tagsId) {
+//        log.debug("開始取得文章預覽列表 - categoryId: {}, routePage: {} ,tagsId.size: {}",categoryId, routePage,tagsId!=null?tagsId.size():0);
+//
+//        final int pageSize = 20;
+//
+//        Page<AmsArticlePreviewVo> page = new Page<>(routePage, pageSize);
+//
+////        //測試
+////        if (tagsId == null) {
+////            tagsId = new ArrayList<>();
+////        }
+////
+////        tagsId.add(1950619174177013762L);
+////        tagsId.add(1950621768463069185L);
+//
+//
+//        IPage<AmsArticlePreviewVo> resultPage = this.baseMapper.getArticlesPreviewPage(page, routePage,categoryId,tagsId);
+//
+//
+//
+//        log.debug("文章預覽查詢完成，總條數:{}，當前頁:{}，每頁數量:{}", resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize());
+//
+//        //目標是重新包裝其中的amsArtTagList欄位
+//        List<AmsArticlePreviewVo> articles = resultPage.getRecords();
+//        if(articles.isEmpty()){
+//            //不拋出異常只記錄
+//            log.warn("獲取文章預覽時結果為空, categoryId:{} , routerPage:{} ,tagsId.size:{}",categoryId,routePage,tagsId!=null?tagsId.size():0);
+//            //返回空的資料
+//            return new Page<>();
+////            throw BusinessRuntimeException.builder()
+////                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
+////                    .detailMessage("獲取文章預覽時結果為空")
+////                    .data(Map.of("categoryId",ObjectUtils.defaultIfNull(categoryId, ""),
+////                            "routePage", ObjectUtils.defaultIfNull(routePage, "")))
+////                    .build();
+//        }
+//        //獲取文章所需的標籤IDS，目標是取得標籤的名稱等資訊
+//
+//
+//        Stream<AmsArtTagsVo> amsArtTagsVoStream = articles.stream().flatMap(item -> item.getAmsArtTagList().stream());
+//        Set<Long> tagsIdSet = amsArtTagsVoStream.map(AmsArtTagsVo::getId).collect(Collectors.toSet());
+//        log.debug("彙總標籤ID完成，標籤ID數量:{}", tagsIdSet.size());
+//
+//        Map<Long, AmsTags> tagsList = amsTagsService.getArtTagsByIds(tagsIdSet);
+//        log.debug("從DB取得標籤實體數量:{}", tagsList != null ? tagsList.size() : 0);
+//
+//
+//        articles.stream()
+//                .flatMap(article -> article.getAmsArtTagList().stream())
+//                .forEach(
+//                        AmsArtTagsVo->{
+//                            AmsTags tags = tagsList.get(AmsArtTagsVo.getId());
+//                            if(tags!=null){
+//                                AmsArtTagsVo.setName(tags.getName());
+//                            }else{
+//                                log.warn("標籤 ID {} 不存在於 tagsList 中", AmsArtTagsVo.getId());
+//                            }
+//                        });
+//
+//        articles.stream().forEach(item->{
+//            List<AmsArtTagsVo> amsArtTagList = item.getAmsArtTagList();
+//            if (amsArtTagList == null) {
+//                log.debug("文章 文章ID:{} 無標籤列表", item.getArticleId());
+//                return;
+//            }
+//            amsArtTagList.forEach(amsArtTagsVo -> {
+//                AmsTags tags = tagsList.get(amsArtTagsVo.getId());
+//                if (tags != null) {
+//                    amsArtTagsVo.setName(tags.getName());
+//                }
+//            });
+//        });
+//
+//        log.debug("文章預覽標籤填充完成，categoryId:{}，routePage:{}", categoryId, routePage);
+//        log.debug("文章預覽結果返回，records:{}，total:{}", resultPage.getRecords().size(), resultPage.getTotal());
+//        return resultPage;
+//
+//    }
+//
+//    /**
+//     * Zset/set交集查詢文章預覽列表
+//     */
+//    @Override
+//    public IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage,Long categoryId,List<Long> tagsId) {
+//        log.debug("開始取得文章預覽列表 - categoryId: {}, routePage: {} ,tagsId.size: {}",categoryId, routePage,tagsId!=null?tagsId.size():0);
+//
+//        //試圖從快取中讀取
+//
+//
+//        String categoryKey = "idx:category:" + categoryId;
+//        String tempKey = "temp:search:" + UUID.randomUUID();
+//
+//        RScoredSortedSet<Long> tempSet = redissonClient.getScoredSortedSet(tempKey);
+////        RScoredSortedSet<Long> sortedSet = redissonClient.getScoredSortedSet(categoryKey);
+//
+//
+//        List<String> tagKeys = tagsId.stream()
+//                .map(id -> "idx:tag:" + id)
+//                .toList();
+//
+////        Set<Long> tagSet = new HashSet<>();
+////        if (tagsId != null) {
+////            for (Long tagId : tagsId) {
+////                tagSet = redissonClient.getSet("idx:tag:" + tagId);
+////
+////            }
+////        }
+//
+//        // 構建交集所需的 Key 列表
+//        List<String> intersectionKeys = new ArrayList<>();
+//        intersectionKeys.add(categoryKey); // 先加入分類 Key
+//        intersectionKeys.addAll(tagKeys);  // 再加入所有標籤 Key
+//
+//
+//        //實施該分類的所有文章ID與標籤的所有文章ID交集
+//        //只保留分類以及標籤中都有的文章ID
+//        tempSet.intersection(intersectionKeys.toArray(new String[0]));
+//        tempSet.expire(Duration.ofSeconds(60));
+//
+//
+//        final int pageSize = 20;
+//
+//        //從零開始, 假設第1頁 取20條就是0-19; 假設第2頁 取20條就是20-39
+//        int start = (routePage - 1) * pageSize;
+//        int end = start + pageSize - 1;
+//
+//        //獲取交集且排序過後的articleIds
+//        Collection<Long> articleIds  = tempSet.valueRangeReversed(start, end);
+//
+//        if (articleIds.isEmpty()) {
+//            return null;
+//        }
+//
+//        RBuckets buckets = redissonClient.getBuckets();
+//        List<String> keys = articleIds.stream()
+//                .map(id -> "ams:article:preview:" + id)
+//                .collect(Collectors.toList());
+//
+//
+//        Map<String, AmsArticlePreviewVo> loadedArticles = buckets.get(keys.toArray(new String[0]));
+//        List<AmsArticlePreviewVo> result = new ArrayList<>();
+//
+//        for (Long id : articleIds) {
+//            AmsArticlePreviewVo vo = loadedArticles.get("ams:article:preview:" + id);
+//            if (vo != null) result.add(vo);
+//        }
+//        IPage<AmsArticlePreviewVo> iPage = new Page<>(routePage, pageSize);
+//        iPage.setRecords(result);
+//        iPage.setTotal(result.size());
+//
+//        return iPage;
+//    }
+
+
+//    private R<Void> saveArticlesPreviewPageCache(IPage<AmsArticlePreviewVo> resultPage,Integer routePage, Long categoryId ,List<Long> tagIds){
+//        //儲存文章詳情
+//        RBucket<IPage<AmsArticlePreviewVo>> bucket = redissonClient.getBucket("AmsArticles:categoryId_" + categoryId + ":routerPage_" + routePage + ":articles");
+//        bucket.set(resultPage);
+//
+//        //蒐集所有articleId以及該文章修改時間
+//        Map<Long, Double> collect = Optional.ofNullable(resultPage)
+//                .map(IPage::getRecords)
+//                .orElse(Collections.emptyList())
+//                .stream()
+//                .collect(Collectors.toMap(AmsArticlePreviewVo::getArticleId, article -> (double) article.getUpdateTime()
+//                        .atZone(ZoneId.systemDefault())
+//                        .toInstant()
+//                        .toEpochMilli()
+//                ));
+//
+//
+//        //紀錄該分類下有哪些文章ID並保存
+//        RScoredSortedSet<Long> sortedSet = redissonClient.getScoredSortedSet("idx:category:" + categoryId);
+//        sortedSet.addAll(collect);
+//
+//        //保存標籤
+//        if (tagIds != null) {
+//            for (Long tagId : tagIds) {
+//                RSet<Long> tagSet = redissonClient.getSet("idx:tag:" + tagId);
+//                tagSet.add(articleId);
+//            }
+//        }
+//    }
+
 }
+

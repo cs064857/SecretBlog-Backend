@@ -24,4 +24,6 @@ public interface AmsCategoryService extends IService<AmsCategory> {
     void updateCategory(Long beforeId, Long afterParentId,Integer afterLevel);
 
     void updateTreeCategoryName(Long id, String categoryName);
+
+    List<AmsCategory> getAllCategoryIds();
 }

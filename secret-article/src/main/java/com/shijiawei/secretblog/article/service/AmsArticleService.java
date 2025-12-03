@@ -26,7 +26,7 @@ public interface AmsArticleService extends IService<AmsArticle> {
 
 //    List<AmsArticle> getListArticle();
 //
-    IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage, Long categoryId, List<Long> tagsId);
+    IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage, Long categoryId);
 
     AmsArticleVo getAmsArticleVo(Long articleId);
 
@@ -63,6 +63,8 @@ public interface AmsArticleService extends IService<AmsArticle> {
      * @param avatar
      */
     void updateAuthorAvatar(Long userId, String avatar);
+
+    List<AmsArticle> getAllDistinctArticleIds();
 
 //
 //

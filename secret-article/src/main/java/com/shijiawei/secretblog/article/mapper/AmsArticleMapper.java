@@ -2,7 +2,6 @@ package com.shijiawei.secretblog.article.mapper;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.shijiawei.secretblog.article.vo.AmsArtTagsVo;
@@ -27,6 +26,24 @@ public interface AmsArticleMapper extends BaseMapper<AmsArticle> {
 //    IPage<AmsArticlePreviewVo> getArticlePreviewListByCategoryId(
     IPage<AmsArticlePreviewVo> getArticlesPreviewPage(
             Page<?> page,
+            Integer routePage, Long categoryId
+    );
+
+
+
+
+
+
+
+    IPage<AmsArticlePreviewVo> getArticlesPreviewPage(
+            Page<?> page,
             Integer routePage, Long categoryId, List<Long> tagsId
     );
+
+    //    /**
+//     * Zset/set交集查詢文章預覽列表
+//     */
+//    List<AmsArticlePreviewVo> getArticlesPreviewPageByArticleIds(
+//            @Param("articleIds") List<Long> articleIds
+//    );
 }

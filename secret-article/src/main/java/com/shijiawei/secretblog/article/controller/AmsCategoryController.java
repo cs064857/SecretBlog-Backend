@@ -79,4 +79,7 @@ public class AmsCategoryController {
         amsCategoryService.updateTreeCategoryName(id,str);
         return R.ok();
     }
+
+
+
 }

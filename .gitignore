@@ -6,6 +6,7 @@ target/
 
 .serena
 .claude
+.agent
 ### STS ###
 .apt_generated
 .classpath
@@ -34,3 +35,4 @@ build/
 ### VS Code ###
 .vscode/
 .tmp.driveupload/*
+

@@ -9,6 +9,8 @@ import com.shijiawei.secretblog.article.entity.AmsCategory;
 import com.shijiawei.secretblog.article.service.AmsCategoryService;
 import com.shijiawei.secretblog.article.mapper.AmsCategoryMapper;
 import com.shijiawei.secretblog.article.vo.AmsCategoryTreeVo;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -143,6 +146,19 @@ public class AmsCategoryServiceImpl extends ServiceImpl<AmsCategoryMapper, AmsCa
 
         // 將更新後的 AmsCategory 對象保存回資料庫
         this.baseMapper.updateById(amsCategory);
+    }
+
+    /**
+     * 獲取所有分類ID , 用於初始化分類索引
+     */
+    @Override
+    public List<AmsCategory> getAllCategoryIds() {
+        // 查詢所有分類ID
+
+
+        return this.baseMapper.selectList(new LambdaQueryWrapper<AmsCategory>()
+                .select(AmsCategory::getId));
+
     }
 
 

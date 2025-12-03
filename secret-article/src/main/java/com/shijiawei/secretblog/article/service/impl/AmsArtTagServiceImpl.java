@@ -45,4 +45,17 @@ public class AmsArtTagServiceImpl extends ServiceImpl<AmsArtTagMapper, AmsArtTag
         return amsArtTags;
     }
 
+    /**
+     * 獲取正被文章使用的所有標籤ID列表
+     * @return 所有正被文章使用的標籤ID列表
+     */
+    public List<AmsArtTag> getAllDistinctTagIds(){
+
+        LambdaQueryWrapper<AmsArtTag> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(AmsArtTag::getTagsId);
+        queryWrapper.groupBy(AmsArtTag::getTagsId);
+
+        return this.baseMapper.selectList(queryWrapper);
+
+    }
 }

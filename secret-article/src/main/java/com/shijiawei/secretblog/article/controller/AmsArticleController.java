@@ -151,10 +151,9 @@ public class AmsArticleController {
     @GetMapping("/categories/articles")
     public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(
             @RequestParam(value = "routePage" , required = true) Integer routePage,
-            @RequestParam(value = "categoryId", required = false) Long categoryId,
-            @RequestParam(value = "tagsId", required = false) List<Long> tagsId
+            @RequestParam(value = "categoryId", required = false) Long categoryId
             ) {
-        IPage<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesPreviewPage(routePage,categoryId,tagsId);
+        IPage<AmsArticlePreviewVo> Page  = amsArticleService.getArticlesPreviewPage(routePage,categoryId);
         return R.ok(Page);
     }
 
