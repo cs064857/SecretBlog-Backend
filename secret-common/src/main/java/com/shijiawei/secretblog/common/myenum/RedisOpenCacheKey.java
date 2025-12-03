@@ -1,7 +1,10 @@
 package com.shijiawei.secretblog.common.myenum;
 
+import com.shijiawei.secretblog.common.annotation.OpenCache;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
+import java.time.temporal.ChronoUnit;
 
 /**
  * ClassName: RedisOpenCacheKey
@@ -50,6 +53,17 @@ public class RedisOpenCacheKey {
         public static final String ARTICLE_Tags_PREFIX = ARTICLE + "articleTags";
         public static final String ARTICLE_Tags_KEY = "list";
 
+
+    }
+
+    /*
+     * 文章預覽列表相關常數
+     */
+    public static class ArticlePreviews{
+        private ArticlePreviews() {}
+
+        public static final String ARTICLE_PREVIEWS_PREFIX = ARTICLE + "previews";
+        public static final String ARTICLE_PREVIEWS_KEY = "categoryId_#{#categoryId}:routerPage_#{#routePage}";
 
     }
 //    /*

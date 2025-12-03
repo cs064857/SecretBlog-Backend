@@ -329,8 +329,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     //    @OpenLog
 //    @OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")
     @OpenCache(
-            prefix = "AmsArticles",
-            key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:tags_#{#tagsId == null || #tagsId.isEmpty() ? 'NONE' : #tagsId.toString()}",
+            prefix = RedisOpenCacheKey.ArticlePreviews.ARTICLE_PREVIEWS_PREFIX,
+            key = RedisOpenCacheKey.ArticlePreviews.ARTICLE_PREVIEWS_KEY,
             time = 3,
             chronoUnit = ChronoUnit.MINUTES /// TODO暫時將快取TTL設置為3分鐘
     )
