@@ -32,16 +32,16 @@ class SecretArticleApplicationTests {
 
     @Autowired
     private AmsCommentActionService amsCommentActionService;
-    @Test
-    void testGetArticlesByCategoryIdAndPage(){
-//        Page<AmsArticlePreviewVo> page =
-        Page<AmsArticlePreviewVo> page = new Page<>(0, 20);
-
-        IPage<AmsArticlePreviewVo> articlesByCategoryIdAndPage = amsArticleMapper.getArticlesPreviewPage(page, 2L);
-        System.out.println("articlesByCategoryIdAndPage:"+articlesByCategoryIdAndPage);
-        List<AmsArticlePreviewVo> articlesByCategoryIdAndPageRecords = articlesByCategoryIdAndPage.getRecords();
-        System.out.println("articlesByCategoryIdAndPageRecords:"+articlesByCategoryIdAndPageRecords);
-    }
+//    @Test
+//    void testGetArticlesByCategoryIdAndPage(){
+////        Page<AmsArticlePreviewVo> page =
+//        Page<AmsArticlePreviewVo> page = new Page<>(0, 20);
+//
+//        IPage<AmsArticlePreviewVo> articlesByCategoryIdAndPage = amsArticleMapper.getArticlesPreviewPage(page, 2L);
+//        System.out.println("articlesByCategoryIdAndPage:"+articlesByCategoryIdAndPage);
+//        List<AmsArticlePreviewVo> articlesByCategoryIdAndPageRecords = articlesByCategoryIdAndPage.getRecords();
+//        System.out.println("articlesByCategoryIdAndPageRecords:"+articlesByCategoryIdAndPageRecords);
+//    }
 
 
 

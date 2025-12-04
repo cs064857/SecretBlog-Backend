@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.user.rabbit.producer;
 
+import com.shijiawei.secretblog.common.codeEnum.RabbitMessage;
 import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -19,10 +20,15 @@ public class AuthorInfoUpdateProducer {
     private RabbitTemplate rabbitTemplate;
 
     public void sendAuthorInfoUpdateNotification(AuthorInfoUpdateMessage authorInfoUpdateMessage){
-        rabbitTemplate.convertAndSend("commentActionDirectExchange","", authorInfoUpdateMessage);
-        log.info("Sent author info update message to queue: {}", authorInfoUpdateMessage);
+        rabbitTemplate.convertAndSend(authorInfoUpdateMessage.getExchange(),authorInfoUpdateMessage.getRoutingKey(), authorInfoUpdateMessage);
+        log.info("將作者資訊更新訊息發送至佇列： {}", authorInfoUpdateMessage);
 
     }
 
+//    public void sendNotification(RabbitMessage message){
+//        rabbitTemplate.convertAndSend(message.getExchange(),message.getRoutingKey(), message);
+//        log.info("Sent message to queue: {}", message);
+//
+//    }
 
 }

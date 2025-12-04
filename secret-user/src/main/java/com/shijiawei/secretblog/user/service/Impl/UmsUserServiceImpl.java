@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Random;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.shijiawei.secretblog.common.codeEnum.RabbitMessage;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
@@ -91,6 +92,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Autowired
     private AuthorInfoUpdateProducer authorInfoUpdateProducer;
+
+    @Autowired
+    private UmsLocalMessageService umsLocalMessageService;
 
     @Override
     public R userLogin(UmsUserLoginDTO umsUserLoginDTO) {
@@ -397,61 +401,42 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     public R<Void> updateUmsUserAvatar(UmsUserAvatarUpdateDTO dto) {
         log.info("updateUmsUserAvatar imgUrl:{} userId:{}", dto.getAvatar(), dto.getUserId());
 
-
         String imgUrl = dto.getAvatar();
         Long userId = dto.getUserId();
 
-        if(userId == null){
+        if (userId == null) {
             throw BusinessRuntimeException.builder()
                     .detailMessage("用戶id不存在")
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .data(Map.of("userId",ObjectUtils.defaultIfNull(userId, "")))
+                    .data(Map.of("userId", ObjectUtils.defaultIfNull(userId, "")))
                     .build();
         }
-        if(imgUrl == null){
+        if (imgUrl == null) {
             throw BusinessRuntimeException.builder()
                     .detailMessage("用戶頭像不存在")
                     .iErrorCode(ResultCode.PARAM_ERROR)
-                    .data(Map.of("avatar",ObjectUtils.defaultIfNull(imgUrl, ""),
-                            "userId",ObjectUtils.defaultIfNull(userId, "")))
+                    .data(Map.of("avatar", ObjectUtils.defaultIfNull(imgUrl, ""),
+                            "userId", ObjectUtils.defaultIfNull(userId, "")))
                     .build();
         }
 
-
         UmsUser umsUser = this.baseMapper.selectById(userId);
-        if(umsUser!=null && !umsUser.isEmpty()){
+        if (umsUser != null && !umsUser.isEmpty()) {
             umsUser.setAvatar(imgUrl);
             int update = this.baseMapper.updateById(umsUser);
-            if(update > 0){
-                try {
-                    AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, imgUrl , System.currentTimeMillis());
-                    authorInfoUpdateProducer.sendAuthorInfoUpdateNotification(authorInfoUpdateMessage);
+            if (update > 0) {
+                // 使用本地消息表記錄作者資訊更新消息，確保最終一致性
+                AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, imgUrl, System.currentTimeMillis());
 
-                    //                    rabbitTemplate.convertAndSend("commentActionDirectExchange","info", authorInfoUpdateMessage);
-//                    log.info("Sent author info update message to queue: {}", authorInfoUpdateMessage);
-                    //            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, avatar));
-                } catch (Exception e) {
-                    log.error("Failed to sync avatar to article service", e);
-                    //嘗試直接更新文章模組的作者資訊
-                    R<Void> updated = articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, imgUrl));
-                    if(updated.getCode().equals("200")){
-                        log.info("Successfully updated author info in article service for user: {}", userId);
-                    }else {
-                        log.error("Failed to update author info in article service for user: {}", userId);
-                        throw BusinessRuntimeException.builder()
-                                .detailMessage("更新文章模組用戶頭像失敗")
-                                .iErrorCode(ResultCode.RABBITMQ_INTERNAL_ERROR)
-                                .data(Map.of("userId",ObjectUtils.defaultIfNull(userId, "")))
-                                .build();
-                    }
-                }
+
+                umsLocalMessageService.createPendingMessage(new UmsLocalMessage(),authorInfoUpdateMessage);
                 return R.ok();
             }
         }
         throw BusinessRuntimeException.builder()
                 .detailMessage("用戶資料不存在")
                 .iErrorCode(ResultCode.NOT_FOUND)
-                .data(Map.of("userId",ObjectUtils.defaultIfNull(userId, "")))
+                .data(Map.of("userId", ObjectUtils.defaultIfNull(userId, "")))
                 .build();
     }
 
