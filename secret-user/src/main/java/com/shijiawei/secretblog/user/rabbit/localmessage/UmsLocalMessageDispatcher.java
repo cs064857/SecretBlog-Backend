@@ -4,7 +4,7 @@ import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
 import com.shijiawei.secretblog.common.message.BaseLocalMessageDispatcher;
 import com.shijiawei.secretblog.common.message.LocalMessageService;
 import com.shijiawei.secretblog.user.entity.UmsLocalMessage;
-import com.shijiawei.secretblog.user.rabbit.producer.AuthorInfoUpdateProducer;
+import com.shijiawei.secretblog.user.rabbit.producer.UmsLocalMessageProducer;
 import com.shijiawei.secretblog.user.service.UmsLocalMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 public class UmsLocalMessageDispatcher extends BaseLocalMessageDispatcher<UmsLocalMessage> {
 
     private final UmsLocalMessageService umsLocalMessageService;
-    private final AuthorInfoUpdateProducer authorInfoUpdateProducer;
+    private final UmsLocalMessageProducer umsLocalMessageProducer;
 
     @Override
     protected LocalMessageService<UmsLocalMessage> getLocalMessageService() {
@@ -36,7 +36,7 @@ public class UmsLocalMessageDispatcher extends BaseLocalMessageDispatcher<UmsLoc
                 AuthorInfoUpdateMessage.class
         );
         // 發送作者信息更新通知
-        authorInfoUpdateProducer.sendAuthorInfoUpdateNotification(payload);
+        umsLocalMessageProducer.sendNotification(payload);
     }
 
     /**

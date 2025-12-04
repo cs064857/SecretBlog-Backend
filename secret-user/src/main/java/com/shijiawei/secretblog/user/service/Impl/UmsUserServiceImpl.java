@@ -9,17 +9,15 @@ import java.util.Objects;
 import java.util.Random;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.shijiawei.secretblog.common.codeEnum.RabbitMessage;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
 import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
-import com.shijiawei.secretblog.user.rabbit.consumer.AuthorInfoUpdateConsumer;
 import com.shijiawei.secretblog.user.entity.*;
 import com.shijiawei.secretblog.user.feign.ArticleFeignClient;
-import com.shijiawei.secretblog.user.rabbit.producer.AuthorInfoUpdateProducer;
+import com.shijiawei.secretblog.user.rabbit.producer.UmsLocalMessageProducer;
 import com.shijiawei.secretblog.user.service.*;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -27,7 +25,6 @@ import org.redisson.api.RRateLimiter;
 import org.redisson.api.RateIntervalUnit;
 import org.redisson.api.RateType;
 import org.redisson.api.RedissonClient;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -91,7 +88,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
 
     @Autowired
-    private AuthorInfoUpdateProducer authorInfoUpdateProducer;
+    private UmsLocalMessageProducer umsLocalMessageProducer;
 
     @Autowired
     private UmsLocalMessageService umsLocalMessageService;

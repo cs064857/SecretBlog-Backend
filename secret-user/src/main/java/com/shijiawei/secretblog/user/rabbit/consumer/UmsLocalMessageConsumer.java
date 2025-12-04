@@ -9,14 +9,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * ClassName: AuthorInfoUpdateConsumer
+ * ClassName: UmsLocalMessageConsumer
  * Description:
  *
  * @Create 2025/12/1 下午6:37
  */
 @Slf4j
 @Component
-public class AuthorInfoUpdateConsumer {
+public class UmsLocalMessageConsumer {
     @Autowired
     private ArticleFeignClient articleFeignClient;
 

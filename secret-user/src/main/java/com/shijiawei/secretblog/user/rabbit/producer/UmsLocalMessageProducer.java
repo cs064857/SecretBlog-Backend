@@ -8,20 +8,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * ClassName: AuthorInfoUpdateProducer
+ * ClassName: UmsLocalMessageProducer
  * Description:
  *
  * @Create 2025/12/1 下午6:28
  */
 @Slf4j
 @Component
-public class AuthorInfoUpdateProducer {
+public class UmsLocalMessageProducer {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-    public void sendAuthorInfoUpdateNotification(AuthorInfoUpdateMessage authorInfoUpdateMessage){
-        rabbitTemplate.convertAndSend(authorInfoUpdateMessage.getExchange(),authorInfoUpdateMessage.getRoutingKey(), authorInfoUpdateMessage);
-        log.info("將作者資訊更新訊息發送至佇列： {}", authorInfoUpdateMessage);
+    public void sendNotification(RabbitMessage message){
+        rabbitTemplate.convertAndSend(message.getExchange(),message.getRoutingKey(), message);
+        log.info("將RabbitMQ訊息發送至佇列： {}", message);
 
     }
 
