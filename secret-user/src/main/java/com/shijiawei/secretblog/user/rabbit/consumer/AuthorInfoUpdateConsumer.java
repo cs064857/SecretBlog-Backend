@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.user.rabbit.consumer;
 
+import com.shijiawei.secretblog.common.codeEnum.RabbitMqConsts;
 import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
 import com.shijiawei.secretblog.user.feign.ArticleFeignClient;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,7 @@ public class AuthorInfoUpdateConsumer {
     @Autowired
     private ArticleFeignClient articleFeignClient;
 
-    @RabbitListener(queues = "Auth Notification Queue")
+    @RabbitListener(queues = RabbitMqConsts.user.userAvatarUpdate.queue)
     public void handleAuthorInfoUpdate(AuthorInfoUpdateMessage authorInfoUpdateMessage) {
         log.info("收到作者信息更新消息，作者ID：{}", authorInfoUpdateMessage.getUserId());
 

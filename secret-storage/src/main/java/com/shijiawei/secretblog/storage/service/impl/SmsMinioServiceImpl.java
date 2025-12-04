@@ -217,18 +217,18 @@ public class SmsMinioServiceImpl implements SmsMinioService {
             }
 
 
-            AmsAuthorAvatarUpdateDTO amsAuthorAvatarUpdateDTO = new AmsAuthorAvatarUpdateDTO(userId, imgUrl);
-            R<Void> updatedArticleAuthorAvatar = articleFeignClient.updateAuthorAvatar(amsAuthorAvatarUpdateDTO);
-            if(!updatedArticleAuthorAvatar.getCode().equals("200")){
-                throw BusinessRuntimeException.builder()
-                        .iErrorCode(ResultCode.UPLOAD_SYSTEM_ERROR)
-                        .detailMessage("在文章系統中更新文章作者頭像失敗")
-                        .data(Map.of(
-                                "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                "originalFilename", StringUtils.defaultString(originalFilename, "")
-                        ))
-                        .build();
-            }
+//            AmsAuthorAvatarUpdateDTO amsAuthorAvatarUpdateDTO = new AmsAuthorAvatarUpdateDTO(userId, imgUrl);
+//            R<Void> updatedArticleAuthorAvatar = articleFeignClient.updateAuthorAvatar(amsAuthorAvatarUpdateDTO);
+//            if(!updatedArticleAuthorAvatar.getCode().equals("200")){
+//                throw BusinessRuntimeException.builder()
+//                        .iErrorCode(ResultCode.UPLOAD_SYSTEM_ERROR)
+//                        .detailMessage("在文章系統中更新文章作者頭像失敗")
+//                        .data(Map.of(
+//                                "userId", ObjectUtils.defaultIfNull(userId, ""),
+//                                "originalFilename", StringUtils.defaultString(originalFilename, "")
+//                        ))
+//                        .build();
+//            }
 
 
 
