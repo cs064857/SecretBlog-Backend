@@ -60,14 +60,14 @@ public abstract class BaseLocalMessageDispatcher<T extends LocalMessage> {
             return;
         }
 
-        log.info("Found {} pending local messages to dispatch", messages.size());
+        log.info("找到 {} 筆待發送的訊息", messages.size());
 
         for (T message : messages) {
             try {
                 processMessage(message);
                 getLocalMessageService().markAsSent(message.getId());
             } catch (Exception e) {
-                log.error("Failed to dispatch local message, id={}", message.getId(), e);
+                log.error("無法分派本機訊息，ID 為 {}", message.getId(), e);
                 getLocalMessageService().markAsFailedAndScheduleRetry(
                         message.getId(),
                         e.getMessage(),

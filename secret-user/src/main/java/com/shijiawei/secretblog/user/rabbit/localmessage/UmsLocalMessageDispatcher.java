@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.user.rabbit.localmessage;
 
+import com.shijiawei.secretblog.common.codeEnum.RabbitMessage;
 import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
 import com.shijiawei.secretblog.common.message.BaseLocalMessageDispatcher;
 import com.shijiawei.secretblog.common.message.LocalMessageService;
@@ -30,12 +31,12 @@ public class UmsLocalMessageDispatcher extends BaseLocalMessageDispatcher<UmsLoc
 
     @Override
     protected void processMessage(UmsLocalMessage message) throws Exception {
-        // 反序列化消息內容
-        AuthorInfoUpdateMessage payload = objectMapper.readValue(
+        // 反序列化消息內容（使用 Jackson 多態類型自動識別具體類型）
+        RabbitMessage payload = objectMapper.readValue(
                 message.getContent(),
-                AuthorInfoUpdateMessage.class
+                RabbitMessage.class
         );
-        // 發送作者信息更新通知
+        // 發送消息到 RabbitMQ
         umsLocalMessageProducer.sendNotification(payload);
     }
 
