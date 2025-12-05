@@ -2,16 +2,21 @@ package com.shijiawei.secretblog.common.message;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shijiawei.secretblog.common.codeEnum.LocalMessage;
+import com.shijiawei.secretblog.common.codeEnum.RabbitMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * 本地消息調度器抽象基類
- * 子類別只需實現 getLocalMessageService() 和 processMessage() 方法
+ * 子類別只需實現 getLocalMessageService() 方法
+ * 
+ * 預設提供 dispatch() 方法進行定時調度，子類可覆寫以自訂調度策略
  *
  * @param <T> 消息實體類型（如 UmsLocalMessage, AmsLocalMessage）
  */
@@ -33,6 +38,9 @@ public abstract class BaseLocalMessageDispatcher<T extends LocalMessage> {
     @Value("${local-message.dispatcher.batch-size:100}")
     protected int batchSize;
 
+    @Autowired
+    private RabbitMessageProducer rabbitMessageProducer;
+
     /**
      * 獲取本地消息服務（由子類實現）
      * @return 本地消息服務實例
@@ -40,13 +48,24 @@ public abstract class BaseLocalMessageDispatcher<T extends LocalMessage> {
     protected abstract LocalMessageService<T> getLocalMessageService();
 
     /**
-     * 處理單條消息（由子類實現）
-     * 子類別負責反序列化消息內容並發送到 RabbitMQ
-     *
-     * @param message 本地消息
-     * @throws Exception 處理失敗時拋出異常
+     * 定時調度待發送的消息（默認實現）
+     * 子類可覆寫此方法以自訂調度策略（如不同的調度頻率或條件判斷）
      */
-    protected abstract void processMessage(T message) throws Exception;
+    @Scheduled(fixedDelayString = "${local-message.dispatcher.fixed-delay-ms:5000}")
+    public void dispatch() {
+        dispatchPendingMessages();
+    }
+
+    protected void processMessage(T message) throws Exception {
+        // 反序列化消息內容（使用 Jackson 多態類型自動識別具體類型）
+        RabbitMessage payload = objectMapper.readValue(
+                message.getContent(),
+                RabbitMessage.class
+        );
+        // 發送消息到 RabbitMQ
+        rabbitMessageProducer.send(payload);
+    }
+
 
     /**
      * 調度待發送的消息
@@ -78,4 +97,6 @@ public abstract class BaseLocalMessageDispatcher<T extends LocalMessage> {
             }
         }
     }
+
+    
 }

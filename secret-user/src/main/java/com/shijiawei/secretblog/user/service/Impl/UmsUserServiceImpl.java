@@ -17,7 +17,6 @@ import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
 import com.shijiawei.secretblog.user.entity.*;
 import com.shijiawei.secretblog.user.feign.ArticleFeignClient;
-import com.shijiawei.secretblog.user.rabbit.producer.UmsLocalMessageProducer;
 import com.shijiawei.secretblog.user.service.*;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -85,10 +84,6 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Autowired
     private ArticleFeignClient articleFeignClient;
-
-
-    @Autowired
-    private UmsLocalMessageProducer umsLocalMessageProducer;
 
     @Autowired
     private UmsLocalMessageService umsLocalMessageService;
@@ -426,7 +421,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                 AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, imgUrl, System.currentTimeMillis());
 
 
-                umsLocalMessageService.createPendingMessage(new UmsLocalMessage(),authorInfoUpdateMessage);
+                umsLocalMessageService.createPendingMessage(authorInfoUpdateMessage);
                 return R.ok();
             }
         }

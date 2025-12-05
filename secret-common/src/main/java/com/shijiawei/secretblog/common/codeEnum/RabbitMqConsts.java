@@ -27,11 +27,20 @@ public class RabbitMqConsts {
 
         }
 
+    }
 
+    public static class ams{
+        private ams(){}
+        private static final String ams = "ams";
+        
+        public static final String topicExchange = ams + ".topicExchange";
 
+        public static class updateArticleLiked{
+            private updateArticleLiked(){}
+            public static final String queue = "ams.liked.updated.queue";
+            public static final String routingKey = "ams.liked.updated";
 
-
-
+        }
 
     }
 }

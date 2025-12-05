@@ -8,16 +8,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
-import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
 import com.shijiawei.secretblog.article.entity.*;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 
+import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 import com.shijiawei.secretblog.article.vo.*;
 
-import com.shijiawei.secretblog.common.codeEnum.IErrorCode;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.exception.BusinessException;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
@@ -33,7 +32,6 @@ import com.shijiawei.secretblog.common.redisutils.RedisLuaScripts;
 import com.shijiawei.secretblog.common.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jsqlparser.expression.LongValue;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.*;
@@ -49,7 +47,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -105,6 +102,9 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     @Autowired
     @Lazy
     private AmsArticleService amsArticleService;
+
+    @Autowired
+    private AmsLocalMessageService amsLocalMessageService;
 
 
     public AmsArticleServiceImpl(RedisRateLimiterUtils redisRateLimiterUtils) {
@@ -851,6 +851,19 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         /**
+         * 調用RabbitMq將點讚數遞增同步至資料庫中
+         */
+
+        UpdateArticleLikedMessage updateArticleLikedMessage = UpdateArticleLikedMessage.builder()
+                .articleId(articleId)
+                .delta(1)
+                .build();
+
+
+        amsLocalMessageService.createPendingMessage(updateArticleLikedMessage);
+
+
+        /**
          * Redis操作
          * 1、將用戶ID加入到該文章的點讚用戶集合中
          * 2、增加該文章的點讚數
@@ -895,6 +908,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         return result;
     }
+
+
 
     /**
      * 用戶對文章取消點讚
@@ -979,6 +994,18 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     ))
                     .build();
         }
+
+        /**
+         * 調用RabbitMq將點讚數遞增同步至資料庫中
+         */
+
+        UpdateArticleLikedMessage updateArticleLikedMessage = UpdateArticleLikedMessage.builder()
+                .articleId(articleId)
+                .delta(-1)
+                .build();
+
+
+        amsLocalMessageService.createPendingMessage(updateArticleLikedMessage);
 
         /**
          * Redis操作

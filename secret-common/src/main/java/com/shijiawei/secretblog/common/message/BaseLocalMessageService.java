@@ -28,13 +28,17 @@ public abstract class BaseLocalMessageService<M extends BaseMapper<T>, T extends
     protected static final int DEFAULT_INITIAL_DELAY_SECONDS = 10;
     protected static final int DEFAULT_MAX_DELAY_SECONDS = 3600;
 
+
+    protected abstract T getLocalMessage();
+
+
     /**
      * 通用的建立待發送消息方法
-     * @param localMessage 本地消息實體
      * @param message RabbitMQ 消息
      * @return 已設置好的本地消息實體
      */
-    public T createPendingMessage(T localMessage, RabbitMessage message) {
+    public T createPendingMessage(RabbitMessage message) {
+        T localMessage = getLocalMessage();
         localMessage.setExchange(message.getExchange());
         localMessage.setRoutingKey(message.getRoutingKey());
         localMessage.setMsgId(UUID.randomUUID().toString());

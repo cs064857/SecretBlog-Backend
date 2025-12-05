@@ -11,3 +11,5 @@ import com.shijiawei.secretblog.article.entity.AmsArtStatus;
  */
 public interface AmsArtStatusMapper extends BaseMapper<AmsArtStatus> {
 }
+
+

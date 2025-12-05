@@ -8,7 +8,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -18,6 +21,7 @@ import java.time.LocalDateTime;
  * 本地消息表抽象父類別
  * 子類別只需繼承並添加 @TableName 註解
  */
+
 @Data
 public abstract class BaseLocalMessage implements Serializable, LocalMessage {
 

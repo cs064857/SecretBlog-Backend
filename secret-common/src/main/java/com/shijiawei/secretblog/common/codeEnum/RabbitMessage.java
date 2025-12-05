@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.common.codeEnum;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
+import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
 
 /**
  * RabbitMQ 消息通用介面
@@ -17,7 +18,8 @@ import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
         defaultImpl = AuthorInfoUpdateMessage.class  // 預設實現，兼容舊數據
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = AuthorInfoUpdateMessage.class, name = "authorInfoUpdate")
+        @JsonSubTypes.Type(value = AuthorInfoUpdateMessage.class, name = "authorInfoUpdate"),
+        @JsonSubTypes.Type(value = UpdateArticleLikedMessage.class, name = "updateArticleLiked")
         // 添加更多消息類型
         // @JsonSubTypes.Type(value = OtherMessage.class, name = "other")
 })

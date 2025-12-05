@@ -20,9 +20,15 @@ public class UmsLocalMessageServiceImpl
         extends BaseLocalMessageService<UmsLocalMessageMapper, UmsLocalMessage>
         implements UmsLocalMessageService {
 
+
     @Override
-    public UmsLocalMessage createPendingMessage(UmsLocalMessage localMessage, RabbitMessage message) {
-        UmsLocalMessage umsLocalMessage = super.createPendingMessage(localMessage, message);
+    protected UmsLocalMessage getLocalMessage() {
+        return new UmsLocalMessage();
+    }
+
+    @Override
+    public UmsLocalMessage createPendingMessage(RabbitMessage message) {
+        UmsLocalMessage umsLocalMessage = super.createPendingMessage(message);
         this.save(umsLocalMessage);
         return umsLocalMessage;
     }

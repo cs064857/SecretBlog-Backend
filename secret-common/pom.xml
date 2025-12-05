@@ -145,6 +145,13 @@
 			<version>4.1.4</version>
 		</dependency>
 
+		<!-- RabbitMQ (optional，供 RabbitMessageProducer 使用) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-amqp</artifactId>
+			<optional>true</optional>
+		</dependency>
+
 		<!--json-->
 		<!-- jwt -->
 		<dependency>
@@ -178,12 +185,12 @@
 <!--        </dependency>-->
 
         <!--   MybatisPlus     -->
-<!--        <dependency>-->
-<!--            <groupId>com.baomidou</groupId>-->
-<!--            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>-->
-<!--            <version>3.5.7</version>-->
-<!--            <optional>true</optional>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.7</version>
+            <optional>true</optional>
+        </dependency>
 
     </dependencies>
 
