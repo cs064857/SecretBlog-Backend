@@ -11,18 +11,25 @@ import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
  *
  * @Create 2025/12/4 下午3:51
  */
+//@JsonTypeInfo(
+//        use = JsonTypeInfo.Id.NAME,
+//        include = JsonTypeInfo.As.PROPERTY,
+//        property = "@type",
+//        defaultImpl = AuthorInfoUpdateMessage.class  // 預設實現，兼容舊數據
+//)
+//
+//@JsonSubTypes({
+//        @JsonSubTypes.Type(value = AuthorInfoUpdateMessage.class, name = "authorInfoUpdate"),
+//        @JsonSubTypes.Type(value = UpdateArticleLikedMessage.class, name = "updateArticleLiked")
+//        // 添加更多消息類型
+//        // @JsonSubTypes.Type(value = OtherMessage.class, name = "other")
+//})
+
 @JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
+        use = JsonTypeInfo.Id.CLASS,  // 使用完整類名
         include = JsonTypeInfo.As.PROPERTY,
-        property = "@type",
-        defaultImpl = AuthorInfoUpdateMessage.class  // 預設實現，兼容舊數據
+        property = "@class"
 )
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = AuthorInfoUpdateMessage.class, name = "authorInfoUpdate"),
-        @JsonSubTypes.Type(value = UpdateArticleLikedMessage.class, name = "updateArticleLiked")
-        // 添加更多消息類型
-        // @JsonSubTypes.Type(value = OtherMessage.class, name = "other")
-})
 public interface RabbitMessage {
 
     Long getTimestamp();
