@@ -248,4 +248,46 @@ public class AmsArtActionServiceImpl extends ServiceImpl<AmsArtActionMapper, Ams
         log.info("查詢用戶點讚文章列表 - userId: {}", userId);
         return baseMapper.selectLikedArticlesByUserId(userId);
     }
+
+    /**
+     * 更新用戶對文章的點讚狀態（由 RabbitMQ Consumer 調用）
+     * @param articleId 文章ID
+     * @param userId 用戶ID
+     * @param isLiked 點讚狀態 (1: 點讚, 0: 取消點讚)
+     */
+    @Override
+    public void updateLikedStatus(Long articleId, Long userId, Byte isLiked) {
+        log.info("開始更新用戶點讚狀態 - articleId: {}, userId: {}, isLiked: {}", articleId, userId, isLiked);
+
+        LambdaQueryWrapper<AmsArtAction> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AmsArtAction::getArticleId, articleId)
+                .eq(AmsArtAction::getUserId, userId);
+
+        AmsArtAction existingAction = this.getOne(queryWrapper);
+
+        if (existingAction != null) {
+            // 記錄已存在，更新點讚狀態
+            existingAction.setIsLiked(isLiked);
+            boolean updated = this.updateById(existingAction);
+            if (updated) {
+                log.info("成功更新用戶點讚狀態 - articleId: {}, userId: {}, isLiked: {}", articleId, userId, isLiked);
+            } else {
+                log.warn("更新用戶點讚狀態失敗 - articleId: {}, userId: {}, isLiked: {}", articleId, userId, isLiked);
+            }
+        } else {
+            // 記錄不存在，新增記錄
+            AmsArtAction newAction = AmsArtAction.builder()
+                    .articleId(articleId)
+                    .userId(userId)
+                    .isLiked(isLiked)
+                    .build();
+            boolean saved = this.save(newAction);
+            if (saved) {
+                log.info("成功新增用戶點讚狀態記錄 - articleId: {}, userId: {}, isLiked: {}", articleId, userId, isLiked);
+            } else {
+                log.warn("新增用戶點讚狀態記錄失敗 - articleId: {}, userId: {}, isLiked: {}", articleId, userId, isLiked);
+            }
+        }
+    }
 }
+

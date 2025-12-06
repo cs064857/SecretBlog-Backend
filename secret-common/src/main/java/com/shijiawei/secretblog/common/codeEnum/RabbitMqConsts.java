@@ -42,5 +42,14 @@ public class RabbitMqConsts {
 
         }
 
+        /**
+         * 用戶對文章互動行為更新（點讚/取消點讚狀態）
+         */
+        public static class updateArticleAction{
+            private updateArticleAction(){}
+            public static final String queue = "ams.action.updated.queue";
+            public static final String routingKey = "ams.action.updated";
+        }
+
     }
 }

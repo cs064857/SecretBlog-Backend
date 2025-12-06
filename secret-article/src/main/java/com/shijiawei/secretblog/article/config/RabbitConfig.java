@@ -20,6 +20,9 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitConfig {
 
 
+    /**
+     * 文章讚數更新佇列 (點讚/取消點讚狀態同步到 AmsArtStatus)
+     */
     @Bean(value = RabbitMqConsts.ams.updateArticleLiked.queue)
     public Queue updateArticleLikedQueue(){
         return new Queue(RabbitMqConsts.ams.updateArticleLiked.queue);
@@ -34,6 +37,20 @@ public class RabbitConfig {
     public Binding amsBinding(@Qualifier(value = RabbitMqConsts.ams.updateArticleLiked.queue) Queue queue,
                               @Qualifier(value = RabbitMqConsts.ams.topicExchange) TopicExchange topicExchange){
         return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.ams.updateArticleLiked.routingKey);
+    }
+
+    /**
+     * 文章互動行為更新佇列 (點讚/取消點讚狀態同步到 AmsArtAction)
+     */
+    @Bean(value = RabbitMqConsts.ams.updateArticleAction.queue)
+    public Queue updateArticleActionQueue(){
+        return new Queue(RabbitMqConsts.ams.updateArticleAction.queue);
+    }
+
+    @Bean
+    public Binding amsActionBinding(@Qualifier(value = RabbitMqConsts.ams.updateArticleAction.queue) Queue queue,
+                                    @Qualifier(value = RabbitMqConsts.ams.topicExchange) TopicExchange topicExchange){
+        return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.ams.updateArticleAction.routingKey);
     }
 
 

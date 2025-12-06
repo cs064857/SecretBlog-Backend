@@ -1,7 +1,9 @@
 package com.shijiawei.secretblog.article.rabbit.consumer;
 
 import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
+import com.shijiawei.secretblog.common.message.UpdateArticleActionMessage;
 import com.shijiawei.secretblog.article.service.AmsArtStatusService;
+import com.shijiawei.secretblog.article.service.AmsArtActionService;
 import com.shijiawei.secretblog.common.codeEnum.RabbitMqConsts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -21,6 +23,9 @@ public class AmsCunsumer {
     @Autowired
     private AmsArtStatusService amsArtStatusService;
 
+    @Autowired
+    private AmsArtActionService amsArtActionService;
+
     @RabbitListener(queues = RabbitMqConsts.ams.updateArticleLiked.queue)
     public void handleUpdateArticleLiked(UpdateArticleLikedMessage message){
         log.info("RabbitMQ收到更新文章讚數消息，文章ID: {}，變更量: {}", message.getArticleId(), message.getDelta());
@@ -36,4 +41,27 @@ public class AmsCunsumer {
         }
     }
 
+    /**
+     * 處理用戶對文章互動行為更新消息（點讚/取消點讚狀態同步到 AmsArtAction）
+     */
+    @RabbitListener(queues = RabbitMqConsts.ams.updateArticleAction.queue)
+    public void handleUpdateArticleAction(UpdateArticleActionMessage message){
+        log.info("RabbitMQ收到更新文章互動行為消息，文章ID: {}, 用戶ID: {}, isLiked: {}", 
+                 message.getArticleId(), message.getUserId(), message.getIsLiked());
+        try {
+            amsArtActionService.updateLikedStatus(
+                message.getArticleId(), 
+                message.getUserId(), 
+                message.getIsLiked()
+            );
+            log.info("RabbitMQ更新文章互動行為成功，文章ID: {}, 用戶ID: {}", 
+                     message.getArticleId(), message.getUserId());
+        } catch (Exception e) {
+            log.error("RabbitMQ更新文章互動行為失敗，文章ID: {}, 用戶ID: {}, isLiked: {}", 
+                      message.getArticleId(), message.getUserId(), message.getIsLiked(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
 }
+

@@ -13,6 +13,7 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 
 import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
+import com.shijiawei.secretblog.common.message.UpdateArticleActionMessage;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 import com.shijiawei.secretblog.article.vo.*;
@@ -772,83 +773,14 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         /**
-         *  記錄/更新使用者對該文章的點讚狀態至 AmsArtAction
+         *  透過 RabbitMQ 訊息佇列異步更新使用者對該文章的點讚狀態至 AmsArtAction
          */
-        try {
-//            AmsArtAction action = AmsArtAction.builder()
-//                    .articleId(articleId)
-//                    .userId(userId)
-//                    .isLiked((byte) 1)
-//                    //不改動isBookmarked,新增時默認為0
-//                    .build();
-//            amsArtActionService.saveOrUpdate(action);
-
-            // 1. 先根據 業務唯一鍵 (articleId + userId) 查詢資料庫
-            LambdaQueryWrapper<AmsArtAction> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(AmsArtAction::getArticleId, articleId)
-                    .eq(AmsArtAction::getUserId, userId);
-
-            AmsArtAction existingAction = amsArtActionService.getOne(queryWrapper);
-
-            if (existingAction != null) {
-                // 2. 如果存在 -> 執行 Update
-
-                // 更新狀態
-                existingAction.setIsLiked((byte) 1);
-                // updateAt 會由 MP 自動填充
-                boolean update = amsArtActionService.updateById(existingAction);
-                if(!update){
-                    throw BusinessRuntimeException.builder()
-                            .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                            .detailMessage("更新用戶點讚狀態失敗")
-                            .data(Map.of(
-                                    "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                    "articleId", ObjectUtils.defaultIfNull(articleId, "")
-                            ))
-                            .build();
-                }
-            } else {
-                // 3. 如果不存在 -> 執行 Insert
-                AmsArtAction newAction = AmsArtAction.builder()
-                        .articleId(articleId)
-                        .userId(userId)
-                        .isLiked((byte) 1)
-                        // .isBookmarked((byte) 0) // 預設值，視需求
-                        .build();
-                boolean save = amsArtActionService.save(newAction);
-                if(!save){
-                    throw BusinessRuntimeException.builder()
-                            .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                            .detailMessage("新增用戶點讚狀態失敗")
-                            .data(Map.of(
-                                    "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                    "articleId", ObjectUtils.defaultIfNull(articleId, "")
-                            ))
-                            .build();
-                }
-            }
-
-
-        } catch (DuplicateKeyException e)   {
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.REPEAT_OPERATION)
-                    .detailMessage("用戶已經點讚過該文章, 不允許重複點讚")
-                    .data(Map.of(
-                            "userId", ObjectUtils.defaultIfNull(userId, ""),
-                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
-                    ))
-                    .build();
-        } catch (Exception e) {
-//            log.error("同步使用者點讚行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
-            throw BusinessException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                    .detailMessage("同步使用者點讚行為至 AmsArtAction 失敗")
-                    .data(Map.of(
-                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                            "userId", ObjectUtils.defaultIfNull(userId, "")
-                    ))
-                    .build();
-        }
+        UpdateArticleActionMessage actionMessage = UpdateArticleActionMessage.builder()
+                .articleId(articleId)
+                .userId(userId)
+                .isLiked((byte) 1)
+                .build();
+        amsLocalMessageService.createPendingMessage(actionMessage);
 
         /**
          * 調用RabbitMq將點讚數遞增同步至資料庫中
@@ -955,48 +887,17 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         /**
-         *  更新使用者對該文章的點讚狀態至 AmsArtAction
+         *  透過 RabbitMQ 訊息佇列異步更新使用者對該文章的點讚狀態至 AmsArtAction
          */
-        try {
-//            AmsArtAction action = AmsArtAction.builder()
-//                    .articleId(articleId)
-//                    .userId(userId)
-//                    .isLiked((byte) 0)
-//                    //不改動isBookmarked,新增時默認為0
-//                    .build();
-//            amsArtActionService.saveOrUpdate(action);
-
-            LambdaUpdateWrapper<AmsArtAction> updateWrapper = new LambdaUpdateWrapper<AmsArtAction>()
-                    .eq(AmsArtAction::getArticleId, articleId)
-                    .eq(AmsArtAction::getUserId, userId)
-                    .set(AmsArtAction::getIsLiked, (byte) 0);
-
-            boolean update = amsArtActionService.update(updateWrapper);
-            if(!update){
-                throw BusinessRuntimeException.builder()
-                        .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                        .detailMessage("同步使用者取消點讚行為至 AmsArtAction 失敗")
-                        .data(Map.of(
-                                "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                "articleId", ObjectUtils.defaultIfNull(articleId, "")
-                        ))
-                        .build();
-            }
-
-
-        } catch (Exception e) {
-            throw BusinessException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                    .detailMessage("同步使用者取消點讚行為至 AmsArtAction 失敗")
-                    .data(Map.of(
-                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                            "userId", ObjectUtils.defaultIfNull(userId, "")
-                    ))
-                    .build();
-        }
+        UpdateArticleActionMessage actionMessage = UpdateArticleActionMessage.builder()
+                .articleId(articleId)
+                .userId(userId)
+                .isLiked((byte) 0)
+                .build();
+        amsLocalMessageService.createPendingMessage(actionMessage);
 
         /**
-         * 調用RabbitMq將點讚數遞增同步至資料庫中
+         * 調用RabbitMq將點讚數遞減同步至資料庫中
          */
 
         UpdateArticleLikedMessage updateArticleLikedMessage = UpdateArticleLikedMessage.builder()

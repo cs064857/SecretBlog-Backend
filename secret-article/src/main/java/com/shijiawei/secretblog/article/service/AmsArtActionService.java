@@ -22,4 +22,13 @@ public interface AmsArtActionService extends IService<AmsArtAction> {
      * @return 點讚文章列表
      */
     List<UserLikedArticleVo> getLikedArticlesByUserId(Long userId);
+
+    /**
+     * 更新用戶對文章的點讚狀態
+     * @param articleId 文章ID
+     * @param userId 用戶ID
+     * @param isLiked 點讚狀態 (1: 點讚, 0: 取消點讚)
+     */
+    void updateLikedStatus(Long articleId, Long userId, Byte isLiked);
 }
+
