@@ -52,6 +52,24 @@ public class RabbitMqConsts {
         }
 
         /**
+         * 文章書籤數更新（書籤數同步到 AmsArtStatus）
+         */
+        public static class updateArticleBookmark{
+            private updateArticleBookmark(){}
+            public static final String queue = "ams.bookmark.updated.queue";
+            public static final String routingKey = "ams.bookmark.updated";
+        }
+
+        /**
+         * 用戶對文章書籤行為更新（書籤狀態同步到 AmsArtAction）
+         */
+        public static class updateArticleBookmarkAction{
+            private updateArticleBookmarkAction(){}
+            public static final String queue = "ams.bookmark.action.updated.queue";
+            public static final String routingKey = "ams.bookmark.action.updated";
+        }
+
+        /**
          * 留言讚數更新（點讚數同步到 AmsCommentStatistics）
          */
         public static class updateCommentLiked{

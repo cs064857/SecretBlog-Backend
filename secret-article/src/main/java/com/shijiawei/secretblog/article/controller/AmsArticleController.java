@@ -104,6 +104,25 @@ public class AmsArticleController {
         Long likes = amsArticleService.decrementArticleLikes(articleId);
         return R.ok(likes);
     }
+
+    /**
+     * 加入文章書籤
+     */
+    @GetMapping("/articles/{articleId}/bookmark")
+    public R<Long> incrementArticleBookmark(@PathVariable Long articleId) {
+        Long bookmarks = amsArticleService.incrementArticleBooksMarket(articleId);
+        return R.ok(bookmarks);
+    }
+
+    /**
+     * 移除文章書籤
+     */
+    @PostMapping("/articles/{articleId}/unbookmark")
+    public R<Long> decrementArticleBookmark(@PathVariable Long articleId) {
+        Long bookmarks = amsArticleService.decrementArticleBooksMarket(articleId);
+        return R.ok(bookmarks);
+    }
+
     /**
      * 根據articleId獲取文章內容以及資訊
      * @param articleId

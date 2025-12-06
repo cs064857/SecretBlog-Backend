@@ -2,6 +2,8 @@ package com.shijiawei.secretblog.article.rabbit.consumer;
 
 import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
 import com.shijiawei.secretblog.common.message.UpdateArticleActionMessage;
+import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkMessage;
+import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkActionMessage;
 import com.shijiawei.secretblog.common.message.UpdateCommentLikedMessage;
 import com.shijiawei.secretblog.common.message.UpdateCommentActionMessage;
 import com.shijiawei.secretblog.article.service.AmsArtStatusService;
@@ -69,6 +71,43 @@ public class AmsCunsumer {
         } catch (Exception e) {
             log.error("RabbitMQ更新文章互動行為失敗，文章ID: {}, 用戶ID: {}, isLiked: {}", 
                       message.getArticleId(), message.getUserId(), message.getIsLiked(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 處理文章書籤數更新消息（書籤數同步到 AmsArtStatus）
+     */
+    @RabbitListener(queues = RabbitMqConsts.ams.updateArticleBookmark.queue)
+    public void handleUpdateArticleBookmark(UpdateArticleBookmarkMessage message){
+        log.info("RabbitMQ收到更新文章書籤數消息，文章ID: {}，變更量: {}", message.getArticleId(), message.getDelta());
+        try {
+            amsArtStatusService.updateBookmarksCount(message.getArticleId(), message.getDelta());
+            log.info("RabbitMQ更新文章書籤數成功，文章ID: {}，變更量: {}", message.getArticleId(), message.getDelta());
+        } catch (Exception e) {
+            log.error("RabbitMQ更新文章書籤數失敗，文章ID: {}，變更量: {}", message.getArticleId(), message.getDelta(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 處理用戶對文章書籤行為更新消息（加入/移除書籤狀態同步到 AmsArtAction）
+     */
+    @RabbitListener(queues = RabbitMqConsts.ams.updateArticleBookmarkAction.queue)
+    public void handleUpdateArticleBookmarkAction(UpdateArticleBookmarkActionMessage message){
+        log.info("RabbitMQ收到更新文章書籤行為消息，文章ID: {}, 用戶ID: {}, isBookmarked: {}", 
+                 message.getArticleId(), message.getUserId(), message.getIsBookmarked());
+        try {
+            amsArtActionService.updateBookmarkedStatus(
+                message.getArticleId(), 
+                message.getUserId(), 
+                message.getIsBookmarked()
+            );
+            log.info("RabbitMQ更新文章書籤行為成功，文章ID: {}, 用戶ID: {}", 
+                     message.getArticleId(), message.getUserId());
+        } catch (Exception e) {
+            log.error("RabbitMQ更新文章書籤行為失敗，文章ID: {}, 用戶ID: {}, isBookmarked: {}", 
+                      message.getArticleId(), message.getUserId(), message.getIsBookmarked(), e);
             throw new RuntimeException(e);
         }
     }

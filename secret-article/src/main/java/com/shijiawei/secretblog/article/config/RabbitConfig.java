@@ -54,6 +54,34 @@ public class RabbitConfig {
     }
 
     /**
+     * 文章書籤數更新佇列 (書籤數同步到 AmsArtStatus)
+     */
+    @Bean(value = RabbitMqConsts.ams.updateArticleBookmark.queue)
+    public Queue updateArticleBookmarkQueue(){
+        return new Queue(RabbitMqConsts.ams.updateArticleBookmark.queue);
+    }
+
+    @Bean
+    public Binding amsBookmarkBinding(@Qualifier(value = RabbitMqConsts.ams.updateArticleBookmark.queue) Queue queue,
+                                      @Qualifier(value = RabbitMqConsts.ams.topicExchange) TopicExchange topicExchange){
+        return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.ams.updateArticleBookmark.routingKey);
+    }
+
+    /**
+     * 文章書籤行為更新佇列 (加入/移除書籤狀態同步到 AmsArtAction)
+     */
+    @Bean(value = RabbitMqConsts.ams.updateArticleBookmarkAction.queue)
+    public Queue updateArticleBookmarkActionQueue(){
+        return new Queue(RabbitMqConsts.ams.updateArticleBookmarkAction.queue);
+    }
+
+    @Bean
+    public Binding amsBookmarkActionBinding(@Qualifier(value = RabbitMqConsts.ams.updateArticleBookmarkAction.queue) Queue queue,
+                                            @Qualifier(value = RabbitMqConsts.ams.topicExchange) TopicExchange topicExchange){
+        return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.ams.updateArticleBookmarkAction.routingKey);
+    }
+
+    /**
      * 留言讚數更新佇列 (點讚數同步到 AmsCommentStatistics)
      */
     @Bean(value = RabbitMqConsts.ams.updateCommentLiked.queue)

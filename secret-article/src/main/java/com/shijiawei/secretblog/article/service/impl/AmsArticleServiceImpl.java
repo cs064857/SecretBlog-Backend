@@ -14,6 +14,8 @@ import com.shijiawei.secretblog.article.feign.UserFeignClient;
 
 import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
 import com.shijiawei.secretblog.common.message.UpdateArticleActionMessage;
+import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkMessage;
+import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkActionMessage;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 import com.shijiawei.secretblog.article.vo.*;
@@ -1024,32 +1026,25 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     ))
                     .build();
         }
-        /**
-         *  記錄/更新使用者對該文章的點讚狀態至 AmsArtAction
-         */
-        try {
-            AmsArtAction action = AmsArtAction.builder()
-                    .articleId(articleId)
-                    .userId(userId)
-                    //不改動isLiked,新增時默認為0
-                    .isBookmarked((byte) 1)
-                    .build();
-            amsArtActionService.saveOrUpdate(action);
 
-        } catch (Exception e) {
-            log.error("同步使用者加入書籤行為至 AmsArtAction 失敗, articleId:{}, userId:{}", articleId, userId, e);
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                    .detailMessage("同步使用者加入書籤行為至 AmsArtAction 失敗")
-                    .data(Map.of(
-                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                            "userId", ObjectUtils.defaultIfNull(userId, "")
-                    ))
-                    .build();
-        }
         /**
-         *
+         * 透過 RabbitMQ 訊息佇列異步更新使用者對該文章的書籤狀態至 AmsArtAction
          */
+        UpdateArticleBookmarkActionMessage actionMessage = UpdateArticleBookmarkActionMessage.builder()
+                .articleId(articleId)
+                .userId(userId)
+                .isBookmarked((byte) 1)
+                .build();
+        amsLocalMessageService.createPendingMessage(actionMessage);
+
+        /**
+         * 調用 RabbitMQ 將書籤數遞增同步至資料庫中
+         */
+        UpdateArticleBookmarkMessage bookmarkMessage = UpdateArticleBookmarkMessage.builder()
+                .articleId(articleId)
+                .delta(1)
+                .build();
+        amsLocalMessageService.createPendingMessage(bookmarkMessage);
 
 
         final String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
@@ -1093,6 +1088,112 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         return result;
     }
 
+    /**
+     * 用戶移除文章書籤
+     * @param articleId 文章ID
+     * @return 新的文章書籤數
+     */
+    @Override
+    public Long decrementArticleBooksMarket(Long articleId) {
+        log.info("開始移除文章書籤，articleId:{}", articleId);
+
+        isArticleNotExists(articleId);
+
+        /*
+          檢查用戶是否登入
+        */
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，拒絕移除文章書籤")
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("用戶ID不存在，拒絕移除文章書籤")
+                    .build();
+        }
+
+        log.debug("用戶嘗試移除文章書籤，userId:{}，articleId:{}", userId, articleId);
+
+        /**
+         * 檢查用戶是否已經對該文章加入書籤
+         */
+        final String userBookMarksKey = RedisCacheKey.ARTICLE_MARKED_USERS.format(articleId);
+        RSet<String> bookmarkedUsersSet = redissonClient.getSet(userBookMarksKey, StringCodec.INSTANCE);
+
+        if (!bookmarkedUsersSet.contains(userId.toString())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶尚未對該文章加入書籤，無法移除")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        }
+
+        /**
+         * 透過 RabbitMQ 訊息佇列異步更新使用者對該文章的書籤狀態至 AmsArtAction
+         */
+        UpdateArticleBookmarkActionMessage actionMessage = UpdateArticleBookmarkActionMessage.builder()
+                .articleId(articleId)
+                .userId(userId)
+                .isBookmarked((byte) 0)
+                .build();
+        amsLocalMessageService.createPendingMessage(actionMessage);
+
+        /**
+         * 調用 RabbitMQ 將書籤數遞減同步至資料庫中
+         */
+        UpdateArticleBookmarkMessage bookmarkMessage = UpdateArticleBookmarkMessage.builder()
+                .articleId(articleId)
+                .delta(-1)
+                .build();
+        amsLocalMessageService.createPendingMessage(bookmarkMessage);
+
+        /**
+         * Redis操作：從書籤集合移除用戶並減少書籤數
+         */
+        final String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
+        log.debug("用戶書籤快取鍵:{}, 文章指標快取鍵:{}", userBookMarksKey, articleStatusKey);
+
+        // Lua 腳本保證原子性
+        String luaScript =
+                "local removed = redis.call('SREM', KEYS[1], ARGV[1]) \n" +
+                        "if removed == 1 then \n" +
+                        "    local count = redis.call('HINCRBY', KEYS[2] , 'bookmarksCount' , -1) \n" +
+                        "    return count \n" +
+                        "else \n" +
+                        "    return -1 \n" +
+                        "end";
+
+        RScript script = redissonClient.getScript(StringCodec.INSTANCE);
+
+        Long result = script.eval(
+                RScript.Mode.READ_WRITE,
+                luaScript,
+                RScript.ReturnType.INTEGER,
+                Arrays.asList(userBookMarksKey, articleStatusKey),
+                userId.toString()
+        );
+
+        if (result == -1) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.REPEAT_OPERATION)
+                    .detailMessage("用戶尚未對該文章加入書籤，無法移除")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        }
+
+        log.info("文章移除用戶的書籤完成, 用戶ID:{}, 文章ID:{}, 新的文章書籤數:{}", userId, articleId, result);
+        return result;
+    }
 
 
 

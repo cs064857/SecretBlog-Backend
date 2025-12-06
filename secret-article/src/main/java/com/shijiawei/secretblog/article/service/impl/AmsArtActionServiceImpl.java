@@ -289,5 +289,46 @@ public class AmsArtActionServiceImpl extends ServiceImpl<AmsArtActionMapper, Ams
             }
         }
     }
+
+    /**
+     * 更新用戶對文章的書籤狀態（由 RabbitMQ Consumer 調用）
+     * @param articleId 文章ID
+     * @param userId 用戶ID
+     * @param isBookmarked 書籤狀態 (1: 加入書籤, 0: 移除書籤)
+     */
+    @Override
+    public void updateBookmarkedStatus(Long articleId, Long userId, Byte isBookmarked) {
+        log.info("開始更新用戶書籤狀態 - articleId: {}, userId: {}, isBookmarked: {}", articleId, userId, isBookmarked);
+
+        LambdaQueryWrapper<AmsArtAction> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AmsArtAction::getArticleId, articleId)
+                .eq(AmsArtAction::getUserId, userId);
+
+        AmsArtAction existingAction = this.getOne(queryWrapper);
+
+        if (existingAction != null) {
+            // 記錄已存在，更新書籤狀態
+            existingAction.setIsBookmarked(isBookmarked);
+            boolean updated = this.updateById(existingAction);
+            if (updated) {
+                log.info("成功更新用戶書籤狀態 - articleId: {}, userId: {}, isBookmarked: {}", articleId, userId, isBookmarked);
+            } else {
+                log.warn("更新用戶書籤狀態失敗 - articleId: {}, userId: {}, isBookmarked: {}", articleId, userId, isBookmarked);
+            }
+        } else {
+            // 記錄不存在，新增記錄
+            AmsArtAction newAction = AmsArtAction.builder()
+                    .articleId(articleId)
+                    .userId(userId)
+                    .isBookmarked(isBookmarked)
+                    .build();
+            boolean saved = this.save(newAction);
+            if (saved) {
+                log.info("成功新增用戶書籤狀態記錄 - articleId: {}, userId: {}, isBookmarked: {}", articleId, userId, isBookmarked);
+            } else {
+                log.warn("新增用戶書籤狀態記錄失敗 - articleId: {}, userId: {}, isBookmarked: {}", articleId, userId, isBookmarked);
+            }
+        }
+    }
 }
 

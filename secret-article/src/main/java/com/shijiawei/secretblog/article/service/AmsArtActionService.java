@@ -30,5 +30,13 @@ public interface AmsArtActionService extends IService<AmsArtAction> {
      * @param isLiked 點讚狀態 (1: 點讚, 0: 取消點讚)
      */
     void updateLikedStatus(Long articleId, Long userId, Byte isLiked);
+
+    /**
+     * 更新用戶對文章的書籤狀態
+     * @param articleId 文章ID
+     * @param userId 用戶ID
+     * @param isBookmarked 書籤狀態 (1: 加入書籤, 0: 移除書籤)
+     */
+    void updateBookmarkedStatus(Long articleId, Long userId, Byte isBookmarked);
 }
 

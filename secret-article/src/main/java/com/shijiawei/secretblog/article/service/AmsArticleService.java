@@ -36,6 +36,13 @@ public interface AmsArticleService extends IService<AmsArticle> {
 
     Long incrementArticleBooksMarket(Long articleId);
 
+    /**
+     * 用戶移除文章書籤
+     * @param articleId 文章ID
+     * @return 新的文章書籤數
+     */
+    Long decrementArticleBooksMarket(Long articleId);
+
     void isArticleNotExists(Long articleId);
 
     void updateArticle(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO);

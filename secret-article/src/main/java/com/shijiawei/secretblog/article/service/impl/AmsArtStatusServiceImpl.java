@@ -45,5 +45,31 @@ public class AmsArtStatusServiceImpl extends ServiceImpl<AmsArtStatusMapper, Ams
         return result;
     }
 
+    /**
+     * 修改文章書籤數
+     * @param articleId 文章ID
+     * @param delta     遞增量（正數為增加，負數為減少）
+     * @return 是否更新成功
+     */
+    @Override
+    public boolean updateBookmarksCount(Long articleId, int delta) {
+        if (articleId == null) {
+            log.warn("修改書籤數失敗: articleId 為空");
+            return false;
+        }
+
+        LambdaUpdateWrapper<AmsArtStatus> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(AmsArtStatus::getArticleId, articleId)
+                .setSql("bookmarks_count = bookmarks_count + " + delta);
+
+        boolean result = this.update(updateWrapper);
+        if (result) {
+            log.debug("成功修改書籤數 {} 給文章ID: {}", delta, articleId);
+        } else {
+            log.warn("修改書籤數失敗，文章ID: {}（文章可能不存在）", articleId);
+        }
+        return result;
+    }
+
 }
 

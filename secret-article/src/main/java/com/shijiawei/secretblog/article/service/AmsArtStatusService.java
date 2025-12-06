@@ -20,4 +20,13 @@ public interface AmsArtStatusService extends IService<AmsArtStatus> {
      */
     boolean updateLikesCount(Long articleId, int delta);
 
+    /**
+     * 修改文章書籤數
+     *
+     * @param articleId 文章ID
+     * @param delta     遞增量（正數為增加，負數為減少）
+     * @return 是否更新成功
+     */
+    boolean updateBookmarksCount(Long articleId, int delta);
+
 }
