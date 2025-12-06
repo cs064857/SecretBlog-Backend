@@ -53,6 +53,34 @@ public class RabbitConfig {
         return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.ams.updateArticleAction.routingKey);
     }
 
+    /**
+     * 留言讚數更新佇列 (點讚數同步到 AmsCommentStatistics)
+     */
+    @Bean(value = RabbitMqConsts.ams.updateCommentLiked.queue)
+    public Queue updateCommentLikedQueue(){
+        return new Queue(RabbitMqConsts.ams.updateCommentLiked.queue);
+    }
+
+    @Bean
+    public Binding amsCommentLikedBinding(@Qualifier(value = RabbitMqConsts.ams.updateCommentLiked.queue) Queue queue,
+                                          @Qualifier(value = RabbitMqConsts.ams.topicExchange) TopicExchange topicExchange){
+        return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.ams.updateCommentLiked.routingKey);
+    }
+
+    /**
+     * 留言互動行為更新佇列 (點讚/取消點讚狀態同步到 AmsCommentAction)
+     */
+    @Bean(value = RabbitMqConsts.ams.updateCommentAction.queue)
+    public Queue updateCommentActionQueue(){
+        return new Queue(RabbitMqConsts.ams.updateCommentAction.queue);
+    }
+
+    @Bean
+    public Binding amsCommentActionBinding(@Qualifier(value = RabbitMqConsts.ams.updateCommentAction.queue) Queue queue,
+                                           @Qualifier(value = RabbitMqConsts.ams.topicExchange) TopicExchange topicExchange){
+        return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.ams.updateCommentAction.routingKey);
+    }
+
 
     @Bean
     public MessageConverter bindAmsLikedUpdatedQueueToExchange() {

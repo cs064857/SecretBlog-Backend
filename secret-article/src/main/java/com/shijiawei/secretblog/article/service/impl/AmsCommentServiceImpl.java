@@ -22,6 +22,9 @@ import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.message.RabbitMessageProducer;
+import com.shijiawei.secretblog.common.message.UpdateCommentLikedMessage;
+import com.shijiawei.secretblog.common.message.UpdateCommentActionMessage;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessException;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
@@ -104,6 +107,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     @Autowired
     private AmsCommentActionService amsCommentActionService;
+
+    @Autowired
+    private RabbitMessageProducer rabbitMessageProducer;
 
     @Value("${comment.edit-window-minutes:15}")
     private Integer editWindowMinutes;
@@ -905,93 +911,25 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                 log.info("點讚成功,用戶ID:{},留言ID:{},新的按讚數:{}", userId, commentId, luaResult);
 
                 /**
-                 *  記錄/更新使用者對該留言的點讚狀態至 AmsCommentAction
+                 *  發送 RabbitMQ 消息更新 AmsCommentAction 和 AmsCommentStatistics
+                 *  改為異步處理，提高響應速度
                  */
-                try {
-                    // 1. 先根據 業務唯一鍵 (commentId + userId) 查詢資料庫
-                    LambdaQueryWrapper<AmsCommentAction> queryWrapper = new LambdaQueryWrapper<>();
-                    queryWrapper.eq(AmsCommentAction::getCommentId, commentId)
-                            .eq(AmsCommentAction::getUserId, userId);
-
-                    AmsCommentAction existingAction = amsCommentActionService.getOne(queryWrapper);
-
-                    if (existingAction != null) {
-                        // 2. 如果存在 -> 執行 Update
-                        existingAction.setIsLiked((byte) 1);
-                        // updateAt 會由 MP 自動填充
-                        boolean updateAction = amsCommentActionService.updateById(existingAction);
-                        if(!updateAction){
-                            throw BusinessRuntimeException.builder()
-                                    .iErrorCode(ResultCode.UPDATE_FAILED)
-                                    .detailMessage("更新用戶留言點讚狀態失敗")
-                                    .data(Map.of(
-                                            "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
-                                    ))
-                                    .build();
-                        }
-                    } else {
-                        // 3. 如果不存在 -> 執行 Insert
-                        AmsCommentAction newAction = AmsCommentAction.builder()
-                                .commentId(commentId)
-                                .articleId(articleId)
-                                .userId(userId)
-                                .isLiked((byte) 1)
-                                .build();
-                        boolean saveAction = amsCommentActionService.save(newAction);
-                        if(!saveAction){
-                            throw BusinessRuntimeException.builder()
-                                    .iErrorCode(ResultCode.UPDATE_FAILED)
-                                    .detailMessage("新增用戶留言點讚狀態失敗")
-                                    .data(Map.of(
-                                            "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
-                                    ))
-                                    .build();
-                        }
-                    }
-
-                } catch (DuplicateKeyException e) {
-                    throw BusinessRuntimeException.builder()
-                            .iErrorCode(ResultCode.REPEAT_OPERATION)
-                            .detailMessage("用戶已經點讚過該留言, 不允許重複點讚")
-                            .data(Map.of(
-                                    "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                    "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                                    "commentId", ObjectUtils.defaultIfNull(commentId, "")
-                            ))
-                            .build();
-                } catch (Exception e) {
-                    throw BusinessException.builder()
-                            .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                            .detailMessage("同步使用者留言點讚行為至 AmsCommentAction 失敗")
-                            .data(Map.of(
-                                    "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                    "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                                    "commentId", ObjectUtils.defaultIfNull(commentId, "")
-                            ))
-                            .build();
-                }
-
-                boolean update = amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
-                        .eq(AmsCommentStatistics::getCommentId, commentId)
-                        .set(AmsCommentStatistics::getLikesCount, luaResult));
-
-                if(!update){
-//                    log.error("更新資料庫中留言點讚數失敗,用戶ID:{},留言ID:{}", userId, commentId);
-//                    throw new CustomRuntimeException("更新資料庫中留言點讚數失敗");
-
-                    throw BusinessRuntimeException.builder()
-                            .iErrorCode(ResultCode.UPDATE_FAILED)
-                            .data("更新文章留言指標失敗")
-                            .data(Map.of(
-                                    "userId",ObjectUtils.defaultIfNull(userId,""),
-                                    "commentId",ObjectUtils.defaultIfNull(commentId,"")
-                                    ))
-                            .build();
-                }
+                
+                // 發送留言點讚數更新消息 (delta = +1)
+                UpdateCommentLikedMessage likedMessage = UpdateCommentLikedMessage.builder()
+                        .commentId(commentId)
+                        .delta(1)
+                        .build();
+                rabbitMessageProducer.send(likedMessage);
+                
+                // 發送用戶留言互動行為消息 (isLiked = 1)
+                UpdateCommentActionMessage actionMessage = UpdateCommentActionMessage.builder()
+                        .commentId(commentId)
+                        .articleId(articleId)
+                        .userId(userId)
+                        .isLiked((byte) 1)
+                        .build();
+                rabbitMessageProducer.send(actionMessage);
 
                 // 返回新的按讚數
                 return Math.toIntExact(luaResult);
@@ -1142,42 +1080,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         }
 
 
+
         log.debug("用戶曾經點讚過該留言,userId: {}, articleId:{} , commentId:{}",userId,articleId,commentId);
-
-
-        /**
-         *  更新使用者對該留言的點讚狀態至 AmsCommentAction
-         */
-        try {
-            LambdaUpdateWrapper<AmsCommentAction> updateWrapper = new LambdaUpdateWrapper<AmsCommentAction>()
-                    .eq(AmsCommentAction::getCommentId, commentId)
-                    .eq(AmsCommentAction::getUserId, userId)
-                    .set(AmsCommentAction::getIsLiked, (byte) 0);
-
-            boolean updateAction = amsCommentActionService.update(updateWrapper);
-            if(!updateAction){
-                throw BusinessRuntimeException.builder()
-                        .iErrorCode(ResultCode.UPDATE_FAILED)
-                        .detailMessage("同步使用者取消留言點讚行為至 AmsCommentAction 失敗")
-                        .data(Map.of(
-                                "userId", ObjectUtils.defaultIfNull(userId, ""),
-                                "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                                "commentId", ObjectUtils.defaultIfNull(commentId, "")
-                        ))
-                        .build();
-            }
-
-        } catch (Exception e) {
-            throw BusinessException.builder()
-                    .iErrorCode(ResultCode.ARTICLE_INTERNAL_ERROR)
-                    .detailMessage("同步使用者取消留言點讚行為至 AmsCommentAction 失敗")
-                    .data(Map.of(
-                            "userId", ObjectUtils.defaultIfNull(userId, ""),
-                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
-                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
-                    ))
-                    .build();
-        }
 
         /**
          * Redis操作
@@ -1210,21 +1114,26 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             if (luaResult >= 0) {
                 log.info("取消點讚成功,用戶ID:{},留言ID:{},新的按讚數:{}", userId, commentId, luaResult);
 
-                boolean update = amsCommentStatisticsService.update(new LambdaUpdateWrapper<AmsCommentStatistics>()
-                        .eq(AmsCommentStatistics::getCommentId, commentId)
-                        .set(AmsCommentStatistics::getLikesCount, luaResult));
-
-                if(!update){
-                    throw BusinessRuntimeException.builder()
-                            .iErrorCode(ResultCode.UPDATE_FAILED)
-                            .detailMessage("更新文章留言指標失敗")
-                            .data(Map.of(
-                                    "userId",ObjectUtils.defaultIfNull(userId,""),
-                                    "articleId",ObjectUtils.defaultIfNull(articleId,""),
-                                    "commentId",ObjectUtils.defaultIfNull(commentId,"")
-                            ))
-                            .build();
-                }
+                /**
+                 *  發送 RabbitMQ 消息更新 AmsCommentAction 和 AmsCommentStatistics
+                 *  改為異步處理，提高響應速度
+                 */
+                
+                // 發送留言點讚數更新消息 (delta = -1)
+                UpdateCommentLikedMessage likedMessage = UpdateCommentLikedMessage.builder()
+                        .commentId(commentId)
+                        .delta(-1)
+                        .build();
+                rabbitMessageProducer.send(likedMessage);
+                
+                // 發送用戶留言互動行為消息 (isLiked = 0)
+                UpdateCommentActionMessage actionMessage = UpdateCommentActionMessage.builder()
+                        .commentId(commentId)
+                        .articleId(articleId)
+                        .userId(userId)
+                        .isLiked((byte) 0)
+                        .build();
+                rabbitMessageProducer.send(actionMessage);
 
                 // 返回新的按讚數
                 return Math.toIntExact(luaResult);

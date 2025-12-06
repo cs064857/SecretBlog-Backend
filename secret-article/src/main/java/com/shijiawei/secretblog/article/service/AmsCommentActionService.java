@@ -29,4 +29,15 @@ public interface AmsCommentActionService extends IService<AmsCommentAction> {
      * @return 留言互動狀態 VO 列表
      */
     List<AmsCommentActionVo> getCommentActionStatusVos(Long articleId);
+
+    /**
+     * 更新用戶對留言的點讚狀態
+     *
+     * @param commentId 留言ID
+     * @param articleId 文章ID
+     * @param userId    用戶ID
+     * @param isLiked   點讚狀態 (1: 點讚, 0: 取消點讚)
+     * @return 是否更新成功
+     */
+    boolean updateLikedStatus(Long commentId, Long articleId, Long userId, Byte isLiked);
 }

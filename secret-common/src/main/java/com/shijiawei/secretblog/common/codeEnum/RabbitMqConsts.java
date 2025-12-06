@@ -51,5 +51,23 @@ public class RabbitMqConsts {
             public static final String routingKey = "ams.action.updated";
         }
 
+        /**
+         * 留言讚數更新（點讚數同步到 AmsCommentStatistics）
+         */
+        public static class updateCommentLiked{
+            private updateCommentLiked(){}
+            public static final String queue = "ams.comment.liked.updated.queue";
+            public static final String routingKey = "ams.comment.liked.updated";
+        }
+
+        /**
+         * 用戶對留言互動行為更新（點讚/取消點讚狀態同步到 AmsCommentAction）
+         */
+        public static class updateCommentAction{
+            private updateCommentAction(){}
+            public static final String queue = "ams.comment.action.updated.queue";
+            public static final String routingKey = "ams.comment.action.updated";
+        }
+
     }
 }

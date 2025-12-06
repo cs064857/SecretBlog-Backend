@@ -466,4 +466,59 @@ public class AmsCommentActionServiceImpl extends ServiceImpl<AmsCommentActionMap
                     commentId, userIdStr, e.getMessage());
         }
     }
+
+    /**
+     * 更新用戶對留言的點讚狀態
+     * 由 RabbitMQ 消費者調用，同步點讚狀態到資料庫
+     *
+     * @param commentId 留言ID
+     * @param articleId 文章ID
+     * @param userId    用戶ID
+     * @param isLiked   點讚狀態 (1: 點讚, 0: 取消點讚)
+     * @return 是否更新成功
+     */
+    @Override
+    public boolean updateLikedStatus(Long commentId, Long articleId, Long userId, Byte isLiked) {
+        if (commentId == null || userId == null) {
+            log.warn("更新留言點讚狀態失敗: commentId 或 userId 為空 - commentId: {}, userId: {}", commentId, userId);
+            return false;
+        }
+
+        log.info("開始更新留言點讚狀態 - commentId: {}, articleId: {}, userId: {}, isLiked: {}", 
+                 commentId, articleId, userId, isLiked);
+
+        try {
+            // 根據業務唯一鍵 (commentId + userId) 查詢資料庫
+            LambdaQueryWrapper<AmsCommentAction> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(AmsCommentAction::getCommentId, commentId)
+                    .eq(AmsCommentAction::getUserId, userId);
+
+            AmsCommentAction existingAction = this.getOne(queryWrapper);
+
+            if (existingAction != null) {
+                // 存在記錄 -> 更新
+                existingAction.setIsLiked(isLiked);
+                boolean result = this.updateById(existingAction);
+                log.info("更新留言點讚狀態完成 - commentId: {}, userId: {}, isLiked: {}, result: {}", 
+                         commentId, userId, isLiked, result);
+                return result;
+            } else {
+                // 不存在記錄 -> 新增
+                AmsCommentAction newAction = AmsCommentAction.builder()
+                        .commentId(commentId)
+                        .articleId(articleId)
+                        .userId(userId)
+                        .isLiked(isLiked)
+                        .build();
+                boolean result = this.save(newAction);
+                log.info("新增留言點讚狀態完成 - commentId: {}, userId: {}, isLiked: {}, result: {}", 
+                         commentId, userId, isLiked, result);
+                return result;
+            }
+        } catch (Exception e) {
+            log.error("更新留言點讚狀態失敗 - commentId: {}, userId: {}, isLiked: {}, error: {}", 
+                      commentId, userId, isLiked, e.getMessage(), e);
+            return false;
+        }
+    }
 }

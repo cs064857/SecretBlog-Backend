@@ -2,8 +2,12 @@ package com.shijiawei.secretblog.article.rabbit.consumer;
 
 import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
 import com.shijiawei.secretblog.common.message.UpdateArticleActionMessage;
+import com.shijiawei.secretblog.common.message.UpdateCommentLikedMessage;
+import com.shijiawei.secretblog.common.message.UpdateCommentActionMessage;
 import com.shijiawei.secretblog.article.service.AmsArtStatusService;
 import com.shijiawei.secretblog.article.service.AmsArtActionService;
+import com.shijiawei.secretblog.article.service.AmsCommentStatisticsService;
+import com.shijiawei.secretblog.article.service.AmsCommentActionService;
 import com.shijiawei.secretblog.common.codeEnum.RabbitMqConsts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -25,6 +29,12 @@ public class AmsCunsumer {
 
     @Autowired
     private AmsArtActionService amsArtActionService;
+
+    @Autowired
+    private AmsCommentStatisticsService amsCommentStatisticsService;
+
+    @Autowired
+    private AmsCommentActionService amsCommentActionService;
 
     @RabbitListener(queues = RabbitMqConsts.ams.updateArticleLiked.queue)
     public void handleUpdateArticleLiked(UpdateArticleLikedMessage message){
@@ -59,6 +69,44 @@ public class AmsCunsumer {
         } catch (Exception e) {
             log.error("RabbitMQ更新文章互動行為失敗，文章ID: {}, 用戶ID: {}, isLiked: {}", 
                       message.getArticleId(), message.getUserId(), message.getIsLiked(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 處理留言讚數更新消息（點讚數同步到 AmsCommentStatistics）
+     */
+    @RabbitListener(queues = RabbitMqConsts.ams.updateCommentLiked.queue)
+    public void handleUpdateCommentLiked(UpdateCommentLikedMessage message){
+        log.info("RabbitMQ收到更新留言讚數消息，留言ID: {}，變更量: {}", message.getCommentId(), message.getDelta());
+        try {
+            amsCommentStatisticsService.updateLikesCount(message.getCommentId(), message.getDelta());
+            log.info("RabbitMQ更新留言讚數成功，留言ID: {}，變更量: {}", message.getCommentId(), message.getDelta());
+        } catch (Exception e) {
+            log.error("RabbitMQ更新留言讚數失敗，留言ID: {}，變更量: {}", message.getCommentId(), message.getDelta(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 處理用戶對留言互動行為更新消息（點讚/取消點讚狀態同步到 AmsCommentAction）
+     */
+    @RabbitListener(queues = RabbitMqConsts.ams.updateCommentAction.queue)
+    public void handleUpdateCommentAction(UpdateCommentActionMessage message){
+        log.info("RabbitMQ收到更新留言互動行為消息，留言ID: {}, 用戶ID: {}, isLiked: {}", 
+                 message.getCommentId(), message.getUserId(), message.getIsLiked());
+        try {
+            amsCommentActionService.updateLikedStatus(
+                message.getCommentId(),
+                message.getArticleId(),
+                message.getUserId(), 
+                message.getIsLiked()
+            );
+            log.info("RabbitMQ更新留言互動行為成功，留言ID: {}, 用戶ID: {}", 
+                     message.getCommentId(), message.getUserId());
+        } catch (Exception e) {
+            log.error("RabbitMQ更新留言互動行為失敗，留言ID: {}, 用戶ID: {}, isLiked: {}", 
+                      message.getCommentId(), message.getUserId(), message.getIsLiked(), e);
             throw new RuntimeException(e);
         }
     }
