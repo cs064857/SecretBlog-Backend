@@ -79,6 +79,12 @@ public class AmsArtinfo implements Serializable {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long categoryId;
 
+    /**
+     * 文章編輯次數
+     */
+    @TableField(value = "edit_count")
+    private Integer editCount;
+
 //    @TableField(exist = false)
 //    private static final long serialVersionUID = 1L;
 //

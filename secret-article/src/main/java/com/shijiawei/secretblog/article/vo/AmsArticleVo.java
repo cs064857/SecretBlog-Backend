@@ -79,6 +79,11 @@ public class AmsArticleVo {
      */
     private Integer commentsCount;
 
+    /**
+     * 編輯次數
+     */
+    private Integer editCount;
+
 
     private List<AmsArtTagsVo> amsArtTagsVoList;
 

@@ -484,8 +484,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         AmsArticleStatusVo articleStatus = getArticleStatusVo(articleId);
-        BeanUtils.copyProperties(articleStatus, amsArticleVo);
 
+        amsArticleVo.setLikesCount(articleStatus.getLikesCount());
+        amsArticleVo.setBookmarksCount(articleStatus.getBookmarksCount());
+        amsArticleVo.setCommentsCount(articleStatus.getCommentsCount());
         amsArticleVo.setViewsCount(Math.toIntExact(newViews));
 
         log.info("獲取帶指標的文章詳情成功，文章ID:{}，views:{}，likes:{}，bookmarks:{}，comments:{}",
@@ -1638,6 +1640,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         LambdaUpdateWrapper<AmsArtinfo> artInfoUpdateWrapper = Wrappers.lambdaUpdate();
         artInfoUpdateWrapper.eq(AmsArtinfo::getArticleId, articleId);
         artInfoUpdateWrapper.set(AmsArtinfo::getCategoryId,amsArticleUpdateDTO.getCategoryId());
+        // 遞增文章編輯次數
+        artInfoUpdateWrapper.setSql("edit_count = edit_count + 1");
         boolean artInfoUpdate = amsArtinfoService.update(artInfoUpdateWrapper);
         if(!artInfoUpdate){
 

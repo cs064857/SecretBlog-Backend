@@ -7,11 +7,11 @@
         <result column="content" property="content" jdbcType="VARCHAR"/>
     </resultMap>
 
-<!--    <sql id="getArticlesByCategoryIdAndPage">-->
-<!--        SELECT *-->
-<!--        FROM ams_article AS ams_article-->
-<!--        INNER JOIN ams_artInfo as ams_artInfo AND a-->
-<!--    </sql>-->
+    <!--    <sql id="getArticlesByCategoryIdAndPage">-->
+    <!--        SELECT *-->
+    <!--        FROM ams_article AS ams_article-->
+    <!--        INNER JOIN ams_artInfo as ams_artInfo AND a-->
+    <!--    </sql>-->
 
     <resultMap id="ArticleTagVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArtTagsVo">
         <id property="id" column="tag_id"/>
@@ -24,7 +24,8 @@
         <result property="content" column="content"/>
         <!-- AmsArtinfo 的欄位 -->
         <result property="userId" column="userId"/>
-<!--        <result property="accountName" column="accountName"/>-->
+        <result property="editCount" column="editCount"/>
+        <!--        <result property="accountName" column="accountName"/>-->
         <result property="createTime" column="createTime"/>
         <result property="updateTime" column="updateTime"/>
         <!-- AmsArtStatus 的欄位 -->
@@ -48,22 +49,23 @@
         ams_article.title AS title,
         ams_article.content AS content,
         ams_artInfo.user_id AS userId,
-<!--        ams_artInfo.account_name AS accountName,-->
+        ams_artInfo.edit_count AS editCount,
+        <!--        ams_artInfo.account_name AS accountName,-->
         ams_artInfo.create_time AS createTime,
         ams_artInfo.update_time AS updateTime,
-<!--        ams_art_status.views_count AS viewsCount,-->
-<!--        ams_art_status.likes_count AS likesCount,-->
-<!--        ams_art_status.bookmarks_count AS bookmarksCount,-->
+        <!--        ams_art_status.views_count AS viewsCount,-->
+        <!--        ams_art_status.likes_count AS likesCount,-->
+        <!--        ams_art_status.bookmarks_count AS bookmarksCount,-->
         ams_category.id AS categoryId,
         ams_category.category_name AS categoryName,
         (
-            SELECT COUNT(1)
-            FROM ams_comment_info
-            WHERE ams_comment_info.article_id = ams_article.id
+        SELECT COUNT(1)
+        FROM ams_comment_info
+        WHERE ams_comment_info.article_id = ams_article.id
         )   AS commentsCount
         FROM ams_article
         INNER JOIN ams_artInfo ON ams_article.id = ams_artInfo.article_id
-<!--        INNER JOIN ams_art_status ON ams_art_status.article_id = ams_article.id-->
+        <!--        INNER JOIN ams_art_status ON ams_art_status.article_id = ams_article.id-->
         INNER JOIN ams_category ON ams_category.id = ams_artInfo.category_id
         WHERE ams_article.id=#{articleId}
         AND ams_artInfo.deleted =0 AND ams_category.deleted = 0
@@ -74,7 +76,7 @@
             ams_tags.id AS tag_id,
             ams_tags.name AS tag_name
         FROM ams_art_tag
-        INNER JOIN ams_tags ON ams_art_tag.tags_id = ams_tags.id
+                 INNER JOIN ams_tags ON ams_art_tag.tags_id = ams_tags.id
         WHERE ams_art_tag.article_id = #{articleId}
         ORDER BY ams_art_tag.id
     </select>
@@ -82,62 +84,62 @@
 
 
     <!--    getArticlesByCategoryIdAndPage  -->
-<!--    <resultMap id="ArticlePreviewVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo">-->
-<!--        <id property="articleId" column="article_id"/>-->
-<!--        <result property="title" column="title"/>-->
-<!--        <result property="nickName" column="nick_name"/>-->
-<!--        <result property="userId" column="user_id"/>-->
-<!--        <result property="avatar" column="avatar"/>-->
-<!--        <result property="categoryName" column="category_name"/>-->
-<!--        <result property="categoryId" column="category_id"/>-->
-<!--        <result property="createTime" column="create_time"/>-->
-<!--        <result property="updateTime" column="update_time"/>-->
-<!--        <result property="viewsCount" column="views_count"/>-->
-<!--        <result property="likesCount" column="likes_count"/>-->
-<!--        <result property="bookmarksCount" column="bookmarks_count"/>-->
-<!--        <result property="commentsCount" column="comments_count"/>-->
-<!--        <collection property="amsArtTagList"-->
-<!--                    ofType="com.shijiawei.secretblog.article.vo.AmsArtTagsVo"-->
-<!--                    column="tags_json"-->
-<!--                    javaType="ArrayList"-->
-<!--                    typeHandler="com.shijiawei.secretblog.article.typehandler.TagsJsonTypeHandler"/>-->
+    <!--    <resultMap id="ArticlePreviewVoResultMap" type="com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo">-->
+    <!--        <id property="articleId" column="article_id"/>-->
+    <!--        <result property="title" column="title"/>-->
+    <!--        <result property="nickName" column="nick_name"/>-->
+    <!--        <result property="userId" column="user_id"/>-->
+    <!--        <result property="avatar" column="avatar"/>-->
+    <!--        <result property="categoryName" column="category_name"/>-->
+    <!--        <result property="categoryId" column="category_id"/>-->
+    <!--        <result property="createTime" column="create_time"/>-->
+    <!--        <result property="updateTime" column="update_time"/>-->
+    <!--        <result property="viewsCount" column="views_count"/>-->
+    <!--        <result property="likesCount" column="likes_count"/>-->
+    <!--        <result property="bookmarksCount" column="bookmarks_count"/>-->
+    <!--        <result property="commentsCount" column="comments_count"/>-->
+    <!--        <collection property="amsArtTagList"-->
+    <!--                    ofType="com.shijiawei.secretblog.article.vo.AmsArtTagsVo"-->
+    <!--                    column="tags_json"-->
+    <!--                    javaType="ArrayList"-->
+    <!--                    typeHandler="com.shijiawei.secretblog.article.typehandler.TagsJsonTypeHandler"/>-->
 
-<!--    </resultMap>-->
+    <!--    </resultMap>-->
 
-<!--    <select id="getArticlesByCategoryIdAndPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
+    <!--    <select id="getArticlesByCategoryIdAndPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
 
-<!--        SELECT-->
-<!--            a.title,-->
-<!--            ai.article_id,-->
-<!--            ai.nick_name,-->
-<!--            ai.user_id,-->
-<!--            ai.avatar,-->
-<!--            ac.category_name,-->
-<!--            ai.category_id,-->
-<!--            ai.create_time,-->
-<!--            ai.update_time,-->
-<!--            aas.views_count,-->
-<!--            aas.likes_count,-->
-<!--            aas.bookmarks_count,-->
-<!--            aas.comments_count,-->
-<!--            GROUP_CONCAT(-->
-<!--                    DISTINCT-->
-<!--                    CONCAT('{"id":', tags.id, ',"name":"', tags.name, '"}')-->
-<!--                    SEPARATOR ','-->
-<!--            ) AS tags_json-->
-<!--        FROM ams_artInfo AS ai-->
-<!--                 INNER JOIN ams_article AS a ON a.id = ai.article_id-->
-<!--                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id-->
-<!--                 LEFT JOIN ams_art_tag AS atag ON ai.article_id = atag.article_id-->
-<!--                 LEFT JOIN ams_tags AS tags ON atag.tags_id = tags.id-->
-<!--                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
-<!--        WHERE ai.category_id = 2-->
-<!--        GROUP BY ai.article_id, a.title, ai.nick_name, ai.user_id, ai.avatar,-->
-<!--                 ac.category_name, ai.category_id, ai.create_time, ai.update_time,-->
-<!--                 aas.views_count, aas.likes_count, aas.bookmarks_count, aas.comments_count-->
-<!--        ORDER BY ai.update_time DESC-->
+    <!--        SELECT-->
+    <!--            a.title,-->
+    <!--            ai.article_id,-->
+    <!--            ai.nick_name,-->
+    <!--            ai.user_id,-->
+    <!--            ai.avatar,-->
+    <!--            ac.category_name,-->
+    <!--            ai.category_id,-->
+    <!--            ai.create_time,-->
+    <!--            ai.update_time,-->
+    <!--            aas.views_count,-->
+    <!--            aas.likes_count,-->
+    <!--            aas.bookmarks_count,-->
+    <!--            aas.comments_count,-->
+    <!--            GROUP_CONCAT(-->
+    <!--                    DISTINCT-->
+    <!--                    CONCAT('{"id":', tags.id, ',"name":"', tags.name, '"}')-->
+    <!--                    SEPARATOR ','-->
+    <!--            ) AS tags_json-->
+    <!--        FROM ams_artInfo AS ai-->
+    <!--                 INNER JOIN ams_article AS a ON a.id = ai.article_id-->
+    <!--                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id-->
+    <!--                 LEFT JOIN ams_art_tag AS atag ON ai.article_id = atag.article_id-->
+    <!--                 LEFT JOIN ams_tags AS tags ON atag.tags_id = tags.id-->
+    <!--                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
+    <!--        WHERE ai.category_id = 2-->
+    <!--        GROUP BY ai.article_id, a.title, ai.nick_name, ai.user_id, ai.avatar,-->
+    <!--                 ac.category_name, ai.category_id, ai.create_time, ai.update_time,-->
+    <!--                 aas.views_count, aas.likes_count, aas.bookmarks_count, aas.comments_count-->
+    <!--        ORDER BY ai.update_time DESC-->
 
-<!--    </select>-->
+    <!--    </select>-->
 
 
 
@@ -168,48 +170,48 @@
         </collection>
     </resultMap>
 
-<!--    <select id="getArticlesPreviewPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
+    <!--    <select id="getArticlesPreviewPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
 
-<!--        SELECT-->
-<!--            a.title AS title,-->
-<!--            ai.article_id AS article_id,-->
-<!--            ai.nick_name AS nick_name,-->
-<!--            ai.user_id AS user_id,-->
-<!--            ai.avatar AS avatar,-->
-<!--            ac.category_name AS category_name,-->
-<!--            ai.category_id AS category_id,-->
-<!--            ai.create_time AS create_time,-->
-<!--            ai.update_time AS update_time,-->
-<!--            aas.views_count AS views_count,-->
-<!--            aas.likes_count AS likes_count,-->
-<!--            aas.bookmarks_count AS bookmarks_count,-->
-<!--            aas.comments_count AS comments_count,-->
-<!--            tag.tags_id AS tag_id-->
-<!--        FROM ams_artInfo AS ai-->
-<!--                 INNER JOIN ams_article AS a ON a.id = ai.article_id-->
-<!--                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id-->
-<!--                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
-<!--                 INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id-->
+    <!--        SELECT-->
+    <!--            a.title AS title,-->
+    <!--            ai.article_id AS article_id,-->
+    <!--            ai.nick_name AS nick_name,-->
+    <!--            ai.user_id AS user_id,-->
+    <!--            ai.avatar AS avatar,-->
+    <!--            ac.category_name AS category_name,-->
+    <!--            ai.category_id AS category_id,-->
+    <!--            ai.create_time AS create_time,-->
+    <!--            ai.update_time AS update_time,-->
+    <!--            aas.views_count AS views_count,-->
+    <!--            aas.likes_count AS likes_count,-->
+    <!--            aas.bookmarks_count AS bookmarks_count,-->
+    <!--            aas.comments_count AS comments_count,-->
+    <!--            tag.tags_id AS tag_id-->
+    <!--        FROM ams_artInfo AS ai-->
+    <!--                 INNER JOIN ams_article AS a ON a.id = ai.article_id-->
+    <!--                 INNER JOIN ams_category AS ac ON ac.id = ai.category_id-->
+    <!--                 INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
+    <!--                 INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id-->
 
-<!--        WHERE ai.deleted = 0-->
-<!--        <if test="categoryId != null">-->
-<!--        AND ai.category_id = #{categoryId}-->
-<!--        </if>-->
+    <!--        WHERE ai.deleted = 0-->
+    <!--        <if test="categoryId != null">-->
+    <!--        AND ai.category_id = #{categoryId}-->
+    <!--        </if>-->
 
-<!--        <if test="tagsId != null and tagsId.size() > 0">-->
-<!--            AND ai.article_id IN (-->
-<!--            SELECT t.article_id-->
-<!--            FROM ams_art_tag t-->
-<!--            WHERE t.tags_id IN-->
-<!--            <foreach collection="tagsId" item="tagId" open="(" separator="," close=")">-->
-<!--                #{tagId}-->
-<!--            </foreach>-->
-<!--            )-->
-<!--        </if>-->
+    <!--        <if test="tagsId != null and tagsId.size() > 0">-->
+    <!--            AND ai.article_id IN (-->
+    <!--            SELECT t.article_id-->
+    <!--            FROM ams_art_tag t-->
+    <!--            WHERE t.tags_id IN-->
+    <!--            <foreach collection="tagsId" item="tagId" open="(" separator="," close=")">-->
+    <!--                #{tagId}-->
+    <!--            </foreach>-->
+    <!--            )-->
+    <!--        </if>-->
 
-<!--        ORDER BY ai.update_time DESC-->
+    <!--        ORDER BY ai.update_time DESC-->
 
-<!--    </select>-->
+    <!--    </select>-->
 
     <select id="getArticlesPreviewPage" resultMap="ArticlePreviewVoResultMap" parameterType="long" >
 
@@ -246,38 +248,38 @@
 
 
 
-<!--    Zset/set交集查詢文章預覽列表-->
-<!--    <select id="getArticlesPreviewPageByArticleIds" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
+    <!--    Zset/set交集查詢文章預覽列表-->
+    <!--    <select id="getArticlesPreviewPageByArticleIds" resultMap="ArticlePreviewVoResultMap" parameterType="long" >-->
 
-<!--        SELECT-->
-<!--        a.title AS title,-->
-<!--        ai.article_id AS article_id,-->
-<!--        ai.nick_name AS nick_name,-->
-<!--        ai.user_id AS user_id,-->
-<!--        ai.avatar AS avatar,-->
-<!--        ac.category_name AS category_name,-->
-<!--        ai.category_id AS category_id,-->
-<!--        ai.create_time AS create_time,-->
-<!--        ai.update_time AS update_time,-->
-<!--        aas.views_count AS views_count,-->
-<!--        aas.likes_count AS likes_count,-->
-<!--        aas.bookmarks_count AS bookmarks_count,-->
-<!--        aas.comments_count AS comments_count,-->
-<!--        tag.tags_id AS tag_id-->
-<!--        FROM ams_artInfo AS ai-->
-<!--        LEFT JOIN ams_article AS a ON a.id = ai.article_id-->
-<!--        LEFT JOIN ams_category AS ac ON ac.id = ai.category_id-->
-<!--        LEFT JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
-<!--        LEFT JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id-->
+    <!--        SELECT-->
+    <!--        a.title AS title,-->
+    <!--        ai.article_id AS article_id,-->
+    <!--        ai.nick_name AS nick_name,-->
+    <!--        ai.user_id AS user_id,-->
+    <!--        ai.avatar AS avatar,-->
+    <!--        ac.category_name AS category_name,-->
+    <!--        ai.category_id AS category_id,-->
+    <!--        ai.create_time AS create_time,-->
+    <!--        ai.update_time AS update_time,-->
+    <!--        aas.views_count AS views_count,-->
+    <!--        aas.likes_count AS likes_count,-->
+    <!--        aas.bookmarks_count AS bookmarks_count,-->
+    <!--        aas.comments_count AS comments_count,-->
+    <!--        tag.tags_id AS tag_id-->
+    <!--        FROM ams_artInfo AS ai-->
+    <!--        LEFT JOIN ams_article AS a ON a.id = ai.article_id-->
+    <!--        LEFT JOIN ams_category AS ac ON ac.id = ai.category_id-->
+    <!--        LEFT JOIN ams_art_status AS aas ON ai.article_id = aas.article_id-->
+    <!--        LEFT JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id-->
 
-<!--        WHERE ai.deleted = 0-->
-<!--        AND ai.article_id IN-->
-<!--        <foreach collection="articleIds" item="articleId" open="(" separator="," close=")">-->
-<!--            #{articleId}-->
-<!--        </foreach>-->
+    <!--        WHERE ai.deleted = 0-->
+    <!--        AND ai.article_id IN-->
+    <!--        <foreach collection="articleIds" item="articleId" open="(" separator="," close=")">-->
+    <!--            #{articleId}-->
+    <!--        </foreach>-->
 
 
 
-<!--    </select>-->
+    <!--    </select>-->
 
 </mapper>
