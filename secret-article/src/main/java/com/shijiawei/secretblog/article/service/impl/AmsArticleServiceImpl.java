@@ -1521,6 +1521,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
      * @param amsArticleUpdateDTO 更新的文章資料
      */
     @Transactional(rollbackFor = Exception.class)
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_PREFIX,
+            key = RedisOpenCacheKey.ArticleDetails.ARTICLE_DETAILS_KEY)
     @Override
     public void updateArticle(Long articleId, AmsArticleUpdateDTO amsArticleUpdateDTO) {
         log.info("開始修改文章，articleId={}",articleId);
