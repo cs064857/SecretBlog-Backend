@@ -34,5 +34,21 @@ build/
 
 ### VS Code ###
 .vscode/
+### Google Drive Upload ###
 .tmp.driveupload/*
 
+### Environment Variables ###
+.env
+.env.local
+.env.*.local
+
+### Local Development Config ###
+**/application-local.yaml
+**/application-local.yml
+**/bootstrap-local.yaml
+**/bootstrap-local.yml
+
+applicationBak.yaml
+applicationBackup.yaml
+
+.gitignore

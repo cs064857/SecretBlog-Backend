@@ -4,9 +4,9 @@ spring:
     time-zone: GMT+8
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://secretblog-passerby064857-7179.f.aivencloud.com:15228/secretblog_ams?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
-    username: avnadmin
-    password: AVNS_CqdanQfHdIVI8zaK5BW
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/secretblog_ams?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
     hikari:
       # 10個連接
       maximum-pool-size: 10
@@ -23,13 +23,13 @@ spring:
   cloud:
     nacos:
 #      server-addr: 127.0.0.1:8848
-      server-addr: 92.113.117.22:10846
+      server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
 
 #      password: nacos
 #      username: nacos
       discovery:
 #        server-addr: 127.0.0.1:8848
-        server-addr: 92.113.117.22:10846
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
       config:
         timeout: 300000
 #        透過openfeign在調用其他微服務時將登入訊息獲取過來
@@ -40,19 +40,22 @@ spring:
     import: optional:nacos:secretblog_article_application.yml
   data:
     redis:
-      port: 6379
-      database: 0
-      host: uncommon-imp-32102.upstash.io
-      password: AX1mAAIjcDE0ZWE1M2UwMTNhMjA0Y2U3YmMxZjgyZDQ3OTBmZDFmNHAxMA
-      username: default
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      host: ${REDIS_HOST:localhost}
+      password: ${REDIS_PASSWORD:}
+      username: ${REDIS_USERNAME:default}
       ssl:
-        enabled: true
+        enabled: ${REDIS_SSL_ENABLED:false}
   rabbitmq:
-    host: cgk1.clusters.zeabur.com
-    port: 26082
-    username: admin
-    password: 2z9Bgnd65U3EfRja0e8741OqZrCWiDyL
-
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
+    # 啟用 SSL 支援
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
 #  cache:
 #    redis:
 #      #以下配置為配合SpringCache使用時
@@ -100,3 +103,7 @@ bloom-filter:
     false-probability: 0.01       # 1% 誤判率
 comment:
   edit-window-minutes: 15  # 留言編輯時間窗（分鐘）
+
+# SEO 配置
+seo:
+  site-url: http://localhost:51733  # 改為正式域名

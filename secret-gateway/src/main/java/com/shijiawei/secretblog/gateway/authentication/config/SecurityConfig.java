@@ -77,7 +77,9 @@ public class SecurityConfig {
                     "/api/ums/user/email-verify-code",
                     "/api/public/**",
                     "/actuator/**",
-                    "/favicon.ico"
+                    "/favicon.ico",
+                    "/sitemap.xml",    // SEO: sitemap
+                    "/robots.txt"      // SEO: robots
                 ).permitAll()
                 
                 // 管理員專屬路由

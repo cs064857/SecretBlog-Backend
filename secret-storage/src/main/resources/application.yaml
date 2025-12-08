@@ -1,11 +1,11 @@
 var:
-  endPoint: https://storage.passerby.me
+  endPoint: ${MINIO_ENDPOINT:https://storage.passerby.me}
   secretblog:
     bucket:
       pub:
-        bucketName: user-assets-pub
-        accessKey: chVVHLpd0maHci21qr5r
-        secretKey: wNmwfj4aZ2VELNmHza2JUwvEmcoXX5U5r80DAukY
+        bucketName: ${MINIO_BUCKET_NAME:user-assets-pub}
+        accessKey: ${MINIO_ACCESS_KEY:}
+        secretKey: ${MINIO_SECRET_KEY:}
 #var:
 #  endPoint: http://4.240.82.138:9001
 #  secretblog:
@@ -23,13 +23,13 @@ spring:
   cloud:
     nacos:
 #      server-addr: 127.0.0.1:8848
-      server-addr: 92.113.117.22:10846
+      server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
 
 #      password: nacos
 #      username: nacos
       discovery:
 #        server-addr: 127.0.0.1:8848
-        server-addr: 92.113.117.22:10846
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
       config:
         timeout: 300000
   config:
