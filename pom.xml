@@ -14,5 +14,6 @@
         <module>secret-gateway</module>
         <module>secret-user</module>
         <module>secret-storage</module>
+        <module>secret-search</module>
     </modules>
 </project>

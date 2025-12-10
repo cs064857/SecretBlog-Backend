@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
+import com.shijiawei.secretblog.article.service.AmsArtinfoService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
+import com.shijiawei.secretblog.common.dto.ArticlePreviewDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.vaildation.Insert;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +36,9 @@ import java.util.List;
 public class AmsArticleController {
     @Autowired
     AmsArticleService amsArticleService;
+
+    @Autowired
+    AmsArtinfoService amsArtinfoService;
 
     @PostMapping("/save")
     public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication) {
@@ -176,8 +181,51 @@ public class AmsArticleController {
         return R.ok(Page);
     }
 
+    /**
+     * 根據 articleId 獲取文章預覽資料
+     * @param articleId 文章ID
+     * @return 文章預覽 DTO
+     */
+    @GetMapping("/internal/preview/{articleId}")
+    public R<ArticlePreviewDTO> getArticlePreviewForSearch(@PathVariable Long articleId) {
+        ArticlePreviewDTO preview = amsArticleService.getArticlePreviewDTO(articleId);
+        return R.ok(preview);
+    }
 
+    /**
+     * 批量獲取文章預覽資料
+     * @param articleIds 文章 ID 列表
+     * @return 文章預覽 DTO 列表
+     */
+    @PostMapping("/internal/preview/batch")
+    public R<List<ArticlePreviewDTO>> getBatchArticlePreviewsForSearch(@RequestBody List<Long> articleIds) {
+        List<ArticlePreviewDTO> previews = amsArticleService.getBatchArticlePreviewDTOs(articleIds);
+        return R.ok(previews);
+    }
 
+    /**
+     * 內部 Feign 專用：獲取所有文章 ID（
+     * @return 所有文章 ID 列表
+     */
+    @GetMapping("/internal/article-ids")
+    public R<List<Long>> getAllDistinctArticleIds() {
+        List<Long> articleIds = amsArticleService.getAllDistinctArticleIds()
+                .stream()
+                .map(article -> article.getId())
+                .toList();
+        return R.ok(articleIds);
+    }
+
+    /**
+     * 內部 Feign 專用：獲取文章總數量
+     * 基於 AmsArtinfo 表統計未刪除的文章數量
+     * @return 文章總數量
+     */
+    @GetMapping("/internal/article-count")
+    public R<Long> getTotalArticleCount() {
+        long count = amsArtinfoService.getTotalArticleCount();
+        return R.ok(count);
+    }
 
 //    /**
 //     * 獲得最新文章的文章列表(按照日期遞減排序顯示文章)

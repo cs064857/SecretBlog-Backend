@@ -26,6 +26,8 @@ import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
+import com.shijiawei.secretblog.common.dto.AmsArtTagsDTO;
+import com.shijiawei.secretblog.common.dto.ArticlePreviewDTO;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.article.annotation.OpenLog;
 import com.shijiawei.secretblog.article.mapper.AmsArticleMapper;
@@ -2221,17 +2223,28 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
     }
 
     /**
-     * 獲取正被文章使用的所有標籤ID列表
-     * @return 所有正被文章使用的標籤ID列表
+     * 獲取所有未刪除文章的 ID 列表
+     * 透過 AmsArtinfo 表查詢，確保與邏輯刪除狀態一致
+     * 用於 Elasticsearch 批量索引建構
+     * @return 所有未刪除文章的 ID 列表
      */
     public List<AmsArticle> getAllDistinctArticleIds(){
-
-        LambdaQueryWrapper<AmsArticle> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(AmsArticle::getId);
-        queryWrapper.groupBy(AmsArticle::getId);
-
-        return this.baseMapper.selectList(queryWrapper);
-
+        // 改用 AmsArtinfo 獲取有效的文章 ID，確保與邏輯刪除狀態一致
+        // AmsArtinfo 使用 @TableLogic，會自動過濾 deleted = 1 的記錄
+        List<Long> articleIds = amsArtinfoService.list()
+                .stream()
+                .map(AmsArtinfo::getArticleId)
+                .distinct()
+                .toList();
+        
+        // 將 articleId 列表轉換為 AmsArticle 列表（只包含 ID）
+        return articleIds.stream()
+                .map(id -> {
+                    AmsArticle article = new AmsArticle();
+                    article.setId(id);
+                    return article;
+                })
+                .toList();
     }
 
     /**
@@ -2421,6 +2434,177 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //            }
 //        }
 //    }
+
+    /**
+     * 獲取文章預覽 DTO
+     * @param articleId 文章ID
+     * @return 文章預覽 DTO
+     */
+    @Override
+    public ArticlePreviewDTO getArticlePreviewDTO(Long articleId) {
+        log.info("獲取文章預覽 DTO，articleId={}", articleId);
+
+        // 驗證文章是否存在
+        isArticleNotExists(articleId);
+
+        // 獲取文章基本資料
+        AmsArticle amsArticle = this.getById(articleId);
+        if (amsArticle == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        // 獲取文章附加資訊
+        AmsArtinfo amsArtinfo = amsArtinfoService.getOne(
+                new LambdaQueryWrapper<AmsArtinfo>().eq(AmsArtinfo::getArticleId, articleId)
+        );
+        if (amsArtinfo == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("文章附加資訊不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        // 獲取分類資訊
+        AmsCategory amsCategory = amsCategoryService.getById(amsArtinfo.getCategoryId());
+
+        // 獲取文章標籤
+        List<AmsArtTag> amsArtTagList = amsArtTagService.list(
+                new LambdaQueryWrapper<AmsArtTag>().eq(AmsArtTag::getArticleId, articleId)
+        );
+        List<Long> tagIds = amsArtTagList.stream().map(AmsArtTag::getTagsId).toList();
+        List<AmsTags> amsTagsList = tagIds.isEmpty() ? List.of() : amsTagsService.listByIds(tagIds);
+
+        // 轉換為 DTO
+        List<AmsArtTagsDTO> tagDTOList = amsTagsList.stream().map(tag -> {
+            AmsArtTagsDTO dto = new AmsArtTagsDTO();
+            dto.setId(tag.getId());
+            dto.setName(tag.getName());
+            return dto;
+        }).toList();
+
+        // 組裝 ArticlePreviewDTO
+        ArticlePreviewDTO previewDTO = new ArticlePreviewDTO();
+        previewDTO.setArticleId(amsArticle.getId());
+        previewDTO.setUserId(amsArtinfo.getUserId());
+        previewDTO.setNickName(amsArtinfo.getNickName());
+        previewDTO.setTitle(amsArticle.getTitle());
+        previewDTO.setContent(amsArticle.getContent()); // HTML 格式的文章內容
+        previewDTO.setCategoryId(amsArtinfo.getCategoryId());
+        previewDTO.setCategoryName(amsCategory != null ? amsCategory.getCategoryName() : null);
+        previewDTO.setAmsArtTagList(tagDTOList);
+        previewDTO.setCreateTime(amsArtinfo.getCreateTime());
+        previewDTO.setUpdateTime(amsArtinfo.getUpdateTime());
+
+        log.info("文章預覽 DTO 建構完成，articleId={}，title={}", articleId, previewDTO.getTitle());
+        return previewDTO;
+    }
+
+    /**
+     * 批量獲取文章預覽 DTO
+     * @param articleIds 文章 ID 列表
+     * @return 文章預覽 DTO 列表
+     */
+    @Override
+    public List<ArticlePreviewDTO> getBatchArticlePreviewDTOs(List<Long> articleIds) {
+        log.info("批量獲取文章預覽 DTO，articleIds.size={}", articleIds != null ? articleIds.size() : 0);
+
+        if (articleIds == null || articleIds.isEmpty()) {
+            log.warn("批量獲取文章預覽 DTO 時傳入的 articleIds 為空");
+            return Collections.emptyList();
+        }
+
+        // 1. 批量獲取文章主體
+        List<AmsArticle> articles = this.listByIds(articleIds);
+        if (articles.isEmpty()) {
+            log.warn("根據 articleIds 批量查詢文章主體結果為空");
+            return Collections.emptyList();
+        }
+        Map<Long, AmsArticle> articleMap = articles.stream()
+                .collect(Collectors.toMap(AmsArticle::getId, article -> article));
+
+        // 2. 批量獲取文章附加資訊
+        List<AmsArtinfo> artinfos = amsArtinfoService.list(
+                new LambdaQueryWrapper<AmsArtinfo>().in(AmsArtinfo::getArticleId, articleIds)
+        );
+        Map<Long, AmsArtinfo> artinfoMap = artinfos.stream()
+                .collect(Collectors.toMap(AmsArtinfo::getArticleId, artinfo -> artinfo));
+
+        // 3. 批量獲取分類資訊
+        Set<Long> categoryIds = artinfos.stream()
+                .map(AmsArtinfo::getCategoryId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, AmsCategory> categoryMap = categoryIds.isEmpty()
+                ? Collections.emptyMap()
+                : amsCategoryService.listByIds(categoryIds).stream()
+                        .collect(Collectors.toMap(AmsCategory::getId, category -> category));
+
+        // 4. 批量獲取文章標籤關聯
+        List<AmsArtTag> artTags = amsArtTagService.list(
+                new LambdaQueryWrapper<AmsArtTag>().in(AmsArtTag::getArticleId, articleIds)
+        );
+        Map<Long, List<Long>> articleTagsMap = artTags.stream()
+                .collect(Collectors.groupingBy(
+                        AmsArtTag::getArticleId,
+                        Collectors.mapping(AmsArtTag::getTagsId, Collectors.toList())
+                ));
+
+        // 5. 批量獲取標籤詳情
+        Set<Long> allTagIds = artTags.stream()
+                .map(AmsArtTag::getTagsId)
+                .collect(Collectors.toSet());
+        Map<Long, AmsTags> tagsMap = allTagIds.isEmpty()
+                ? Collections.emptyMap()
+                : amsTagsService.listByIds(allTagIds).stream()
+                        .collect(Collectors.toMap(AmsTags::getId, tag -> tag));
+
+        // 6. 組裝 DTO 列表
+        List<ArticlePreviewDTO> result = articleIds.stream()
+                .map(articleId -> {
+                    AmsArticle article = articleMap.get(articleId);
+                    AmsArtinfo artinfo = artinfoMap.get(articleId);
+                    if (article == null || artinfo == null) {
+                        log.warn("文章資料不完整，跳過 articleId={}", articleId);
+                        return null;
+                    }
+
+                    AmsCategory category = categoryMap.get(artinfo.getCategoryId());
+                    List<Long> tagIds = articleTagsMap.getOrDefault(articleId, Collections.emptyList());
+                    List<AmsArtTagsDTO> tagDTOList = tagIds.stream()
+                            .map(tagsMap::get)
+                            .filter(Objects::nonNull)
+                            .map(tag -> {
+                                AmsArtTagsDTO dto = new AmsArtTagsDTO();
+                                dto.setId(tag.getId());
+                                dto.setName(tag.getName());
+                                return dto;
+                            })
+                            .toList();
+
+                    ArticlePreviewDTO previewDTO = new ArticlePreviewDTO();
+                    previewDTO.setArticleId(article.getId());
+                    previewDTO.setUserId(artinfo.getUserId());
+                    previewDTO.setNickName(artinfo.getNickName());
+                    previewDTO.setTitle(article.getTitle());
+                    previewDTO.setContent(article.getContent());
+                    previewDTO.setCategoryId(artinfo.getCategoryId());
+                    previewDTO.setCategoryName(category != null ? category.getCategoryName() : null);
+                    previewDTO.setAmsArtTagList(tagDTOList);
+                    previewDTO.setCreateTime(artinfo.getCreateTime());
+                    previewDTO.setUpdateTime(artinfo.getUpdateTime());
+                    return previewDTO;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        log.info("批量獲取文章預覽 DTO 完成，成功處理 {} 篇文章", result.size());
+        return result;
+    }
 
 }
 

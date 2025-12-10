@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
+import com.shijiawei.secretblog.common.dto.ArticlePreviewDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
@@ -72,6 +73,20 @@ public interface AmsArticleService extends IService<AmsArticle> {
     void updateAuthorAvatar(Long userId, String avatar);
 
     List<AmsArticle> getAllDistinctArticleIds();
+
+    /**
+     * 批量獲取文章預覽 DTO
+     * @param articleIds 文章 ID 列表
+     * @return 文章預覽 DTO 列表
+     */
+    List<ArticlePreviewDTO> getBatchArticlePreviewDTOs(List<Long> articleIds);
+
+    /**
+     * 獲取文章預覽 DTO
+     * @param articleId 文章ID
+     * @return 文章預覽 DTO
+     */
+    ArticlePreviewDTO getArticlePreviewDTO(Long articleId);
 
 //
 //

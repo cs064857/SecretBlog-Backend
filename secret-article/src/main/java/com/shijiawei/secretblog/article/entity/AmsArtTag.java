@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * ClassName: AmsArtTag
@@ -39,5 +40,6 @@ public class AmsArtTag {
     private LocalDateTime createAt;
     @TableField(value = "update_at",fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateAt;
+
 
 }

@@ -14,4 +14,10 @@ public interface AmsArtinfoService extends IService<AmsArtinfo> {
     void saveArticleInfo(AmsSaveArtInfoVo amsSaveArtInfoVo);
 
     int isArticleOwner(Long articleId, Long userId);
+
+    /**
+     * 獲取目前文章的總數量（未刪除的文章）
+     * @return 文章總數量
+     */
+    long getTotalArticleCount();
 }

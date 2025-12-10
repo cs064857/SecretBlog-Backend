@@ -1,0 +1,65 @@
+package com.shijiawei.secretblog.search.initializer;
+
+import com.shijiawei.secretblog.search.service.ElasticSearchService;
+import document.ArticlePreviewDocument;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.stereotype.Component;
+
+/**
+ * ClassName: ElasticSearchInitializer
+ * Description:
+ *
+ * @Create 2025/12/10 下午5:17
+ */
+@Slf4j
+@Component
+public class ElasticSearchInitializer {
+
+    @Autowired
+    private ElasticSearchService elasticSearchService;
+
+
+    /**
+     * 運行服務時, 當ArticlePreviewDocument的索引不存在或不完整時則進行初始化
+     */
+    @Retryable(
+            retryFor = {Exception.class},
+            maxAttempts = 3, //最多重試三次
+            backoff = @Backoff(delay = 10000) //間隔10秒
+    )
+    @EventListener(ApplicationReadyEvent.class)
+    public void initElasticSearchArticlePreviewDocument() {
+        try {
+            // 先檢查索引是否已經存在
+            boolean ensureIndexExists = elasticSearchService.ensureIndexExists(ArticlePreviewDocument.class);
+
+            if (ensureIndexExists) {
+                // 索引存在，進一步檢查索引完整性（ES文檔數 vs 資料庫文章數進行比對）
+                boolean isIndexComplete = elasticSearchService.isArticlePreviewIndexComplete();
+                
+                if (isIndexComplete) {
+                    long indexDocCount = elasticSearchService.getIndexDocCount();
+                    log.info("跳過初始化, 索引已完整建立 , ES文檔數量:{}", indexDocCount);
+                    return;
+                } else {
+                    log.info("索引存在但不完整，將重新建立所有文檔...");
+                }
+            }
+
+            log.info("開始初始化 Elasticsearch 文章預覽索引...");
+            elasticSearchService.createArticlePreviewAllListDoc();
+            log.info("Elasticsearch 文章預覽索引初始化完成");
+        } catch (Exception e) {
+            // 不拋出異常，讓程式正常啟動
+            log.error("Elasticsearch 初始化失敗，將在後續手動觸發: {}", e.getMessage());
+        }
+    }
+
+}
