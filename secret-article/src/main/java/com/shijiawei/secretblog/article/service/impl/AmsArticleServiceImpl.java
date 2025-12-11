@@ -10,12 +10,13 @@ import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.entity.*;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
-
+import com.shijiawei.secretblog.article.feign.SearchFeignClient;
 
 import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
 import com.shijiawei.secretblog.common.message.UpdateArticleActionMessage;
 import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkMessage;
 import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkActionMessage;
+import com.shijiawei.secretblog.common.message.SyncArticleToESMessage;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 import com.shijiawei.secretblog.article.vo.*;
@@ -76,6 +77,9 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
     @Autowired
     private UserFeignClient userFeignClient;
+
+    @Autowired
+    private SearchFeignClient searchFeignClient;
 
     @Autowired
     private AmsArtTagService amsArtTagService;
@@ -282,6 +286,15 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 amsArticle.getId(),
                 RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey()
         );
+
+        // 透過本地消息表 + RabbitMQ 異步同步新文章至 Elasticsearch 索引
+        // 確保最終一致性：即使 ES 暫時不可用，消息也會在後續重試同步
+        SyncArticleToESMessage syncMessage = SyncArticleToESMessage.builder()
+                .articleId(amsArticle.getId())
+                .operationType(SyncArticleToESMessage.OPERATION_CREATE)
+                .build();
+        amsLocalMessageService.createPendingMessage(syncMessage);
+        log.info("已建立文章 ES 同步本地消息，articleId={}，operationType=CREATE", amsArticle.getId());
 
 
 //        // 使用 final 變量以便在後續使用
@@ -1737,6 +1750,15 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 userId,
                 amsArticleUpdateDTO.getCategoryId(),
                 newArtTagsIdList != null ? newArtTagsIdList.size() : 0);
+
+        // 透過本地消息表 + RabbitMQ 異步同步更新文章至 Elasticsearch 索引
+        // 確保最終一致性：即使 ES 暫時不可用，消息也會在後續重試同步
+        SyncArticleToESMessage syncMessage = SyncArticleToESMessage.builder()
+                .articleId(articleId)
+                .operationType(SyncArticleToESMessage.OPERATION_UPDATE)
+                .build();
+        amsLocalMessageService.createPendingMessage(syncMessage);
+        log.info("已建立文章 ES 同步本地消息，articleId={}，operationType=UPDATE", articleId);
     }
 
 

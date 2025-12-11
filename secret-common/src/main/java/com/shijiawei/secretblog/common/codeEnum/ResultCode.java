@@ -95,7 +95,13 @@ public enum ResultCode implements IErrorCode{
      * 7000-7999 RabbitMQ模組
      */
     //RabbitMQ異常
-    RABBITMQ_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"7001", "系統服務繁忙，請稍後再試");
+    RABBITMQ_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"7001", "系統服務繁忙，請稍後再試"),
+
+    /**
+     * 8000-8999 ElasticSearch模組
+     */
+    //建立文章 ES 文檔失敗
+    ARTICLE_ES_INDEX_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"8001", "系統服務繁忙，請稍後再試");
 
 
 

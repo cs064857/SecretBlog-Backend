@@ -4,6 +4,7 @@ import com.shijiawei.secretblog.common.dto.AmsArtTagsDTO;
 import com.shijiawei.secretblog.common.dto.ArticlePreviewDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.search.feign.ArticleFeignClient;
+import com.shijiawei.secretblog.search.service.ElasticSearchService;
 import com.shijiawei.secretblog.search.vo.AmsArtTagsVo;
 import document.ArticlePreviewDocument;
 import lombok.extern.slf4j.Slf4j;
@@ -11,10 +12,13 @@ import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-
+import org.springframework.data.domain.Pageable;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,6 +41,10 @@ class SecretSearchApplicationTests {
 
     @Autowired
     private ElasticsearchOperations operations;
+
+    @Autowired
+    private ElasticSearchService elasticSearchService;
+
     @Test
     void testGetArticlePreviewForSearch() {
         // 使用已存在的文章 ID
@@ -110,5 +118,17 @@ class SecretSearchApplicationTests {
                     return vo;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Test
+    void highlightSearchArticlePreview(){
+        String keyword = "最幸福";
+        Pageable pageable = PageRequest.of(0,10);
+        Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(keyword, pageable, "title");
+        List<ArticlePreviewDocument> content = result.getContent();
+        content.forEach(item->{
+            System.out.println("搜尋結果:"+item);
+
+        });
     }
 }

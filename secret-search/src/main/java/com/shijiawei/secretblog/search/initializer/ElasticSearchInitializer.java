@@ -36,16 +36,19 @@ public class ElasticSearchInitializer {
     )
     @EventListener(ApplicationReadyEvent.class)
     public void initElasticSearchArticlePreviewDocument() {
+        log.info("初始化 Elasticsearch 文章預覽索引...");
         try {
             // 先檢查索引是否已經存在
             boolean ensureIndexExists = elasticSearchService.ensureIndexExists(ArticlePreviewDocument.class);
 
             if (ensureIndexExists) {
+                log.info("索引存在, 檢查索引完整性...");
+
                 // 索引存在，進一步檢查索引完整性（ES文檔數 vs 資料庫文章數進行比對）
                 boolean isIndexComplete = elasticSearchService.isArticlePreviewIndexComplete();
-                
+                log.info("索引完整性檢查結果: {}", isIndexComplete);
                 if (isIndexComplete) {
-                    long indexDocCount = elasticSearchService.getIndexDocCount();
+                    long indexDocCount = elasticSearchService.getArticlePreviewIndexDocCount();
                     log.info("跳過初始化, 索引已完整建立 , ES文檔數量:{}", indexDocCount);
                     return;
                 } else {

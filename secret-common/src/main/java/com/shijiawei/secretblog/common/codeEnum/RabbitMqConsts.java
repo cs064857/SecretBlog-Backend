@@ -88,4 +88,23 @@ public class RabbitMqConsts {
         }
 
     }
+
+    /**
+     * 搜索服務（secret-search）相關常量
+     */
+    public static class search {
+        private search() {}
+        private static final String searchPrefix = "search";
+
+        public static final String topicExchange = searchPrefix + ".topicExchange";
+
+        /**
+         * 文章同步至 Elasticsearch
+         */
+        public static class syncArticleToES {
+            private syncArticleToES() {}
+            public static final String queue = "search.article.sync.queue";
+            public static final String routingKey = "search.article.sync";
+        }
+    }
 }

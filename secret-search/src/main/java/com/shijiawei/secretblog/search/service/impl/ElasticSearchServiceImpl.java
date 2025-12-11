@@ -1,25 +1,36 @@
 package com.shijiawei.secretblog.search.service.impl;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.MoreLikeThisQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.QueryVariant;
 import com.shijiawei.secretblog.common.dto.AmsArtTagsDTO;
 import com.shijiawei.secretblog.common.dto.ArticlePreviewDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.search.feign.ArticleFeignClient;
+import com.shijiawei.secretblog.search.repository.ArticlePreviewDocumentRepository;
 import com.shijiawei.secretblog.search.service.ElasticSearchService;
 import com.shijiawei.secretblog.search.vo.AmsArtTagsVo;
 import document.ArticlePreviewDocument;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.IndexOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.HighlightQuery;
+import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Service;
 import org.jsoup.Jsoup;
 
-import javax.management.Query;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -37,7 +48,11 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     private ElasticsearchOperations operations;
 
     @Autowired
-    private ElasticsearchRepository repository;
+    private ArticlePreviewDocumentRepository articlePreviewDocumentRepository;
+
+    @Autowired
+    private ElasticsearchTemplate elasticsearchTemplate;
+
 
     /**
      * 根據 articleId 建立文章預覽 Elasticsearch 文檔
@@ -245,9 +260,20 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     /**
      * 獲取索引的文檔總數量
      */
-    public long getIndexDocCount(){
+//    public long getIndexDocCount(){
+//        // 使用 ElasticsearchOperations 的 count 方法計算文檔數量
+//        NativeQuery countQuery = NativeQuery.builder()
+//                .withQuery(q -> q.matchAll(m -> m))
+//                .build();
+//        return operations.count(countQuery, ArticlePreviewDocument.class);
+//    }
+
+    /**
+     * 獲取索引的文檔總數量
+     */
+    public long getArticlePreviewIndexDocCount(){
         //直接使用repository的count取代operations的操作
-        return repository.count();
+        return articlePreviewDocumentRepository.count();
     }
 
     /**
@@ -262,7 +288,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
         
         try {
             // 獲取 ES 索引的文檔數量
-            long esDocCount = getIndexDocCount();
+            long esDocCount = getArticlePreviewIndexDocCount();
             log.debug("ES 索引文檔數量: {}", esDocCount);
             
             // 透過 Feign 獲取資料庫中的文章總數量
@@ -312,6 +338,81 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     public <T> boolean deleteIndex(Class<T> clzz){
         IndexOperations indexOperations = operations.indexOps(clzz);
         return indexOperations.delete();
+    }
+
+    /**
+     * 搜索
+     */
+    public void searchDocs(){
+
+
+    }
+
+
+    /**
+     * 執行高亮搜索
+     * @param keyword 搜索關鍵字
+     * @param pageable 分頁參數
+     * @return 包含高亮內容的分頁結果
+     */
+    public Page<ArticlePreviewDocument> searchWithHighlight(String keyword,Pageable pageable,String... fields) {
+
+
+        List<HighlightField> highlightFields = Arrays.stream(fields).map(HighlightField::new).toList();
+
+        //設定高亮參數：前後綴標籤 (例如黃色文字)
+        HighlightParameters highlightParameters = HighlightParameters.builder()
+                .withPostTags("<b style='color:yellow'>") // 關鍵字前的標籤
+                .withPostTags("</b>") // 關鍵字後的標籤
+                .withFragmentSize(100)// 內容過長時，每個片段的字數
+                .withNumberOfFragments(1)//只取 1 個最佳片段 (避免內容過長)
+                .build();
+
+        Highlight highlight = new Highlight(highlightParameters,highlightFields);
+
+
+        /*
+        建構NativeQuery
+         */
+        NativeQuery nativeQuery = NativeQuery.builder()
+                .withQuery(q -> q.multiMatch(
+                        m -> m.fields(Arrays.asList(fields))//設置搜索欄位
+                                .query(keyword)//搜索的關鍵字
+                                .minimumShouldMatch("75%")
+                ))
+                .withHighlightQuery(new HighlightQuery(highlight, null))//加入高亮配置
+                .withPageable(pageable)//設置分頁
+                .build();
+
+        SearchHits<ArticlePreviewDocument> searchHits = operations.search(nativeQuery, ArticlePreviewDocument.class);
+
+
+
+        // 處理結果將高亮片段替換回原始物件
+        List<ArticlePreviewDocument> resultList = searchHits.stream().map(hit -> {
+            // 獲取原始文檔
+            ArticlePreviewDocument doc = hit.getContent();
+
+            // 處理標題高亮
+            List<String> titleHighlights = hit.getHighlightField("title");
+            if (titleHighlights != null && !titleHighlights.isEmpty()) {
+                // 如果有高亮片段，替換原始標題
+                doc.setTitle(titleHighlights.get(0));
+            }
+
+            // 處理內容高亮
+            List<String> contentHighlights = hit.getHighlightField("content");
+            if (contentHighlights != null && !contentHighlights.isEmpty()) {
+                // 如果有高亮片段，替換原始內容
+                // 將內容變成只有包含關鍵字的那一小段文字，適合做列表預覽
+                doc.setContent(contentHighlights.get(0));
+            }
+
+            return doc;
+        }).collect(Collectors.toList());
+
+        // 5. 封裝成分頁物件返回
+        return new PageImpl<>(resultList, pageable, searchHits.getTotalHits());
     }
 
 }

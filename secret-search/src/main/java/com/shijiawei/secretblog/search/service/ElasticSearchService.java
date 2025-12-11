@@ -1,5 +1,9 @@
 package com.shijiawei.secretblog.search.service;
 
+import document.ArticlePreviewDocument;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 
 /**
@@ -42,9 +46,9 @@ public interface ElasticSearchService {
     <T> boolean ensureIndexExists(Class<T> documentClass);
 
     /**
-     * 獲取索引的文檔總數量
+     * 獲取ArticlePreview索引的文檔總數量
      */
-    long getIndexDocCount();
+    long getArticlePreviewIndexDocCount();
 
     /**
      * 檢查 ArticlePreview 索引是否已完整建立
@@ -53,4 +57,12 @@ public interface ElasticSearchService {
      * @return true 表示索引完整（ES 文檔數 >= 資料庫文章數），false 表示索引不完整
      */
     boolean isArticlePreviewIndexComplete();
-}
+
+    /**
+     * 執行高亮搜索
+     * @param keyword 搜索關鍵字
+     * @param pageable 分頁參數
+     * @return 包含高亮內容的分頁結果
+     */
+    Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, String... fields);
+    }

@@ -33,6 +33,14 @@ public class RabbitConfig {
         return new TopicExchange(RabbitMqConsts.ams.topicExchange);
     }
 
+    /**
+     * 搜索服務 Topic Exchange（用於發送 ES 同步消息）
+     */
+    @Bean(value = RabbitMqConsts.search.topicExchange)
+    public TopicExchange searchTopicExchange(){
+        return new TopicExchange(RabbitMqConsts.search.topicExchange);
+    }
+
     @Bean
     public Binding amsBinding(@Qualifier(value = RabbitMqConsts.ams.updateArticleLiked.queue) Queue queue,
                               @Qualifier(value = RabbitMqConsts.ams.topicExchange) TopicExchange topicExchange){
