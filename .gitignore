@@ -4,9 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-.serena
-.claude
-.agent
+
 ### STS ###
 .apt_generated
 .classpath
@@ -50,5 +48,3 @@ build/
 
 applicationBak.yaml
 applicationBackup.yaml
-
-.gitignore

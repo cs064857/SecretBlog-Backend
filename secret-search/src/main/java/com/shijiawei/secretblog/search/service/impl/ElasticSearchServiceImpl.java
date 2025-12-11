@@ -3,8 +3,11 @@ package com.shijiawei.secretblog.search.service.impl;
 import co.elastic.clients.elasticsearch._types.query_dsl.MoreLikeThisQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.QueryVariant;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.AmsArtTagsDTO;
 import com.shijiawei.secretblog.common.dto.ArticlePreviewDTO;
+import com.shijiawei.secretblog.common.exception.BusinessException;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.search.feign.ArticleFeignClient;
 import com.shijiawei.secretblog.search.repository.ArticlePreviewDocumentRepository;
@@ -435,8 +438,12 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
             
             log.info("文章預覽 ES 文檔刪除完成，articleId={}，esDocId={}", articleId, esDocId);
         } catch (Exception e) {
-            log.error("刪除文章預覽 ES 文檔失敗，articleId={}，error={}", articleId, e.getMessage(), e);
-            throw new RuntimeException("刪除文章預覽 ES 文檔失敗: articleId=" + articleId, e);
+            throw BusinessException.builder()
+                    .iErrorCode(ResultCode.ARTICLE_ES_INDEX_ERROR)
+                    .detailMessage("刪除文章預覽 ES 文檔失敗: articleId=" + articleId)
+                    .cause(e)
+                    .data(Map.of("articleId", articleId))
+                    .build();
         }
     }
 
