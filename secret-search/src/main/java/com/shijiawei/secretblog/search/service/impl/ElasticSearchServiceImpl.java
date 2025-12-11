@@ -415,4 +415,31 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
         return new PageImpl<>(resultList, pageable, searchHits.getTotalHits());
     }
 
+    /**
+     * 根據 articleId 刪除文章預覽 Elasticsearch 文檔
+     *
+     * @param articleId 文章ID
+     */
+    @Override
+    public void deleteArticlePreviewDoc(Long articleId) {
+        log.info("開始刪除文章預覽 ES 文檔，articleId={}", articleId);
+        
+        String esDocId = "article_" + articleId;
+        
+        try {
+            // 使用 repository 刪除文檔
+            articlePreviewDocumentRepository.deleteById(esDocId);
+            
+            // 刷新索引，使變更立即可見
+            operations.indexOps(ArticlePreviewDocument.class).refresh();
+            
+            log.info("文章預覽 ES 文檔刪除完成，articleId={}，esDocId={}", articleId, esDocId);
+        } catch (Exception e) {
+            log.error("刪除文章預覽 ES 文檔失敗，articleId={}，error={}", articleId, e.getMessage(), e);
+            throw new RuntimeException("刪除文章預覽 ES 文檔失敗: articleId=" + articleId, e);
+        }
+    }
+
+
+
 }

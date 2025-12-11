@@ -32,8 +32,15 @@ public class SearchConsumer {
                 message.getArticleId(), message.getOperationType());
         
         try {
-            // 調用 ES 服務創建/更新文檔
-            elasticSearchService.createArticlePreviewDoc(message.getArticleId());
+            String operationType = message.getOperationType();
+            
+            if (SyncArticleToESMessage.OPERATION_DELETE.equals(operationType)) {
+                // 刪除操作
+                elasticSearchService.deleteArticlePreviewDoc(message.getArticleId());
+            } else {
+                // CREATE 和 UPDATE 操作都使用同一方法（save 會自動處理新增或更新）
+                elasticSearchService.createArticlePreviewDoc(message.getArticleId());
+            }
             
             log.info("RabbitMQ 文章同步至 ES 成功，articleId={}，operationType={}",
                     message.getArticleId(), message.getOperationType());

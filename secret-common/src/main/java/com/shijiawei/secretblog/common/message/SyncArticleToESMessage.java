@@ -50,4 +50,5 @@ public class SyncArticleToESMessage implements Serializable, RabbitMessage {
      */
     public static final String OPERATION_CREATE = "CREATE";
     public static final String OPERATION_UPDATE = "UPDATE";
+    public static final String OPERATION_DELETE = "DELETE";
 }

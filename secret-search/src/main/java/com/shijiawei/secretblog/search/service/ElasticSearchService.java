@@ -65,4 +65,11 @@ public interface ElasticSearchService {
      * @return 包含高亮內容的分頁結果
      */
     Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, String... fields);
-    }
+
+    /**
+     * 根據 articleId 刪除文章預覽 Elasticsearch 文檔
+     *
+     * @param articleId 文章ID
+     */
+    void deleteArticlePreviewDoc(Long articleId);
+}

@@ -2128,6 +2128,14 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
             // 快取清理失敗不影響主流程，僅記錄日誌
         }
 
+        // 8. 透過本地消息表 + RabbitMQ 異步同步刪除 Elasticsearch 索引
+        SyncArticleToESMessage syncMessage = SyncArticleToESMessage.builder()
+                .articleId(articleId)
+                .operationType(SyncArticleToESMessage.OPERATION_DELETE)
+                .build();
+        amsLocalMessageService.createPendingMessage(syncMessage);
+        log.info("已建立文章 ES 同步本地消息，articleId={}，operationType=DELETE", articleId);
+
         log.info("文章邏輯刪除成功 - articleId: {}, userId: {}", articleId, userId);
         return R.ok();
     }
