@@ -10,42 +10,32 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-/**
- * Feign 攔截器配置
- * 用於在微服務間調用時傳遞認證資訊（Authorization Header / Cookie）
- */
 @Configuration
 public class FeignInterceptorConfig {
 
     /**
-     * Feign 請求攔截器
+     * feign 攔截器
      * @return RequestInterceptor 實例
      */
     @Bean
     public RequestInterceptor requestInterceptor() {
-        return new FeignRequestInterceptor();
+        return new MyRequestInterceptor();
     }
 
     /**
-     * 實現攔截器 RequestInterceptor
-     * 自動傳遞 Authorization Header 或 Cookie 中的 jwtToken
+     * 實現攔截器RequestInterceptor
      */
-    static class FeignRequestInterceptor implements RequestInterceptor {
+    static class MyRequestInterceptor implements RequestInterceptor {
         @Override
         public void apply(RequestTemplate template) {
-            ServletRequestAttributes servletRequestAttributes = 
-                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            
+            ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (servletRequestAttributes != null) {
                 HttpServletRequest request = servletRequestAttributes.getRequest();
-                
-                // 優先傳遞 Authorization Header
                 String authorization = request.getHeader("Authorization");
                 if (StringUtils.hasText(authorization)) {
                     template.header("Authorization", authorization);
                     return;
                 }
-                
                 // Authorization 為空時，回退至 Cookie 中的 jwtToken
                 Cookie[] cookies = request.getCookies();
                 if (cookies != null) {
@@ -63,4 +53,5 @@ public class FeignInterceptorConfig {
             }
         }
     }
+
 }

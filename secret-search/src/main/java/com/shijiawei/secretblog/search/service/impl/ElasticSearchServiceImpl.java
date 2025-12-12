@@ -365,10 +365,11 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
 
         //設定高亮參數：前後綴標籤 (例如黃色文字)
         HighlightParameters highlightParameters = HighlightParameters.builder()
-                .withPostTags("<b style='color:yellow'>") // 關鍵字前的標籤
+                .withPreTags("<b style='color:yellow'>") // 關鍵字前的標籤
                 .withPostTags("</b>") // 關鍵字後的標籤
                 .withFragmentSize(100)// 內容過長時，每個片段的字數
                 .withNumberOfFragments(1)//只取 1 個最佳片段 (避免內容過長)
+                .withNoMatchSize(50)//如果內容不包含關鍵字，則返回的片段長度
                 .build();
 
         Highlight highlight = new Highlight(highlightParameters,highlightFields);
@@ -407,9 +408,22 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
             List<String> contentHighlights = hit.getHighlightField("content");
             if (contentHighlights != null && !contentHighlights.isEmpty()) {
                 // 如果有高亮片段，替換原始內容
+
                 // 將內容變成只有包含關鍵字的那一小段文字，適合做列表預覽
-                doc.setContent(contentHighlights.get(0));
+                // 判斷內容字元是否超過maxLength
+                String string = contentHighlights.get(0);
+                int maxLength = 150;
+                if(string.length() > maxLength){
+                    //手動限制內容字數, 避免溢出 , 並在最後加上省略號
+                    string = string.substring(0,maxLength) + "...";
+                }
+
+                //設置最終的結果
+                doc.setContent(string);
             }
+
+
+
 
             return doc;
         }).collect(Collectors.toList());
