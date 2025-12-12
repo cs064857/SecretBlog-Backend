@@ -8,6 +8,7 @@ import document.ArticlePreviewDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -54,6 +56,11 @@ class ElasticSearchServiceImplTest {
         elasticSearchService.createArticlePreviewDocByList(articleIdList);
 
         verify(articleFeignClient).getBatchArticlePreviewsForSearch(articleIdList);
+        ArgumentCaptor<Iterable> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(operations).save(captor.capture());
+        Iterable<ArticlePreviewDocument> savedDocs = captor.getValue();
+        ArticlePreviewDocument first = savedDocs.iterator().next();
+        assertEquals("https://example.com/avatar/1.png", first.getAvatar());
         verify(operations).indexOps(ArticlePreviewDocument.class);
         verify(indexOperations).refresh();
     }
@@ -77,6 +84,7 @@ class ElasticSearchServiceImplTest {
         preview.setArticleId(articleId);
         preview.setUserId(1L);
         preview.setNickName("TestUser");
+        preview.setAvatar("https://example.com/avatar/1.png");
         preview.setTitle("Test Article " + articleId);
         preview.setContent("<p>Test content for article " + articleId + "</p>");
         preview.setCategoryId(1L);

@@ -2522,6 +2522,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         previewDTO.setArticleId(amsArticle.getId());
         previewDTO.setUserId(amsArtinfo.getUserId());
         previewDTO.setNickName(amsArtinfo.getNickName());
+        previewDTO.setAvatar(amsArtinfo.getAvatar());
         previewDTO.setTitle(amsArticle.getTitle());
         previewDTO.setContent(amsArticle.getContent()); // HTML 格式的文章內容
         previewDTO.setCategoryId(amsArtinfo.getCategoryId());
@@ -2620,6 +2621,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     previewDTO.setArticleId(article.getId());
                     previewDTO.setUserId(artinfo.getUserId());
                     previewDTO.setNickName(artinfo.getNickName());
+                    previewDTO.setAvatar(artinfo.getAvatar());
                     previewDTO.setTitle(article.getTitle());
                     previewDTO.setContent(article.getContent());
                     previewDTO.setCategoryId(artinfo.getCategoryId());

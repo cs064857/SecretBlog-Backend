@@ -86,6 +86,7 @@ class SecretSearchApplicationTests {
                 .articleId(preview.getArticleId())
                 .userId(preview.getUserId())
                 .nickName(preview.getNickName())
+                .avatar(preview.getAvatar())
                 .title(preview.getTitle())
                 .content(cleanText)
                 .categoryId(preview.getCategoryId())

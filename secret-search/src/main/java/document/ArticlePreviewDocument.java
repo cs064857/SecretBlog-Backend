@@ -51,6 +51,12 @@ public class ArticlePreviewDocument {
     private String nickName;
 
     /**
+     * 作者頭像(可為空)
+     */
+    @Field(type = FieldType.Keyword)
+    private String avatar;
+
+    /**
      * 文章標題(不可為空,最多64字符)
      */
     @Field(type = FieldType.Text,analyzer = "ik_max_word",searchAnalyzer = "ik_smart")

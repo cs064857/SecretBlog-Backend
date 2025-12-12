@@ -32,6 +32,11 @@ public class ArticlePreviewDTO {
     private String nickName;
 
     /**
+     * 作者頭像
+     */
+    private String avatar;
+
+    /**
      * 文章標題
      */
     private String title;
