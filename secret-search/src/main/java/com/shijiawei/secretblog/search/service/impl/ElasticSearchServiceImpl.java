@@ -15,6 +15,7 @@ import com.shijiawei.secretblog.search.service.ElasticSearchService;
 import com.shijiawei.secretblog.search.vo.AmsArtTagsVo;
 import document.ArticlePreviewDocument;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -24,6 +25,7 @@ import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.IndexOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
@@ -102,10 +104,10 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
 
         // 儲存文檔到 Elasticsearch
         operations.save(articleDocument);
-        
+
         // 刷新索引，使變更立即可見
         operations.indexOps(ArticlePreviewDocument.class).refresh();
-        
+
         log.info("文章預覽 ES 文檔建立完成，articleId={}，esDocId={}", articleId, articleDocument.getId());
     }
 
@@ -251,7 +253,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
      * 確保指定的 Elasticsearch 索引存在
      *
      * @param documentClass 文檔類型的 Class 對象
-     * @param <T> 文檔類型泛型
+     * @param <T>           文檔類型泛型
      */
     public <T> boolean ensureIndexExists(Class<T> documentClass) {
         IndexOperations indexOps = operations.indexOps(documentClass);
@@ -277,7 +279,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     /**
      * 獲取索引的文檔總數量
      */
-    public long getArticlePreviewIndexDocCount(){
+    public long getArticlePreviewIndexDocCount() {
         //直接使用repository的count取代operations的操作
         return articlePreviewDocumentRepository.count();
     }
@@ -285,18 +287,18 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     /**
      * 檢查 ArticlePreview 索引是否已完整建立
      * 透過比較資料庫文章數量與 ES 索引文檔數量來判斷
-     * 
+     *
      * @return true 表示索引完整（ES 文檔數 >= 資料庫文章數），false 表示索引不完整
      */
     @Override
     public boolean isArticlePreviewIndexComplete() {
         log.info("開始檢查 ArticlePreview 索引完整性");
-        
+
         try {
             // 獲取 ES 索引的文檔數量
             long esDocCount = getArticlePreviewIndexDocCount();
             log.debug("ES 索引文檔數量: {}", esDocCount);
-            
+
             // 透過 Feign 獲取資料庫中的文章總數量
             R<Long> response = articleFeignClient.getTotalArticleCount();
             if (response == null || response.getData() == null) {
@@ -305,12 +307,12 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
             }
             long dbArticleCount = response.getData();
             log.debug("資料庫文章總數量: {}", dbArticleCount);
-            
+
             // 比較數量，判斷索引是否完整
             boolean isComplete = esDocCount >= dbArticleCount;
-            log.info("ArticlePreview 索引完整性檢查結果: {} (ES文檔數: {}, 資料庫文章數: {})", 
+            log.info("ArticlePreview 索引完整性檢查結果: {} (ES文檔數: {}, 資料庫文章數: {})",
                     isComplete ? "完整" : "不完整", esDocCount, dbArticleCount);
-            
+
             return isComplete;
         } catch (Exception e) {
             log.error("檢查索引完整性時發生錯誤: {}", e.getMessage());
@@ -341,7 +343,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     /**
      * 刪除索引
      */
-    public <T> boolean deleteIndex(Class<T> clzz){
+    public <T> boolean deleteIndex(Class<T> clzz) {
         IndexOperations indexOperations = operations.indexOps(clzz);
         return indexOperations.delete();
     }
@@ -349,7 +351,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     /**
      * 搜索
      */
-    public void searchDocs(){
+    public void searchDocs() {
 
 
     }
@@ -435,6 +437,116 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
         return new PageImpl<>(resultList, pageable, searchHits.getTotalHits());
     }
 
+
+//    /**
+//     * 執行高亮搜索
+//     *
+//     * @param keyword  搜索關鍵字
+//     * @param pageable 分頁參數
+//     * @return 包含高亮內容的分頁結果
+//     */
+//    public Page<ArticlePreviewDocument> searchWithHighlight(String searchType, String keyword, Pageable pageable, String... fields) {
+//
+//
+//        // 代表默認搜尋為文章
+//        if ("users".equals(searchType)) {
+//            //代表搜尋用戶相關資訊
+//            NativeQuery nativeQuery = NativeQuery.builder()
+//                    .withQuery(q -> q.match(m -> m
+//                            .query(keyword)
+//                            .field("nickName")
+//                    ))
+//                    .build();
+//
+//            SearchHits<ArticlePreviewDocument> searchHits = operations.search(nativeQuery, ArticlePreviewDocument.class);
+//
+//            // 處理結果將高亮片段替換回原始物件
+//            // 獲取原始文檔
+//            List<ArticlePreviewDocument> resultList = searchHits.stream().map(SearchHit::getContent).toList();
+//
+//            return new PageImpl<>(resultList, pageable, searchHits.getTotalHits());
+//        } else {
+//
+//
+//
+//
+//            String[] defaultFields = {"title", "content"};
+//
+//
+//            List<HighlightField> highlightFields = Arrays.stream(defaultFields).map(HighlightField::new).toList();
+//
+//            //設定高亮參數：前後綴標籤 (例如黃色文字)
+//            HighlightParameters highlightParameters = HighlightParameters.builder()
+//                    .withPreTags("<b style='color:yellow'>") // 關鍵字前的標籤
+//                    .withPostTags("</b>") // 關鍵字後的標籤
+//                    .withFragmentSize(100)// 內容過長時，每個片段的字數
+//                    .withNumberOfFragments(1)//只取 1 個最佳片段 (避免內容過長)
+//                    .withNoMatchSize(50)//如果內容不包含關鍵字，則返回的片段長度
+//                    .build();
+//
+//            Highlight highlight = new Highlight(highlightParameters, highlightFields);
+//
+//            // 2準備搜索欄位 (合併默認與額外欄位)
+//            List<String> targetFields = new ArrayList<>(List.of("title", "content"));
+//            if (fields != null) {
+//                Collections.addAll(targetFields, fields);
+//            }
+//            /*
+//            建構NativeQuery
+//             */
+//
+//            NativeQuery nativeQuery = NativeQuery.builder()
+//                    .withQuery(q -> q.multiMatch(m -> m
+//                            .fields(targetFields)
+//                            .query(keyword)
+//                            .minimumShouldMatch("75%"))
+//                    )
+//                    .withHighlightQuery(new HighlightQuery(highlight,null))
+//                    .build();
+//
+//
+//            SearchHits<ArticlePreviewDocument> searchHits = operations.search(nativeQuery, ArticlePreviewDocument.class);
+//
+//
+//            // 處理結果將高亮片段替換回原始物件
+//            List<ArticlePreviewDocument> resultList = searchHits.stream().map(hit -> {
+//                // 獲取原始文檔
+//                ArticlePreviewDocument doc = hit.getContent();
+//
+//                // 處理標題高亮
+//                List<String> titleHighlights = hit.getHighlightField("title");
+//                if (titleHighlights != null && !titleHighlights.isEmpty()) {
+//                    // 如果有高亮片段，替換原始標題
+//                    doc.setTitle(titleHighlights.get(0));
+//                }
+//
+//                // 處理內容高亮
+//                List<String> contentHighlights = hit.getHighlightField("content");
+//                if (contentHighlights != null && !contentHighlights.isEmpty()) {
+//                    // 如果有高亮片段，替換原始內容
+//
+//                    // 將內容變成只有包含關鍵字的那一小段文字，適合做列表預覽
+//                    // 判斷內容字元是否超過maxLength
+//                    String string = contentHighlights.get(0);
+//                    int maxLength = 150;
+//                    if (string.length() > maxLength) {
+//                        //手動限制內容字數, 避免溢出 , 並在最後加上省略號
+//                        string = string.substring(0, maxLength) + "...";
+//                    }
+//
+//                    //設置最終的結果
+//                    doc.setContent(string);
+//                }
+//
+//
+//                return doc;
+//            }).collect(Collectors.toList());
+//
+//            return new PageImpl<>(resultList, pageable, searchHits.getTotalHits());
+//        }
+//
+//    }
+
     /**
      * 根據 articleId 刪除文章預覽 Elasticsearch 文檔
      *
@@ -443,16 +555,16 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     @Override
     public void deleteArticlePreviewDoc(Long articleId) {
         log.info("開始刪除文章預覽 ES 文檔，articleId={}", articleId);
-        
+
         String esDocId = "article_" + articleId;
-        
+
         try {
             // 使用 repository 刪除文檔
             articlePreviewDocumentRepository.deleteById(esDocId);
-            
+
             // 刷新索引，使變更立即可見
             operations.indexOps(ArticlePreviewDocument.class).refresh();
-            
+
             log.info("文章預覽 ES 文檔刪除完成，articleId={}，esDocId={}", articleId, esDocId);
         } catch (Exception e) {
             throw BusinessException.builder()
@@ -463,7 +575,6 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
                     .build();
         }
     }
-
 
 
 }

@@ -64,6 +64,7 @@ public interface ElasticSearchService {
      * @param pageable 分頁參數
      * @return 包含高亮內容的分頁結果
      */
+//    Page<ArticlePreviewDocument> searchWithHighlight(String searchType,String keyword, Pageable pageable, String... fields);
     Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, String... fields);
 
     /**

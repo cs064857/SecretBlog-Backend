@@ -43,54 +43,59 @@ public class SearchController {
     @GetMapping("/highlight")
     public R<Page<ArticlePreviewDocument>> searchWithHighlight(
             @RequestParam(value = "keyword") String keyword,
+//            @RequestParam(value = "searchType" , required = false) String searchType,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "fields", required = false) String... fields
+    ) {
+
         log.info("執行高亮搜索，keyword={}，page={}，size={}", keyword, page, size);
         
         // 建立分頁參數
         Pageable pageable = PageRequest.of(page, size);
         
         // 執行高亮搜索，預設搜索 title 和 content 欄位
+//        Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(
+//                searchType,keyword, pageable, fields);
+
         Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(
-                keyword, pageable, "title", "content");
-        
+                keyword, pageable, fields);
         log.info("高亮搜索完成，共找到 {} 筆結果", result.getTotalElements());
         
         return R.ok(result);
     }
 
-    /**
-     * 自訂欄位高亮搜索文章
-     * 可指定搜索欄位，返回包含高亮標記的搜索結果
-     *
-     * @param keyword 搜索關鍵字
-     * @param fields  要搜索的欄位（例如：title, content, nickName）
-     * @param page    頁碼（從 0 開始，預設為 0）
-     * @param size    每頁數量（預設為 10）
-     * @return 包含高亮內容的分頁搜索結果
-     */
-    @GetMapping("/highlight/custom")
-    public R<Page<ArticlePreviewDocument>> searchWithHighlightCustomFields(
-            @RequestParam(value = "keyword") String keyword,
-            @RequestParam(value = "fields") String[] fields,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        
-        log.info("執行自訂欄位高亮搜索，keyword={}，fields={}，page={}，size={}", 
-                keyword, String.join(",", fields), page, size);
-        
-        // 建立分頁參數
-        Pageable pageable = PageRequest.of(page, size);
-        
-        // 執行高亮搜索
-        Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(
-                keyword, pageable, fields);
-        
-        log.info("自訂欄位高亮搜索完成，共找到 {} 筆結果", result.getTotalElements());
-        
-        return R.ok(result);
-    }
+//    /**
+//     * 自訂欄位高亮搜索文章
+//     * 可指定搜索欄位，返回包含高亮標記的搜索結果
+//     *
+//     * @param keyword 搜索關鍵字
+//     * @param fields  要搜索的欄位（例如：title, content, nickName）
+//     * @param page    頁碼（從 0 開始，預設為 0）
+//     * @param size    每頁數量（預設為 10）
+//     * @return 包含高亮內容的分頁搜索結果
+//     */
+//    @GetMapping("/highlight/custom")
+//    public R<Page<ArticlePreviewDocument>> searchWithHighlightCustomFields(
+//            @RequestParam(value = "keyword") String keyword,
+//            @RequestParam(value = "fields") String[] fields,
+//            @RequestParam(value = "page", defaultValue = "0") int page,
+//            @RequestParam(value = "size", defaultValue = "10") int size) {
+//
+//        log.info("執行自訂欄位高亮搜索，keyword={}，fields={}，page={}，size={}",
+//                keyword, String.join(",", fields), page, size);
+//
+//        // 建立分頁參數
+//        Pageable pageable = PageRequest.of(page, size);
+//
+//        // 執行高亮搜索
+//        Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(
+//                keyword, pageable, fields);
+//
+//        log.info("自訂欄位高亮搜索完成，共找到 {} 筆結果", result.getTotalElements());
+//
+//        return R.ok(result);
+//    }
 
     /**
      * 建立單篇文章的 Elasticsearch 預覽文檔
