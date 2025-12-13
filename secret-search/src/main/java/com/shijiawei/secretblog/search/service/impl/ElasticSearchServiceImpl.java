@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.search.service.impl;
 import co.elastic.clients.elasticsearch._types.query_dsl.MoreLikeThisQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.QueryVariant;
+import co.elastic.clients.json.JsonData;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.AmsArtTagsDTO;
 import com.shijiawei.secretblog.common.dto.ArticlePreviewDTO;
@@ -359,7 +360,8 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
 
     /**
      * 執行高亮搜索
-     * @param keyword 搜索關鍵字
+     *
+     * @param keyword  搜索關鍵字
      * @param pageable 分頁參數
      * @return 包含高亮內容的分頁結果
      */
@@ -399,38 +401,30 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
          建構 NativeQuery
          */
 
-        NativeQuery nativeQuery;
-
-        if (categoryId == null) {
-            // 不指定分類時，搜尋所有文章
-            nativeQuery = NativeQuery.builder()
-                    .withQuery(q -> q.multiMatch(
-                            m -> m.fields(fields)//設置搜索欄位
-                                    .query(keyword)//搜索的關鍵字
-                                    .minimumShouldMatch("75%")
-                    ))
-                    .withHighlightQuery(new HighlightQuery(highlight, null))//加入高亮配置
-                    .withPageable(pageable)//設置分頁
-                    .build();
-        } else {
-            // 指定分類時，搜尋指定分類的文章
-            nativeQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(b -> b
-                            .must(m -> m.multiMatch(mm -> mm
+        // 指定分類時，搜尋指定分類的文章
+        NativeQuery nativeQuery = NativeQuery.builder()
+                .withQuery(q -> q.bool(b -> {
+                            b.must(m -> m.multiMatch(mm -> mm
                                     .fields(fields)//設置搜索欄位
                                     .query(keyword)//搜索的關鍵字
                                     .minimumShouldMatch("75%")
-                            ))
-                            .filter(f -> f.term(t -> t
-                                    .field("categoryId")//設置過濾分類的欄位
-                                    .value(categoryId.toString())
-                            ))
-                    ))
-                    .withHighlightQuery(new HighlightQuery(highlight, null))//加入高亮配置
-                    .withPageable(pageable)//設置分頁
-                    .build();
-        }
+                            ));
 
+
+                            if (categoryId != null) {
+                                // 若指定分類，則加入分類過濾條件
+                                b.filter(f -> f.term(t -> t
+                                        .field("categoryId")//設置過濾分類的欄位
+                                        .value(categoryId.toString())
+                                ));
+                            }
+
+                            return b;
+                        }
+                ))
+                .withHighlightQuery(new HighlightQuery(highlight, null))//加入高亮配置
+                .withPageable(pageable)//設置分頁
+                .build();
 
 
         SearchHits<ArticlePreviewDocument> searchHits = operations.search(nativeQuery, ArticlePreviewDocument.class);
