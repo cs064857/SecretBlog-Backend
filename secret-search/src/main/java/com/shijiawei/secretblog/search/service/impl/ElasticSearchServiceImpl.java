@@ -363,12 +363,28 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
      * @param pageable 分頁參數
      * @return 包含高亮內容的分頁結果
      */
-    public Page<ArticlePreviewDocument> searchWithHighlight(String keyword,Pageable pageable,String... fields) {
+    @Override
+    public Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable) {
+        return searchWithHighlight(keyword, pageable, null);
+    }
 
+    /**
+     * 執行高亮搜索（可選依分類過濾）
+     *
+     * @param keyword    搜索關鍵字
+     * @param pageable   分頁參數
+     * @param categoryId 文章分類 ID（可選）
+     * @return 包含高亮內容的分頁結果
+     */
+    @Override
+    public Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, Long categoryId) {
 
-        List<HighlightField> highlightFields = Arrays.stream(fields).map(HighlightField::new).toList();
+        // 默認搜尋條件, 標題和內容
+        List<String> fields = Arrays.asList("title", "content");
+        // 設置高量的欄位
+        List<HighlightField> highlightFields = fields.stream().map(HighlightField::new).toList();
 
-        //設定高亮參數：前後綴標籤 (例如黃色文字)
+        // 設定高亮參數：前後綴標籤 (例如黃色文字)
         HighlightParameters highlightParameters = HighlightParameters.builder()
                 .withPreTags("<b style='color:yellow'>") // 關鍵字前的標籤
                 .withPostTags("</b>") // 關鍵字後的標籤
@@ -377,25 +393,47 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
                 .withNoMatchSize(50)//如果內容不包含關鍵字，則返回的片段長度
                 .build();
 
-        Highlight highlight = new Highlight(highlightParameters,highlightFields);
-
+        Highlight highlight = new Highlight(highlightParameters, highlightFields);
 
         /*
-        建構NativeQuery
+         建構 NativeQuery
          */
-        NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(q -> q.multiMatch(
-                        m -> m.fields(Arrays.asList(fields))//設置搜索欄位
-                                .query(keyword)//搜索的關鍵字
-                                .minimumShouldMatch("75%")
-                ))
-                .withHighlightQuery(new HighlightQuery(highlight, null))//加入高亮配置
-                .withPageable(pageable)//設置分頁
-                .build();
+
+        NativeQuery nativeQuery;
+
+        if (categoryId == null) {
+            // 不指定分類時，搜尋所有文章
+            nativeQuery = NativeQuery.builder()
+                    .withQuery(q -> q.multiMatch(
+                            m -> m.fields(fields)//設置搜索欄位
+                                    .query(keyword)//搜索的關鍵字
+                                    .minimumShouldMatch("75%")
+                    ))
+                    .withHighlightQuery(new HighlightQuery(highlight, null))//加入高亮配置
+                    .withPageable(pageable)//設置分頁
+                    .build();
+        } else {
+            // 指定分類時，搜尋指定分類的文章
+            nativeQuery = NativeQuery.builder()
+                    .withQuery(q -> q.bool(b -> b
+                            .must(m -> m.multiMatch(mm -> mm
+                                    .fields(fields)//設置搜索欄位
+                                    .query(keyword)//搜索的關鍵字
+                                    .minimumShouldMatch("75%")
+                            ))
+                            .filter(f -> f.term(t -> t
+                                    .field("categoryId")//設置過濾分類的欄位
+                                    .value(categoryId.toString())
+                            ))
+                    ))
+                    .withHighlightQuery(new HighlightQuery(highlight, null))//加入高亮配置
+                    .withPageable(pageable)//設置分頁
+                    .build();
+        }
+
+
 
         SearchHits<ArticlePreviewDocument> searchHits = operations.search(nativeQuery, ArticlePreviewDocument.class);
-
-
 
         // 處理結果將高亮片段替換回原始物件
         List<ArticlePreviewDocument> resultList = searchHits.stream().map(hit -> {
@@ -413,27 +451,22 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
             List<String> contentHighlights = hit.getHighlightField("content");
             if (contentHighlights != null && !contentHighlights.isEmpty()) {
                 // 如果有高亮片段，替換原始內容
-
                 // 將內容變成只有包含關鍵字的那一小段文字，適合做列表預覽
-                // 判斷內容字元是否超過maxLength
                 String string = contentHighlights.get(0);
                 int maxLength = 150;
-                if(string.length() > maxLength){
-                    //手動限制內容字數, 避免溢出 , 並在最後加上省略號
-                    string = string.substring(0,maxLength) + "...";
+                if (string.length() > maxLength) {
+                    // 手動限制內容字數，避免溢出，並在最後加上省略號
+                    string = string.substring(0, maxLength) + "...";
                 }
 
-                //設置最終的結果
+                // 設置最終的結果
                 doc.setContent(string);
             }
-
-
-
 
             return doc;
         }).collect(Collectors.toList());
 
-        // 5. 封裝成分頁物件返回
+        // 封裝成分頁物件返回
         return new PageImpl<>(resultList, pageable, searchHits.getTotalHits());
     }
 

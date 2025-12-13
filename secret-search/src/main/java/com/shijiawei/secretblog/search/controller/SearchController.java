@@ -35,9 +35,10 @@ public class SearchController {
      * 高亮搜索文章
      * 根據關鍵字搜索文章，返回包含高亮標記的搜索結果
      *
-     * @param keyword 搜索關鍵字
-     * @param page    頁碼（從 0 開始，預設為 0）
-     * @param size    每頁數量（預設為 10）
+     * @param keyword    搜索關鍵字
+     * @param page       頁碼（從 0 開始，預設為 0）
+     * @param size       每頁數量（預設為 10）
+     * @param categoryId 文章分類 ID（可選）
      * @return 包含高亮內容的分頁搜索結果
      */
     @GetMapping("/highlight")
@@ -46,10 +47,10 @@ public class SearchController {
 //            @RequestParam(value = "searchType" , required = false) String searchType,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestParam(value = "fields", required = false) String... fields
+            @RequestParam(value = "categoryId", required = false) Long categoryId
     ) {
 
-        log.info("執行高亮搜索，keyword={}，page={}，size={}", keyword, page, size);
+        log.info("執行高亮搜索，keyword={}，page={}，size={}，categoryId={}", keyword, page, size, categoryId);
         
         // 建立分頁參數
         Pageable pageable = PageRequest.of(page, size);
@@ -59,7 +60,7 @@ public class SearchController {
 //                searchType,keyword, pageable, fields);
 
         Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(
-                keyword, pageable, fields);
+                keyword, pageable, categoryId);
         log.info("高亮搜索完成，共找到 {} 筆結果", result.getTotalElements());
         
         return R.ok(result);

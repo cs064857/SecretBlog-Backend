@@ -65,7 +65,17 @@ public interface ElasticSearchService {
      * @return 包含高亮內容的分頁結果
      */
 //    Page<ArticlePreviewDocument> searchWithHighlight(String searchType,String keyword, Pageable pageable, String... fields);
-    Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, String... fields);
+    Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable);
+
+    /**
+     * 執行高亮搜索（可選依分類過濾）
+     *
+     * @param keyword    搜索關鍵字
+     * @param pageable   分頁參數
+     * @param categoryId 文章分類 ID（可選）
+     * @return 包含高亮內容的分頁結果
+     */
+    Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, Long categoryId);
 
     /**
      * 根據 articleId 刪除文章預覽 Elasticsearch 文檔

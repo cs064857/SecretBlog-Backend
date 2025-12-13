@@ -125,7 +125,7 @@ class SecretSearchApplicationTests {
     void highlightSearchArticlePreview(){
         String keyword = "最幸福";
         Pageable pageable = PageRequest.of(0,10);
-        Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(keyword, pageable, "title");
+        Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(keyword, pageable);
         List<ArticlePreviewDocument> content = result.getContent();
         content.forEach(item->{
             System.out.println("搜尋結果:"+item);
