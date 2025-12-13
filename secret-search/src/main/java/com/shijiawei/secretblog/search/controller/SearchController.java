@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,10 @@ public class SearchController {
      * @param page       頁碼（從 0 開始，預設為 0）
      * @param size       每頁數量（預設為 10）
      * @param categoryId 文章分類 ID（可選）
+     * @param timeField  時間欄位（"createTime" 或 "updateTime"，可選）
+     * @param startTime  開始時間，ISO 格式如 2024-01-01T00:00:00（可選）
+     * @param endTime    結束時間，ISO 格式如 2024-12-31T23:59:59（可選）
+     * @param tagsId     標籤 ID 列表（可選，多選時以逗號分隔）
      * @return 包含高亮內容的分頁搜索結果
      */
     @GetMapping("/highlight")
@@ -47,20 +52,32 @@ public class SearchController {
 //            @RequestParam(value = "searchType" , required = false) String searchType,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestParam(value = "categoryId", required = false) Long categoryId
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "timeField", required = false) String timeField,
+            @RequestParam(value = "startTime", required = false) String startTime,
+            @RequestParam(value = "endTime", required = false) String endTime,
+            @RequestParam(value = "tagsId", required = false) List<Long> tagsId
     ) {
 
-        log.info("執行高亮搜索，keyword={}，page={}，size={}，categoryId={}", keyword, page, size, categoryId);
+        log.info("執行高亮搜索，keyword={}，page={}，size={}，categoryId={}，timeField={}，startTime={}，endTime={}，tagsId={}",
+                keyword, page, size, categoryId, timeField, startTime, endTime, tagsId);
         
         // 建立分頁參數
         Pageable pageable = PageRequest.of(page, size);
-        
-        // 執行高亮搜索，預設搜索 title 和 content 欄位
-//        Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(
-//                searchType,keyword, pageable, fields);
 
+        // 解析時間參數
+        LocalDateTime parsedStartTime = null;
+        LocalDateTime parsedEndTime = null;
+        if (startTime != null && !startTime.isEmpty()) {
+            parsedStartTime = LocalDateTime.parse(startTime);
+        }
+        if (endTime != null && !endTime.isEmpty()) {
+            parsedEndTime = LocalDateTime.parse(endTime);
+        }
+        
+        // 執行高亮搜索
         Page<ArticlePreviewDocument> result = elasticSearchService.searchWithHighlight(
-                keyword, pageable, categoryId);
+                keyword, pageable, categoryId, timeField, parsedStartTime, parsedEndTime, tagsId);
         log.info("高亮搜索完成，共找到 {} 筆結果", result.getTotalElements());
         
         return R.ok(result);

@@ -36,6 +36,7 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
 import org.springframework.stereotype.Service;
 import org.jsoup.Jsoup;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -380,6 +381,54 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
      */
     @Override
     public Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, Long categoryId) {
+        // 調用完整版本的方法，時間篩選和標籤參數設為 null
+        return searchWithHighlight(keyword, pageable, categoryId, null, null, null, null);
+    }
+
+    /**
+     * 執行高亮搜索（可選依分類與時間過濾）
+     *
+     * @param keyword    搜索關鍵字
+     * @param pageable   分頁參數
+     * @param categoryId 文章分類 ID（可選）
+     * @param timeField  時間欄位（"createTime" 或 "updateTime"，可選）
+     * @param startTime  開始時間（可選）
+     * @param endTime    結束時間（可選）
+     * @return 包含高亮內容的分頁結果
+     */
+    @Override
+    public Page<ArticlePreviewDocument> searchWithHighlight(
+            String keyword,
+            Pageable pageable,
+            Long categoryId,
+            String timeField,
+            LocalDateTime startTime,
+            LocalDateTime endTime) {
+        // 調用完整版本的方法，標籤參數設為 null
+        return searchWithHighlight(keyword, pageable, categoryId, timeField, startTime, endTime, null);
+    }
+
+    /**
+     * 執行高亮搜索（可選依分類、時間與標籤過濾）
+     *
+     * @param keyword    搜索關鍵字
+     * @param pageable   分頁參數
+     * @param categoryId 文章分類 ID（可選）
+     * @param timeField  時間欄位（"createTime" 或 "updateTime"，可選）
+     * @param startTime  開始時間（可選）
+     * @param endTime    結束時間（可選）
+     * @param tagsId     標籤 ID 列表（可選）
+     * @return 包含高亮內容的分頁結果
+     */
+    @Override
+    public Page<ArticlePreviewDocument> searchWithHighlight(
+            String keyword,
+            Pageable pageable,
+            Long categoryId,
+            String timeField,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            List<Long> tagsId) {
 
         // 默認搜尋條件, 標題和內容
         List<String> fields = Arrays.asList("title", "content");
@@ -416,6 +465,37 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
                                 b.filter(f -> f.term(t -> t
                                         .field("categoryId")//設置過濾分類的欄位
                                         .value(categoryId.toString())
+                                ));
+                            }
+
+                            // 時間範圍篩選
+                            if (StringUtils.isNotBlank(timeField) && (startTime != null || endTime != null)) {
+                                // 驗證 timeField 只能是 createTime 或 updateTime
+                                if ("createTime".equals(timeField) || "updateTime".equals(timeField)) {
+                                    b.filter(f -> f.range(r -> {
+                                        r.field(timeField);
+                                        if (startTime != null) {
+                                            r.gte(JsonData.of(startTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))));
+                                        }
+                                        if (endTime != null) {
+                                            r.lte(JsonData.of(endTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))));
+                                        }
+                                        return r;
+                                    }));
+                                }
+                            }
+
+                            // 標籤過濾
+                            if (tagsId != null && !tagsId.isEmpty()) {
+                                // 使用 terms 查詢匹配 amsArtTagList.id 欄位
+                                List<String> tagIdStrings = tagsId.stream()
+                                        .map(String::valueOf)
+                                        .toList();
+                                b.filter(f -> f.terms(t -> t
+                                        .field("amsArtTagList.id")
+                                        .terms(tv -> tv.value(tagIdStrings.stream()
+                                                .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
+                                                .toList()))
                                 ));
                             }
 

@@ -4,6 +4,7 @@ import document.ArticlePreviewDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -76,6 +77,48 @@ public interface ElasticSearchService {
      * @return 包含高亮內容的分頁結果
      */
     Page<ArticlePreviewDocument> searchWithHighlight(String keyword, Pageable pageable, Long categoryId);
+
+    /**
+     * 執行高亮搜索（可選依分類與時間過濾）
+     *
+     * @param keyword    搜索關鍵字
+     * @param pageable   分頁參數
+     * @param categoryId 文章分類 ID（可選）
+     * @param timeField  時間欄位（"createTime" 或 "updateTime"，可選）
+     * @param startTime  開始時間（可選）
+     * @param endTime    結束時間（可選）
+     * @return 包含高亮內容的分頁結果
+     */
+    Page<ArticlePreviewDocument> searchWithHighlight(
+            String keyword,
+            Pageable pageable,
+            Long categoryId,
+            String timeField,
+            LocalDateTime startTime,
+            LocalDateTime endTime
+    );
+
+    /**
+     * 執行高亮搜索（可選依分類、時間與標籤過濾）
+     *
+     * @param keyword    搜索關鍵字
+     * @param pageable   分頁參數
+     * @param categoryId 文章分類 ID（可選）
+     * @param timeField  時間欄位（"createTime" 或 "updateTime"，可選）
+     * @param startTime  開始時間（可選）
+     * @param endTime    結束時間（可選）
+     * @param tagsId     標籤 ID 列表（可選）
+     * @return 包含高亮內容的分頁結果
+     */
+    Page<ArticlePreviewDocument> searchWithHighlight(
+            String keyword,
+            Pageable pageable,
+            Long categoryId,
+            String timeField,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            List<Long> tagsId
+    );
 
     /**
      * 根據 articleId 刪除文章預覽 Elasticsearch 文檔
