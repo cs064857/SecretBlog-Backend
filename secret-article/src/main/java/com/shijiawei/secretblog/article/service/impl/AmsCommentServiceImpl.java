@@ -2,6 +2,8 @@ package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -582,13 +584,9 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 
     }
 
-    /**
-     * 依據用戶ID查詢該用戶所有留言
-     * @param userId 用戶ID
-     * @return 用戶留言列表
-     */
+
     @Override
-    public List<AmsUserCommentVo> getUserCommentsByUserId(Long userId) {
+    public IPage<AmsUserCommentVo> getUserCommentsByUserId(Long userId, Integer routePage) {
         if (userId == null) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
@@ -596,8 +594,26 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     .build();
         }
 
-        log.info("查詢用戶留言列表 - userId: {}", userId);
-        return this.baseMapper.selectUserComments(userId);
+        if (routePage == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage("查詢頁碼不可為空")
+                    .build();
+        }
+
+        final int pageSize = 20;
+        Page<AmsUserCommentVo> page = new Page<>(routePage, pageSize);
+
+        log.info("查詢用戶留言列表 - userId: {}, routePage: {}", userId, routePage);
+        IPage<AmsUserCommentVo> resultPage = this.baseMapper.selectUserComments(page, userId);
+
+        if (resultPage == null || resultPage.getRecords() == null || resultPage.getRecords().isEmpty()) {
+            log.info("用戶留言列表結果為空 - userId: {}, routePage: {}", userId, routePage);
+            return new Page<>(routePage, pageSize);
+        }
+
+        log.debug("用戶留言分頁查詢完成，總條數:{}，當前頁:{}，每頁數量:{}", resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize());
+        return resultPage;
     }
 
 
@@ -1729,4 +1745,3 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         return R.ok();
     }
 }
-

@@ -5,21 +5,41 @@
     <resultMap id="UserLikedArticleVoResultMap" type="com.shijiawei.secretblog.article.vo.UserLikedArticleVo">
         <result property="articleId" column="article_id"/>
         <result property="title" column="title"/>
+        <result property="avatar" column="avatar"/>
         <result property="isLiked" column="is_liked"/>
         <result property="isBookmarked" column="is_bookmarked"/>
         <result property="updateAt" column="update_at"/>
     </resultMap>
 
-    <select id="selectLikedArticlesByUserId" resultMap="UserLikedArticleVoResultMap" parameterType="Long">
+    <select id="selectLikedArticlesByUserId" resultMap="UserLikedArticleVoResultMap" parameterType="map">
         SELECT
             ams_art_action.article_id,
             ams_article.title,
+            ai.avatar AS avatar,
             ams_art_action.is_liked,
             ams_art_action.is_bookmarked,
             ams_art_action.update_at
         FROM ams_art_action
         INNER JOIN ams_article ON ams_art_action.article_id = ams_article.id
-        WHERE ams_art_action.user_id = #{userId} AND ams_art_action.is_liked = 1 OR ams_art_action.is_bookmarked = 1
+        LEFT JOIN ams_artInfo ai ON ams_art_action.article_id = ai.article_id
+        WHERE ams_art_action.user_id = #{userId}
+          AND ams_art_action.is_liked = 1
+        ORDER BY ams_art_action.update_at DESC
+    </select>
+
+    <select id="selectBookmarkedArticlesByUserId" resultMap="UserLikedArticleVoResultMap" parameterType="map">
+        SELECT
+            ams_art_action.article_id,
+            ams_article.title,
+            ai.avatar AS avatar,
+            ams_art_action.is_liked,
+            ams_art_action.is_bookmarked,
+            ams_art_action.update_at
+        FROM ams_art_action
+        INNER JOIN ams_article ON ams_art_action.article_id = ams_article.id
+        LEFT JOIN ams_artInfo ai ON ams_art_action.article_id = ai.article_id
+        WHERE ams_art_action.user_id = #{userId}
+          AND ams_art_action.is_bookmarked = 1
         ORDER BY ams_art_action.update_at DESC
     </select>
 

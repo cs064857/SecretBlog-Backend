@@ -27,12 +27,13 @@
 
     </select>
 
-    <select id="selectUserComments" parameterType="long" resultType="com.shijiawei.secretblog.article.vo.AmsUserCommentVo">
+    <select id="selectUserComments" parameterType="map" resultType="com.shijiawei.secretblog.article.vo.AmsUserCommentVo">
         SELECT
             ci.article_id AS articleId,
             ci.comment_id AS commentId,
             ci.create_at AS createAt,
             ci.update_at AS updateAt,
+            ci.avatar AS avatar,
             ac.comment_content AS commentContent,
             a.title AS articleTitle
         FROM

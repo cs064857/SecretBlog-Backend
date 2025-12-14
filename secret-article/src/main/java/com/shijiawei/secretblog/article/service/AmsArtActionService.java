@@ -1,11 +1,10 @@
 package com.shijiawei.secretblog.article.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.entity.AmsArtAction;
 import com.shijiawei.secretblog.article.vo.AmsArtActionVo;
 import com.shijiawei.secretblog.article.vo.UserLikedArticleVo;
-
-import java.util.List;
 
 /**
  * ClassName: AmsArtActionService
@@ -17,11 +16,20 @@ public interface AmsArtActionService extends IService<AmsArtAction> {
     AmsArtActionVo getArticleActionStatusVo(Long articleId);
 
     /**
-     * 根據用戶ID獲取點讚過的文章列表
+     * 根據用戶ID獲取喜歡（點讚）過的文章列表（分頁）
      * @param userId 用戶ID
-     * @return 點讚文章列表
+     * @param routePage 頁碼（從 1 開始）
+     * @return 喜歡（點讚）文章列表分頁
      */
-    List<UserLikedArticleVo> getLikedArticlesByUserId(Long userId);
+    IPage<UserLikedArticleVo> getLikedArticlesByUserId(Long userId, Integer routePage);
+
+    /**
+     * 根據用戶ID獲取書籤文章列表（分頁）
+     * @param userId 用戶ID
+     * @param routePage 頁碼（從 1 開始）
+     * @return 書籤文章列表分頁
+     */
+    IPage<UserLikedArticleVo> getBookmarkedArticlesByUserId(Long userId, Integer routePage);
 
     /**
      * 更新用戶對文章的點讚狀態

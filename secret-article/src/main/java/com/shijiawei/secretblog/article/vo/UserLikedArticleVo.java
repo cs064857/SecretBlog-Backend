@@ -29,6 +29,9 @@ public class UserLikedArticleVo {
     @Schema(description = "文章標題")
     private String title;
 
+    @Schema(description = "作者頭像")
+    private String avatar;
+
     @Schema(description = "是否點讚")
     private Byte isLiked;
 

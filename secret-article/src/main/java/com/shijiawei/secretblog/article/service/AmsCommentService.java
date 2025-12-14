@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.article.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
@@ -26,7 +27,8 @@ public interface AmsCommentService extends IService<AmsComment> {
 
     List<AmsArtCommentsVo> getArtComments(Long articleId);
 
-    List<AmsUserCommentVo> getUserCommentsByUserId(Long userId);
+
+    IPage<AmsUserCommentVo> getUserCommentsByUserId(Long userId, Integer routePage);
 
     @OpenCache(prefix = "AmsComments", key = "articleId_#{#articleId}", time = 30, chronoUnit = ChronoUnit.MINUTES)
     List<AmsArtCommentStaticVo> getStaticCommentDetails(Long articleId);

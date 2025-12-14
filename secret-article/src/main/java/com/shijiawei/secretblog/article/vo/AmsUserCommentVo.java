@@ -24,6 +24,9 @@ public class AmsUserCommentVo {
 
     private String articleTitle;
 
+
+    private String avatar;
+
     private LocalDateTime createAt;
 
     private LocalDateTime updateAt;

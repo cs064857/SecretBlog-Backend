@@ -1,6 +1,8 @@
 package com.shijiawei.secretblog.article.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.article.entity.AmsArtAction;
 import com.shijiawei.secretblog.article.mapper.AmsArtActionMapper;
@@ -237,16 +239,65 @@ public class AmsArtActionServiceImpl extends ServiceImpl<AmsArtActionMapper, Ams
     }
 
     @Override
-    public List<UserLikedArticleVo> getLikedArticlesByUserId(Long userId) {
+    public IPage<UserLikedArticleVo> getLikedArticlesByUserId(Long userId, Integer routePage) {
         if (userId == null) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
                     .detailMessage("查詢的目標用戶ID不存在")
                     .build();
         }
+        if (routePage == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage("查詢頁碼不可為空")
+                    .build();
+        }
 
-        log.info("查詢用戶點讚文章列表 - userId: {}", userId);
-        return baseMapper.selectLikedArticlesByUserId(userId);
+        final int pageSize = 20;
+        Page<UserLikedArticleVo> page = new Page<>(routePage, pageSize);
+
+        log.info("查詢用戶喜歡（點讚）文章列表 - userId: {}, routePage: {}", userId, routePage);
+        IPage<UserLikedArticleVo> resultPage = baseMapper.selectLikedArticlesByUserId(page, userId);
+
+        if (resultPage == null || resultPage.getRecords() == null || resultPage.getRecords().isEmpty()) {
+            log.info("用戶喜歡（點讚）文章列表結果為空 - userId: {}, routePage: {}", userId, routePage);
+            return new Page<>(routePage, pageSize);
+        }
+
+        log.debug("用戶喜歡（點讚）文章分頁查詢完成，總條數:{}，當前頁:{}，每頁數量:{}",
+                resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize());
+        return resultPage;
+    }
+
+    @Override
+    public IPage<UserLikedArticleVo> getBookmarkedArticlesByUserId(Long userId, Integer routePage) {
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("查詢的目標用戶ID不存在")
+                    .build();
+        }
+        if (routePage == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage("查詢頁碼不可為空")
+                    .build();
+        }
+
+        final int pageSize = 20;
+        Page<UserLikedArticleVo> page = new Page<>(routePage, pageSize);
+
+        log.info("查詢用戶書籤文章列表 - userId: {}, routePage: {}", userId, routePage);
+        IPage<UserLikedArticleVo> resultPage = baseMapper.selectBookmarkedArticlesByUserId(page, userId);
+
+        if (resultPage == null || resultPage.getRecords() == null || resultPage.getRecords().isEmpty()) {
+            log.info("用戶書籤文章列表結果為空 - userId: {}, routePage: {}", userId, routePage);
+            return new Page<>(routePage, pageSize);
+        }
+
+        log.debug("用戶書籤文章分頁查詢完成，總條數:{}，當前頁:{}，每頁數量:{}",
+                resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize());
+        return resultPage;
     }
 
     /**
