@@ -64,6 +64,7 @@ public class RedisOpenCacheKey {
 
         public static final String ARTICLE_PREVIEWS_PREFIX = ARTICLE + "previews";
         public static final String ARTICLE_PREVIEWS_KEY = "categoryId_#{#categoryId}:routerPage_#{#routePage}";
+        public static final String ARTICLE_PREVIEWS_BY_VO_KEY = "categoryId_#{#amsSaveArticleVo.categoryId}:routerPage_#{#routePage}";
 
     }
 //    /*

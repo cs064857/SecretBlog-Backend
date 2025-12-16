@@ -154,11 +154,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
      * @param authentication 認證物件
      */
     @OpenLog//開啟方法執行時間紀錄
-    @DelayDoubleDelete(prefix = "AmsArticles", key = "categoryId_#{#amsSaveArticleVo.categoryId}")
-//    @DelayDoubleDelete(prefix = "AmsArticle",key = "articles",delay = 5,timeUnit = TimeUnit.SECONDS)//AOP延遲雙刪
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticlePreviews.ARTICLE_PREVIEWS_PREFIX, key = RedisOpenCacheKey.ArticlePreviews.ARTICLE_PREVIEWS_BY_VO_KEY)
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest,Authentication authentication) {
+    public long saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest,Authentication authentication) {
 
         if((amsSaveArticleVo.getTitle()==null)||(amsSaveArticleVo.getTitle().isEmpty())){
             log.warn("文章標題為空，拒絕發佈文章");
@@ -296,7 +295,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         amsLocalMessageService.createPendingMessage(syncMessage);
         log.info("已建立文章 ES 同步本地消息，articleId={}，operationType=CREATE", amsArticle.getId());
 
-
+        return amsArticle.getId();//返回文章ID, 讓前端能直接跳轉至該文章介面
+        
 //        // 使用 final 變量以便在後續使用
 //        final AmsArticle savedArticle = amsArticle;
 //

@@ -23,7 +23,7 @@ import java.util.List;
 
 public interface AmsArticleService extends IService<AmsArticle> {
 
-    void saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication);
+    long saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication);
 
 //    List<AmsArticle> getListArticle();
 //

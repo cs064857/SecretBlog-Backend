@@ -42,10 +42,10 @@ public class AmsArticleController {
 
     @PostMapping("/save")
     public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication) {
-        log.info("amsSaveArticleVo:{}",amsSaveArticleVo);
-        amsArticleService.saveArticles(amsSaveArticleVo,httpServletRequest,authentication);
+        log.debug("amsSaveArticleVo:{}",amsSaveArticleVo);
+        long articleId = amsArticleService.saveArticles(amsSaveArticleVo, httpServletRequest,authentication);
         //log.info("完成");
-        return R.ok();
+        return R.ok(articleId);
     }
 
     /**
