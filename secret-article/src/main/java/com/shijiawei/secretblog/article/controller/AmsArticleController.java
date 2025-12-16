@@ -44,8 +44,9 @@ public class AmsArticleController {
     public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication) {
         log.debug("amsSaveArticleVo:{}",amsSaveArticleVo);
         long articleId = amsArticleService.saveArticles(amsSaveArticleVo, httpServletRequest,authentication);
+
         //log.info("完成");
-        return R.ok(articleId);
+        return R.ok(String.valueOf(articleId));
     }
 
     /**
