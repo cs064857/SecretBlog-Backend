@@ -1,9 +1,5 @@
 package com.shijiawei.secretblog.user.DTO;
 
-import java.time.LocalDate;
-
-import com.shijiawei.secretblog.user.enumValue.Gender;
-
 import jakarta.validation.constraints.*;
 import lombok.Data;
 

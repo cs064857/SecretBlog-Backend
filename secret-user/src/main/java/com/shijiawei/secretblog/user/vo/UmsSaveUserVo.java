@@ -1,16 +1,11 @@
 package com.shijiawei.secretblog.user.vo;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.shijiawei.secretblog.user.enumValue.Gender;
-import com.shijiawei.secretblog.user.enumValue.Role;
-import com.shijiawei.secretblog.user.enumValue.Status;
+import com.shijiawei.secretblog.common.enumValue.Gender;
+import com.shijiawei.secretblog.common.enumValue.Role;
+import com.shijiawei.secretblog.common.enumValue.Status;
 import lombok.Data;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.sql.Blob;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * ClassName: UmsSaveUserVo

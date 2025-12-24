@@ -1,6 +1,6 @@
 package com.shijiawei.secretblog.user.DTO;
 
-import com.shijiawei.secretblog.user.enumValue.Role;
+import com.shijiawei.secretblog.common.enumValue.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

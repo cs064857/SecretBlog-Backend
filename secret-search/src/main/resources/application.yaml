@@ -58,4 +58,8 @@ spring:
       - group: 'default'
         paths-to-match: '/**'
         packages-to-scan: com.shijiawei.secretblog.search.controller
-
+#  JwtToken相關
+login:
+  jwt:
+    private-key: ${local.jwt.private-key}
+    public-key: ${local.jwt.public-key}

@@ -18,6 +18,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -173,6 +174,7 @@ public class AmsArticleController {
      * @return
      */
 
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     @GetMapping("/categories/articles")
     public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(
             @RequestParam(value = "routePage" , required = true) Integer routePage,

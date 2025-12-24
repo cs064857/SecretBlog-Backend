@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.shijiawei.secretblog.user.enumValue.Gender;
+import com.shijiawei.secretblog.common.enumValue.Gender;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -47,17 +47,7 @@ public class UmsUserInfo implements Serializable {
     @Size(max = 255,message = "帳號名稱最大長度要小於 255")
     private String accountName;
 
-    ///TODO password 欄位已從資料庫移除，如需保留請手動添加欄位
-    //    @TableField(value = "`password`")
-    //    @Schema(description="密碼")
-    //    @Size(max = 255,message = "密碼最大長度要小於 255")
-    //    private String password;
 
-    ///TODO email 欄位已從資料庫移除，如需保留請手動添加欄位
-    //    @TableField(value = "email")
-    //    @Schema(description="信箱地址")
-    //    @Size(max = 255,message = "信箱地址最大長度要小於 255")
-    //    private String email;
 
     /**
      * 生日(1970-01-01)
@@ -82,11 +72,6 @@ public class UmsUserInfo implements Serializable {
     @Size(max = 255,message = "居住地址最大長度要小於 255")
     private String address;
 
-    ///TODO phoneNumber 欄位已從資料庫移除，如需保留請手動添加欄位
-    //    @TableField(value = "phone_number")
-    //    @Schema(description="手機號碼")
-    //    @Size(max = 255,message = "手機號碼最大長度要小於 255")
-    //    private String phoneNumber;
 
     /**
      * 註冊時間

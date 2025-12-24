@@ -1,8 +1,8 @@
 package com.shijiawei.secretblog.user.DTO;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.shijiawei.secretblog.user.enumValue.Gender;
-import com.shijiawei.secretblog.user.enumValue.Role;
+import com.shijiawei.secretblog.common.enumValue.Gender;
+import com.shijiawei.secretblog.common.enumValue.Role;
 import lombok.Data;
 
 import java.time.LocalDateTime;

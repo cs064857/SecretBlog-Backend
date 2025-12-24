@@ -47,7 +47,7 @@ spring:
         - id: user_route
           uri: lb://secret-user
           predicates:
-            - Path=/api/ums/**
+            - Path=/api/ums/user/**
           filters:
             - RewritePath=/api/?(?<segment>.*), /$\{segment}
         - id: storage_route
@@ -62,3 +62,8 @@ spring:
             - Path=/api/search/**
           filters:
             - RewritePath=/api/?(?<segment>.*), /$\{segment}
+#  JwtToken相關
+login:
+  jwt:
+    private-key: ${local.jwt.private-key}
+    public-key: ${local.jwt.public-key}

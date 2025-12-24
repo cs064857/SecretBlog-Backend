@@ -41,7 +41,7 @@ import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
-import com.shijiawei.secretblog.user.enumValue.Role;
+import com.shijiawei.secretblog.common.enumValue.Role;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
@@ -334,8 +334,14 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             }
 
 
-        }else {
-            throw new RuntimeException("未接受到任何需要修改的數據");
+        } else {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_MISSING)
+                    .detailMessage("未接受到任何需要修改的數據")
+                    .data(Map.of(
+                            "userId", Objects.requireNonNullElse(userId, -1L)
+                    ))
+                    .build();
         }
 
 //        Field[] userInfoFields = userInfo.getClass().getDeclaredFields();

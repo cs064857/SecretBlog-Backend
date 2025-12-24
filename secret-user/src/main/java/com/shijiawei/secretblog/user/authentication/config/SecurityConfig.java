@@ -1,197 +1,113 @@
 package com.shijiawei.secretblog.user.authentication.config;
 
-
-import java.util.List;
-
-import org.springframework.context.ApplicationContext;
+import com.shijiawei.secretblog.common.security.JwtAuthenticationTokenFilter;
+import com.shijiawei.secretblog.common.security.JwtService;
+import com.shijiawei.secretblog.user.authentication.handler.exception.CustomAuthenticationExceptionHandler;
+import com.shijiawei.secretblog.user.authentication.handler.exception.CustomAuthorizationExceptionHandler;
+import com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.context.SecurityContextHolderFilter;
-import org.springframework.security.web.savedrequest.NullRequestCache;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import com.shijiawei.secretblog.user.authentication.handler.exception.CustomAuthenticationExceptionHandler;
-import com.shijiawei.secretblog.user.authentication.handler.exception.CustomAuthorizationExceptionHandler;
-import com.shijiawei.secretblog.user.authentication.handler.exception.CustomSecurityExceptionHandler;
-import com.shijiawei.secretblog.user.authentication.handler.login.LoginFailHandler;
-import com.shijiawei.secretblog.user.authentication.handler.login.LoginSuccessHandler;
-import com.shijiawei.secretblog.user.authentication.handler.login.business.MyJwtAuthenticationFilter;
-import com.shijiawei.secretblog.user.authentication.handler.login.username.UsernameAuthenticationFilter;
-import com.shijiawei.secretblog.user.authentication.handler.login.username.UsernameAuthenticationProvider;
-
-
-import jakarta.servlet.Filter;
-
+/**
+ * ClassName: SecurityConfig
+ * Description:
+ *
+ * @Create 2025/12/22 下午11:55
+ */
+@EnableMethodSecurity//開啟權限校驗功能
 @Configuration
-@EnableWebSecurity
+@EnableWebSecurity//開啟SpringSecurity基本功能
 public class SecurityConfig {
 
-    private final ApplicationContext applicationContext;
+    @Autowired
+    AuthenticationConfiguration authenticationConfiguration;//獲取AuthenticationManager
 
-    public SecurityConfig(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
+
+    @Autowired
+    private CustomAuthenticationExceptionHandler customAuthenticationExceptionHandler;
+
+    @Autowired
+    private CustomAuthorizationExceptionHandler customAuthorizationExceptionHandler;
+
+    @Bean
+    public PasswordEncoder passwordEncoder (){
+        ///TODO 暫時使用NoOpPasswordEncoder(非加密)，後續考慮使用BCryptPasswordEncoder加密
+        PasswordEncoder noPasswordEncoder = NoOpPasswordEncoder.getInstance();
+//        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
+
+        return noPasswordEncoder;
     }
 
-    //處理異常
-    private final AuthenticationEntryPoint authenticationExceptionHandler = new CustomAuthenticationExceptionHandler();
-    //處理異常
-    private final AccessDeniedHandler authorizationExceptionHandler = new CustomAuthorizationExceptionHandler();
-    //處理異常
-    private final Filter globalSpringSecurityExceptionHandler = new CustomSecurityExceptionHandler();
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
 
-
-    public void commonHttpSetting(HttpSecurity http) throws Exception {
-        /**
-         * 關閉非前後端分離時所需的或者不需要的過濾器
-         */
+    /**
+     * 配置Spring Security的過濾鏈。
+     *
+     * @param http 用於構建安全配置的HttpSecurity對象。
+     * @return 返回配置好的SecurityFilterChain對象。
+     * @throws Exception 如果配置過程中發生錯誤，則拋出異常。
+     */
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/article/comment/**")
-                .formLogin(AbstractHttpConfigurer::disable)
-                .logout(AbstractHttpConfigurer::disable)
+                // 禁用CSRF保護
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(AbstractHttpConfigurer::disable)
-                .requestCache(cache -> cache.requestCache(new NullRequestCache()))
-                .anonymous(AbstractHttpConfigurer::disable);
+                // 設置會話創建策略為無狀態
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // 配置授權規則（登入端點放行，其餘需要身份認證）
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/user/login","ums/user/login", "/api/user/login").permitAll()
+                        // 既有公開端點（保留相容）
+                        .requestMatchers("/ums/user/register", "/ums/user/email-verify-code").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
+                        // 管理員端點
+                        .requestMatchers(
+                                "/ums/role/**",
+                                "/ums/status/**",
+                                "/ums/auths/**",
+                                "/ums/credentials/**",
+                                "/ums/user/delete/**"
+                        ).hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                )
+                // 開啟跨域訪問（目前由 Gateway 處理，這裡先維持禁用）
+                .cors(AbstractHttpConfigurer::disable)
+                // 添加JWT認證過濾器（統一 Authorization Bearer）
+                .addFilterBefore(new JwtAuthenticationTokenFilter(jwtService, tokenBlacklistService), UsernamePasswordAuthenticationFilter.class)
+                // 配置例外處理
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(customAuthenticationExceptionHandler)
+                        .accessDeniedHandler(customAuthorizationExceptionHandler)
+                )
+                // 交由 Controller 實作 /logout（並於 Controller 寫入黑名單）
+                .logout(AbstractHttpConfigurer::disable);
 
 
-        // 處理 SpringSecurity 異常響應結果。響應數據的結構，改成業務統一的JSON結構。不要框架默認的響應結構
-        http.exceptionHandling(exceptionHandling ->
-                exceptionHandling
-                        // 認證失敗異常
-                        .authenticationEntryPoint(authenticationExceptionHandler)
-                        // 鑒權失敗異常
-                        .accessDeniedHandler(authorizationExceptionHandler)
-        );
-        // 其他未知異常. 盡量提前加載。
-        http.addFilterBefore(globalSpringSecurityExceptionHandler, SecurityContextHolderFilter.class);
-    }
 
-    @Bean
-    public SecurityFilterChain LoginApiFilterChain(HttpSecurity http) throws Exception {
-        // 關閉不需要的過濾器與通用異常處理
-        commonHttpSetting(http);
-
-        // 僅匹配登入端點
-        http.securityMatcher("/ums/user/login/username")
-            .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated());
-
-        LoginSuccessHandler loginSuccessHandler = applicationContext.getBean(LoginSuccessHandler.class);
-        LoginFailHandler loginFailHandler = applicationContext.getBean(LoginFailHandler.class);
-
-        String usernameLoginPath = "/ums/user/login/username";
-        UsernameAuthenticationFilter usernameLoginFilter = new UsernameAuthenticationFilter(
-            new AntPathRequestMatcher(usernameLoginPath, HttpMethod.POST.name()),
-            new ProviderManager(List.of(applicationContext.getBean(UsernameAuthenticationProvider.class))),
-            loginSuccessHandler,
-            loginFailHandler
-        );
-        http.addFilterBefore(usernameLoginFilter, UsernamePasswordAuthenticationFilter.class);
-
+        // 構建並返回安全過濾鏈
         return http.build();
-    }
-
-    @Bean
-    public SecurityFilterChain UserApiFilterChain(HttpSecurity http) throws Exception {
-        // 通用設定
-        commonHttpSetting(http);
-
-        // 匹配使用者 API
-        http.securityMatcher("/ums/user/**")
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(
-                    // 允許匿名訪問的端點
-                    "/ums/user/login/username",
-                    "/ums/user/register",
-                    "/ums/user/email-verify-code"
-                ).permitAll()
-                //允許以授權的用戶使用DELETE端點刪除用戶資料(邏輯刪除)
-                .requestMatchers(HttpMethod.DELETE, "/ums/user/delete/userDetail").authenticated()
-
-                .anyRequest().authenticated()
-            );
-
-        // 加入 JWT 濾器（從 Cookie 讀取 token 並設置 SecurityContext）
-        var jwtService = applicationContext.getBean(com.shijiawei.secretblog.common.utils.JwtService.class);
-        var blacklist = applicationContext.getBean(com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService.class);
-        http.addFilterBefore(new MyJwtAuthenticationFilter(jwtService, blacklist), UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
-//    @Bean
-//    public SecurityFilterChain Business2ApiFilterChain(HttpSecurity http) throws exception {
-//        //關閉不需要的過濾器
-//        commonHttpSetting(http);
-//
-//        /**
-//         * 必要的配置，決定哪些請求需要登入
-//         */
-//        http
-//                .securityMatcher("/ums/user/login/business2","/article/articles/**")
-//                .authorizeHttpRequests(authorize -> authorize
-//                        .anyRequest().authenticated()
-//                );
-//
-////        String business2LoginPath = "/ums/user/login/business2";
-//        // 加一個登錄方式。用戶名、密碼登錄
-//        MyJwtAuthenticationFilter filter = new MyJwtAuthenticationFilter(applicationContext.getBean(JwtService.class));
-//        /**
-//         * 將自訂的過濾器加至過濾鏈中，在UsernamePasswordAuthenticationFilter之前(LogoutFilter之後)
-//         */
-//        http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
-
-    /**
-     * 文章API安全配置
-     * 保護/article/articles/**路徑，使其只有登錄用戶才能訪問
-     */
-//    @Bean
-//    public SecurityFilterChain ArticleApiFilterChain(HttpSecurity http) throws exception {
-//        //關閉不需要的過濾器
-//        commonHttpSetting(http);
-//
-//        /**
-//         * 必要的配置，決定哪些請求需要登入
-//         */
-//        http
-//                .securityMatcher("/article/articles/**")
-//                .authorizeHttpRequests(authorize -> authorize
-//                        .anyRequest().authenticated()
-//                );
-//
-//        // 使用JWT認證過濾器
-//        MyJwtAuthenticationFilter filter = new MyJwtAuthenticationFilter(applicationContext.getBean(JwtService.class));
-//        /**
-//         * 將自訂的過濾器加至過濾鏈中，在UsernamePasswordAuthenticationFilter之前(LogoutFilter之後)
-//         */
-//        http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
-
-    /**
-     * 密碼加密使用的編碼器 (臨時修改: 測試明文密碼, 使用 NoOpPasswordEncoder)
-     * TODO: 測試結束後恢復為 BCryptPasswordEncoder
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        // 原正式版:
-        // return new BCryptPasswordEncoder();
-        // 臨時測試版(明文匹配, 嚴禁生產使用)
-        return NoOpPasswordEncoder.getInstance();
     }
 }

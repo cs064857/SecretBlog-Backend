@@ -1,37 +1,44 @@
 package com.shijiawei.secretblog.storage.config;
 
+import com.shijiawei.secretblog.common.security.JwtAuthenticationTokenFilter;
+import com.shijiawei.secretblog.common.security.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * Storage 微服務安全配置
- * 禁用 Spring Security 的默認行為，因為認證由 Gateway 處理
+ * 認證由下游服務自行驗證 JWT（統一使用 Authorization Bearer）
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         http
             // 禁用 CSRF 保護
             .csrf(AbstractHttpConfigurer::disable)
-            // 禁用表單登入
+            // 禁用不需要的預設登入方式
             .formLogin(AbstractHttpConfigurer::disable)
-            // 禁用 HTTP Basic 認證
             .httpBasic(AbstractHttpConfigurer::disable)
-            // 禁用登出功能
             .logout(AbstractHttpConfigurer::disable)
-            // 禁用會話管理
-            .sessionManagement(AbstractHttpConfigurer::disable)
-            // 允許所有請求（認證由 Gateway 處理）
+            // 無狀態（JWT）
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // 授權規則（Storage 服務預設皆需登入）
             .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().permitAll()
-            );
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/actuator/**").permitAll()
+                    .anyRequest().authenticated()
+            )
+            // JWT 驗證 Filter
+            .addFilterBefore(new JwtAuthenticationTokenFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

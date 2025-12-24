@@ -55,7 +55,7 @@ public class CustomSecurityExceptionHandler extends OncePerRequestFilter {
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             // 未知異常
-            R result = new R("System Error","system.error");
+            R result = new R("403","請稍後再試一次");
             response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
             response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
             PrintWriter writer = response.getWriter();

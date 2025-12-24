@@ -78,3 +78,9 @@ springdoc:
 #  enable: true
 #  setting:
 #    language: zh_cn
+
+#  JwtToken相關
+login:
+  jwt:
+    private-key: ${local.jwt.private-key}
+    public-key: ${local.jwt.public-key}

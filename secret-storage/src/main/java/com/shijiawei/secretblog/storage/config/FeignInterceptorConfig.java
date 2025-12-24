@@ -2,7 +2,6 @@ package com.shijiawei.secretblog.storage.config;
 
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,22 +32,8 @@ public class FeignInterceptorConfig {
                 HttpServletRequest request = servletRequestAttributes.getRequest();
                 String authorization = request.getHeader("Authorization");
                 if (StringUtils.hasText(authorization)) {
+                    // 統一透傳 Authorization Bearer，供下游服務自行驗證 Token
                     template.header("Authorization", authorization);
-                    return;
-                }
-                // Authorization 為空時，回退至 Cookie 中的 jwtToken
-                Cookie[] cookies = request.getCookies();
-                if (cookies != null) {
-                    for (Cookie cookie : cookies) {
-                        if ("jwtToken".equals(cookie.getName()) && StringUtils.hasText(cookie.getValue())) {
-                            String jwt = cookie.getValue();
-                            // 1) 透傳 Cookie，滿足下游只讀取 Cookie 的驗證邏輯
-                            template.header("Cookie", "jwtToken=" + jwt);
-                            // 2) 同時補一個 Bearer 頭，便於其他服務基於 Authorization 校驗
-                            template.header("Authorization", "Bearer " + jwt);
-                            break;
-                        }
-                    }
                 }
             }
         }

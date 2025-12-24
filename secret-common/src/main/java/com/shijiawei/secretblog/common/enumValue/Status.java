@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.user.enumValue;
+package com.shijiawei.secretblog.common.enumValue;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;

@@ -1,7 +1,7 @@
-package com.shijiawei.secretblog.user.enumValue;
+package com.shijiawei.secretblog.common.enumValue;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,10 +14,9 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public enum Gender {
-    MALE(1,"male"),
-    FEMALE(2,"female"),
-    OTHER(3,"other");
+public enum Role {
+    ADMIN(0,"管理員"),
+    NORMALUSER(1,"普通用戶");
 
     @EnumValue
     private final int value;

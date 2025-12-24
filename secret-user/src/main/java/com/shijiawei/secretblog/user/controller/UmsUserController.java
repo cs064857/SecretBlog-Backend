@@ -4,31 +4,23 @@ import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.common.utils.JwtService; // TEMP 新增
-import com.shijiawei.secretblog.common.utils.TimeTool;
-import com.shijiawei.secretblog.common.utils.UserContextHolder;
+import com.shijiawei.secretblog.common.security.JwtService;
 import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
-import com.shijiawei.secretblog.user.authentication.handler.login.UserLoginInfo; // TEMP 新增
-import com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService; // TEMP 新增
 import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.shijiawei.secretblog.user.service.UmsUserInfoService;
 import com.shijiawei.secretblog.user.service.UmsUserService;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import com.shijiawei.secretblog.user.converter.UserConverter;
-import com.shijiawei.secretblog.user.enumValue.Gender;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.redisson.api.RedissonClient;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,9 +55,8 @@ public class UmsUserController {
     @Autowired
     private JwtService jwtService; // TEMP 新增
 
-    @Autowired
-    private TokenBlacklistService tokenBlacklistService; // TEMP 新增
-
+//    @Autowired
+//    private TokenBlacklistService tokenBlacklistService;
 
     /**
      * 通過主鍵查詢單條數據
@@ -220,70 +211,6 @@ public class UmsUserController {
     @PostMapping("/email-verify-code")
     public R sendVerificationCode(@RequestBody UmsUserEmailVerifyDTO umsUserEmailVerifyDTO){
         return umsUserService.sendVerificationCode(umsUserEmailVerifyDTO);
-    }
-
-//    @PostMapping("/login")
-//    public R userLogin(@Validated UmsUserLoginDTO umsUserLoginDTO){
-//        umsUserService.userLogin(umsUserLoginDTO);
-//        return R.ok();
-//    }
-
-
-//    @GetMapping("/login")
-//    public String index() {
-//        return "index";
-//    }
-
-//    @GetMapping("/login/business2")
-//    public R getA(){
-//
-//        UserLoginInfo userLoginInfo = (UserLoginInfo)SecurityContextHolder
-//                .getContext()
-//                .getAuthentication()
-//                .getPrincipal();
-//        System.out.println("自家登入信息："+ JSON.stringify(userLoginInfo));
-//        return new R("自家登入成功",userLoginInfo);
-//    }
-
-    @PostMapping("/logout")
-    public R logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-
-        String originalJwtToken = null;
-        // 1) 優先：從認證物件(MyJwtAuthentication)取出在過濾器中保存的原始JWT
-        if (authentication instanceof com.shijiawei.secretblog.user.authentication.handler.login.business.MyJwtAuthentication auth) {
-            originalJwtToken = auth.getJwtToken();
-        }
-
-        log.info("Logout originalJwtToken: {}", originalJwtToken);
-
-        // 將當前 sessionId 放入黑名單（使用剩餘有效期作為TTL）
-        if (authentication != null && authentication.isAuthenticated()) {
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof UserLoginInfo currentUser) {
-                long now = TimeTool.nowMilli();
-                long expiredTime = currentUser.getExpiredTime();
-                long ttl = Math.max(expiredTime - now, 1000L); // 至少1秒，避免0或負數
-                try {
-                    tokenBlacklistService.blacklist(currentUser.getSessionId(), ttl);
-                    log.info("SessionId {} 已加入黑名單, TTL={}ms", currentUser.getSessionId(), ttl);
-                } catch (Exception e) {
-                    log.warn("加入黑名單失敗: {}", e.getMessage(), e);
-                }
-            }
-        }
-
-        // 清除安全上下文
-        SecurityContextHolder.clearContext();
-        return R.ok("登出成功");
-    }
-    @GetMapping("/is-login")
-    public R<String> isLogin(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated() ||
-            "anonymousUser".equals(String.valueOf(authentication.getPrincipal()))) {
-            return new R<>("401", "未登入", null);
-        }
-
-        return R.ok("已登入", null);
     }
 
     @GetMapping("/summary/{id}")

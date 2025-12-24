@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * ClassName: UmsAuthsServiceImpl
  * Description: ums_auths 服務實作
- * 註解均採用繁體中文
  */
 @Service
 @Slf4j

@@ -107,3 +107,8 @@ comment:
 # SEO 配置
 seo:
   site-url: http://localhost:51733  # 改為正式域名
+#  JwtToken相關
+login:
+  jwt:
+    private-key: ${local.jwt.private-key}
+    public-key: ${local.jwt.public-key}
