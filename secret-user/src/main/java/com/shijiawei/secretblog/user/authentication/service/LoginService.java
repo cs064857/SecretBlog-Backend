@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.user.authentication.service;
 
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * ClassName: LoginService
@@ -12,6 +13,6 @@ import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 
 public interface LoginService {
 
-    R login(UmsUserLoginDTO umsUserLoginDTO);
+    R login(UmsUserLoginDTO umsUserLoginDTO, HttpServletResponse response);
 
 }

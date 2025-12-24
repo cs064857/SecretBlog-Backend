@@ -4,6 +4,7 @@ import com.shijiawei.secretblog.common.enumValue.Role;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +24,8 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 共用 JWT 驗證 Filter（統一使用 Authorization: Bearer ...）。
- * 從 Authorization Header 解析 Bearer Token
+ * 共用 JWT 驗證 Filter
+ * 從 Cookie 中提取 Token
  * 使用 JwtService 驗簽與驗過期
  * 將從jwtToken中解析出的用戶信息建立並放入SecurityContextHolder上下文中
  */
@@ -52,7 +53,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        String token = extractBearerToken(request);
+        String token = extractToken(request);
         if (!StringUtils.hasText(token)) {
             filterChain.doFilter(request, response);
             return;
@@ -88,19 +89,60 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 從請求頭中提取Bearer Token
+     * 從請求中提取 Token
+     *
      * @param request
-     * @return
+     * @return Token 字串，若無則返回 null
      */
-    private String extractBearerToken(HttpServletRequest request) {
-        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (!StringUtils.hasText(authorization)) {
+    private String extractToken(HttpServletRequest request) {
+
+
+        // 從 Cookie 提取 jwtToken
+        String token = extractTokenFromCookie(request);
+        if (StringUtils.hasText(token)) {
+            log.debug("從 Cookie 提取 Token");
+            return token;
+        }
+
+        return null;
+    }
+
+//    /**
+//     * 從請求頭中提取Bearer Token
+//     * @param request
+//     * @return
+//     */
+//    private String extractBearerToken(HttpServletRequest request) {
+//        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+//        if (!StringUtils.hasText(authorization)) {
+//            return null;
+//        }
+//        if (authorization.startsWith("Bearer ")) {
+//            return authorization.substring(7);
+//        }
+//        return authorization;
+//    }
+
+    /**
+     * 從 Cookie 中提取 Token
+     *
+     * @param request HTTP 請求
+     * @return Token 字串，若無則返回 null
+     */
+    private String extractTokenFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
             return null;
         }
-        if (authorization.startsWith("Bearer ")) {
-            return authorization.substring(7);
+
+        for (Cookie cookie : cookies) {
+
+            if ("jwtToken".equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+
         }
-        return authorization;
+        return null;
     }
 
     private Collection<? extends GrantedAuthority> createAuthorities(@Nullable Role roleId) {

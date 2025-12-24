@@ -79,7 +79,7 @@ public class SecurityConfig {
                 // 配置授權規則（登入端點放行，其餘需要身份認證）
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/user/login","ums/user/login", "/api/user/login").permitAll()
+                        .requestMatchers("ums/user/login/username").permitAll()
                         // 既有公開端點（保留相容）
                         .requestMatchers("/ums/user/register", "/ums/user/email-verify-code").permitAll()
                         .requestMatchers("/actuator/**").permitAll()

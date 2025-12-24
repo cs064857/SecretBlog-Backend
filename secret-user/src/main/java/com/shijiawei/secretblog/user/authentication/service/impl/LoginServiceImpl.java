@@ -10,7 +10,10 @@ import com.shijiawei.secretblog.common.security.JwtUserInfo;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.authentication.entity.LoginUser;
 import com.shijiawei.secretblog.user.authentication.service.LoginService;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -30,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @Create 2025/12/23 上午12:14
  */
+@Slf4j
 @Service
 public class LoginServiceImpl implements LoginService {
 
@@ -40,7 +44,10 @@ public class LoginServiceImpl implements LoginService {
     @Autowired
     private JwtService jwtService;
 
-    public R login(UmsUserLoginDTO umsUserLoginDTO){
+    public R login(UmsUserLoginDTO umsUserLoginDTO, HttpServletResponse response){
+
+
+
         if (umsUserLoginDTO == null) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.PARAM_MISSING)
@@ -102,31 +109,68 @@ public class LoginServiceImpl implements LoginService {
 
         UmsUserLoginDTO userLoginDTO = currentUser.getUmsUserLoginDTO();
         Long userId = userLoginDTO.getUserId();
-
+        String avatar = userLoginDTO.getAvatar();
         /**
          * 生成jwtToken並返回
           */
 
         //包裝token裡存放的資訊，創建JwtUserInfo物件，並設定會話ID、使用者ID、暱稱、頭像URL、過期時間、角色ID
-        Map<String, Object> responseData = new LinkedHashMap<>();
         long expiredAt = TimeTool.nowMilli() + TimeUnit.DAYS.toMillis(30);
         JwtUserInfo jwtUserInfo = new JwtUserInfo();
         jwtUserInfo.setSessionId(UUID.randomUUID().toString());
         jwtUserInfo.setUserId(userId);
         jwtUserInfo.setNickname(userLoginDTO.getAccountName());
-        jwtUserInfo.setAvatar(userLoginDTO.getAvatar());
+        jwtUserInfo.setAvatar(avatar);
         jwtUserInfo.setExpiredTime(expiredAt);
         jwtUserInfo.setRoleId(userLoginDTO.getRoleId());
 
         //創建jwtToken
         String token = jwtService.createJwt(jwtUserInfo, expiredAt);
 
-        //返回值中存入token以及userId
-        responseData.put("token", token);
-        responseData.put("userId",userId);
+        /**
+         * 將 token 寫入 Cookie
+         */
 
-        //返回jwtToken以及userId
-        return R.ok(responseData);
+
+        int maxAgeSeconds = (int) TimeUnit.DAYS.toSeconds(30);
+
+        ResponseCookie jwtCookie = ResponseCookie.from("jwtToken", token)
+                .path("/")
+                .maxAge(maxAgeSeconds)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .build();
+
+        ResponseCookie userIdCookie = ResponseCookie.from("userId", String.valueOf(userId))
+                .path("/")
+                .maxAge(maxAgeSeconds)
+                .httpOnly(false)
+                .secure(true)
+                .sameSite("Lax")
+                .build();
+        ResponseCookie avatarCookie = ResponseCookie.from("avatar",avatar)
+                .path("/")
+                .maxAge(maxAgeSeconds)
+                .httpOnly(false)
+                .secure(true)
+                .sameSite("Lax")
+                .build();
+
+        response.addHeader("Set-Cookie", jwtCookie.toString());
+        response.addHeader("Set-Cookie", userIdCookie.toString());
+        response.addHeader("Set-Cookie", avatarCookie.toString());
+
+        //返回值中存入token以及userId
+//        Map<String, Object> responseData = new LinkedHashMap<>();
+//        responseData.put("jwtToken", token);
+//        responseData.put("userId",userId);
+//        responseData.put("avatar",userLoginDTO.getAvatar());
+//
+//        //返回jwtToken以及userId
+//        return R.ok(responseData);
+
+        return R.ok();
     }
 
     private static RuntimeException unwrapBusinessException(Throwable throwable) {

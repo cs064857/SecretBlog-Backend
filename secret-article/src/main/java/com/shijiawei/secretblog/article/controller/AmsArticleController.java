@@ -174,7 +174,6 @@ public class AmsArticleController {
      * @return
      */
 
-    @PreAuthorize("hasAuthority('ROLE_USER')")
     @GetMapping("/categories/articles")
     public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(
             @RequestParam(value = "routePage" , required = true) Integer routePage,

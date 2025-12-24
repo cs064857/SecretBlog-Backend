@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -34,10 +35,10 @@ public class UmsLoginController {
     /**
      * 登入入口。
      */
-    @PostMapping({"/login"})
-    public R login(@RequestBody UmsUserLoginDTO umsUserLoginDTO) {
+    @PostMapping({"/login/username"})
+    public R login(@RequestBody UmsUserLoginDTO umsUserLoginDTO, HttpServletResponse response) {
 
-        return loginService.login(umsUserLoginDTO);
+        return loginService.login(umsUserLoginDTO, response);
 
     }
     /**
@@ -107,7 +108,7 @@ public class UmsLoginController {
      * 登出入口。
      * JWT 為無狀態；登出時將 sessionId 寫入黑名單（TTL = Token 剩餘有效期），達成「登出即失效」。
      */
-    @PreAuthorize("authenticated()")//該端點權限要求為已登入
+    @PreAuthorize("isAuthenticated()")//該端點權限要求為已登入
     @PostMapping("/logout")
     public R logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
         // 以 Filter 建立的 principal（JwtUserInfo）為準，避免重複解析 JWT。
@@ -118,6 +119,8 @@ public class UmsLoginController {
             long ttlMillis = Math.max(userInfo.getExpiredTime() - TimeTool.nowMilli(), 1000L);
             tokenBlacklistService.blacklist(userInfo.getSessionId(), ttlMillis);
         }
+
+        SecurityContextHolder.clearContext();
 
         new SecurityContextLogoutHandler().logout(request, response, authentication);
         return R.ok("登出成功");
