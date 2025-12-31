@@ -35,7 +35,7 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.common.codeEnum.HttpCodeEnum;
 import com.shijiawei.secretblog.common.utils.R;
-import com.shijiawei.secretblog.common.utils.RedisRateLimiterUtils;
+import com.shijiawei.secretblog.common.utils.redis.RedisRateLimiterUtils;
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;

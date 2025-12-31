@@ -1,6 +1,5 @@
-package com.shijiawei.secretblog.common.utils;
+package com.shijiawei.secretblog.common.utils.redis;
 
-import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;

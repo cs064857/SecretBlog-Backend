@@ -11,6 +11,7 @@ import com.shijiawei.secretblog.article.vo.AmsCommentActionVo;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.expression.LongValue;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,7 @@ class SecretArticleApplicationTests {
     void testGetStaticCommentDetails() {
         // 準備測試數據 - 使用實際存在的文章ID
         Long articleId = 1965494783750287361L;
+
 
         // 執行查詢
         List<AmsArtCommentStaticVo> result = amsCommentMapper.getStaticCommentDetails(articleId);

@@ -10,7 +10,7 @@ import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.exception.BusinessException;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
-import com.shijiawei.secretblog.common.utils.RedisCacheLoaderUtils;
+import com.shijiawei.secretblog.common.utils.redis.RedisCacheLoaderUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;

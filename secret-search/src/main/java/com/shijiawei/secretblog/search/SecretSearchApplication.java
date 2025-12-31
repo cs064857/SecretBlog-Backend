@@ -6,12 +6,22 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 
 
 @EnableRabbit
 @EnableFeignClients
 @EnableDiscoveryClient
-@ComponentScan(basePackages = {"com.shijiawei.secretblog.search", "com.shijiawei.secretblog.common"})
+@ComponentScan(
+        basePackages = {
+                "com.shijiawei.secretblog.search",
+                "com.shijiawei.secretblog.common",
+        },
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASPECTJ,
+                pattern = "com.shijiawei.secretblog.common.utils.redis.*"//不載入Redis相關
+        )
+)
 @SpringBootApplication
 public class SecretSearchApplication {
 

@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.common.utils;
+package com.shijiawei.secretblog.common.utils.redis;
 
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RRateLimiter;

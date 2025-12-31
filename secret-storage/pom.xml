@@ -11,8 +11,8 @@
     <groupId>com.shijiawei.secretblog</groupId>
     <artifactId>secret-storage</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>secret-minio</name>
-    <description>secret-minio</description>
+    <name>secret-storage</name>
+    <description>secret-storage</description>
     <url/>
     <licenses>
         <license/>
@@ -43,6 +43,10 @@
                 <exclusion>
                     <groupId>org.redisson</groupId>
                     <artifactId>redisson-spring-boot-starter</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-amqp</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

@@ -1,4 +1,4 @@
-package com.shijiawei.secretblog.common.utils;
+package com.shijiawei.secretblog.common.utils.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
