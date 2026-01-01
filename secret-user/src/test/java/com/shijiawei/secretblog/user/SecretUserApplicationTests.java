@@ -5,7 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.util.EncodingUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 @SpringBootTest
@@ -42,5 +45,17 @@ class SecretUserApplicationTests {
     @Test
     public void testArgon2(){
 
+    }
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Test
+    public void testPasswordEncoderBean() {
+        assertThat(passwordEncoder).isInstanceOf(BCryptPasswordEncoder.class);
+        String raw = "Password20250705";
+        String encoded = passwordEncoder.encode(raw);
+        log.info("Encoded password for verification: {}", encoded);
+        assertThat(passwordEncoder.matches(raw, encoded)).isTrue();
     }
 }

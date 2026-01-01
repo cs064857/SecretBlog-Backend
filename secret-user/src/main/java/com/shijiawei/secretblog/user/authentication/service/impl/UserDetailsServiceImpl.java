@@ -58,38 +58,42 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                     .build();
         }
 
-        // 1) 先以帳號名稱查 UmsUserInfo
-        UmsUserInfo userInfo = umsUserInfoMapper.selectOne(
+        // 1) 嘗試以帳號名稱 (accountName) 或 電子郵件 (email) 查找使用者
+        UmsUser user = null;
+        UmsUserInfo userInfo = null;
+
+        // 先嘗試以 accountName 查找 UmsUserInfo
+        userInfo = umsUserInfoMapper.selectOne(
                 new LambdaQueryWrapper<UmsUserInfo>()
                         .eq(UmsUserInfo::getAccountName, username)
         );
-        if (userInfo == null) {
+
+        if (userInfo != null) {
+            user = umsUserMapper.selectById(userInfo.getUserId());
+        } else {
+            // 若找不到，再嘗試以 email 查找 UmsCredentials
+            UmsCredentials credentials = umsCredentialsService.getOne(
+                    new LambdaQueryWrapper<UmsCredentials>()
+                            .eq(UmsCredentials::getEmail, username)
+            );
+            if (credentials != null) {
+                user = umsUserMapper.selectById(credentials.getUserId());
+                if (user != null) {
+                    // 取得對應的 userInfo 以便後續讀取暱稱/頭像（相容現有 DTO 邏輯）
+                    userInfo = umsUserInfoMapper.selectOne(
+                            new LambdaQueryWrapper<UmsUserInfo>()
+                                    .eq(UmsUserInfo::getUserId, user.getId())
+                    );
+                }
+            }
+        }
+
+        if (user == null || userInfo == null) {
             // 避免洩漏使用者是否存在，統一回傳認證失敗。
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UNAUTHORIZED)
                     .detailMessage("帳號或密碼錯誤")
                     .data(Map.of("accountName", username))
-                    .build();
-        }
-
-        // 2) 再取得對應 UmsUser
-        UmsUser user = umsUserMapper.selectById(userInfo.getUserId());
-        if (user == null) {
-            // 相容舊/異常資料：若 userId 取不到，改用 userinfoId 反查
-            user = umsUserMapper.selectOne(
-                    new LambdaQueryWrapper<UmsUser>()
-                            .eq(UmsUser::getUserinfoId, userInfo.getId())
-            );
-        }
-        if (user == null) {
-            throw BusinessException.builder()
-                    .iErrorCode(ResultCode.AUTH_INTERNAL_ERROR)
-                    .detailMessage("找不到使用者資料，資料可能不一致")
-                    .data(Map.of(
-                            "accountName", username,
-                            "userInfoId", Objects.requireNonNullElse(userInfo.getId(), -1L),
-                            "userId", Objects.requireNonNullElse(userInfo.getUserId(), -1L)
-                    ))
                     .build();
         }
 

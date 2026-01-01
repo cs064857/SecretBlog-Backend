@@ -17,7 +17,6 @@ import org.apache.commons.lang3.ObjectUtils;
  * Description: 使用者憑證資訊表對應實體
  * 建表: secretblog_ums.ums_credentials
  *
- * 註解均採用繁體中文
  */
 @Data
 @Schema

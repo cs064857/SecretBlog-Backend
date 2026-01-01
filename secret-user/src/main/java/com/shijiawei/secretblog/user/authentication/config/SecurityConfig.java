@@ -16,7 +16,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -50,11 +50,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder (){
-        ///TODO 暫時使用NoOpPasswordEncoder(非加密)，後續考慮使用BCryptPasswordEncoder加密
-        PasswordEncoder noPasswordEncoder = NoOpPasswordEncoder.getInstance();
-//        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
-
-        return noPasswordEncoder;
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -80,8 +76,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("ums/user/login/username").permitAll()
-                        // 既有公開端點（保留相容）
-                        .requestMatchers("/ums/user/register", "/ums/user/email-verify-code").permitAll()
+                        // 公開端點：註冊、傳送驗證碼、忘記密碼
+                        .requestMatchers("/ums/user/register", "/ums/user/email-verify-code","/ums/user/reset-password","/ums/user/verify-reset-token", "/ums/user/forgot-password").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         // 管理員端點
                         .requestMatchers(

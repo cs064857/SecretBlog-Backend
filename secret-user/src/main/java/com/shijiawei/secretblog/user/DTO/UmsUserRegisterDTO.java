@@ -1,5 +1,7 @@
 package com.shijiawei.secretblog.user.DTO;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -9,10 +11,13 @@ public class UmsUserRegisterDTO {
 //    @NotBlank(message = "用戶名不能為空")
 //    @Pattern(regexp = "^[A-Za-z0-9]{4,16}$",message = "用戶名只能包含英文和數字，長度在4-16之間")
 //    private String name;
-    ///TODO 待辦:目前只開放只用信箱註冊,可選添加帳號註冊
-//    @NotBlank(message = "帳號不能為空")
-//    @Pattern(regexp = "^[A-Za-z0-9]{4,16}$",message = "帳號只能包含英文和數字，長度在4-16之間")
-//    private String accountName;
+    /**
+     * 帳號名稱
+     */
+    @Schema(description = "帳號名稱（可選；若未提供將以信箱前綴自動產生）")
+    @JsonAlias({"acountName"})
+    @Size(max = 255, message = "帳號名稱長度需小於等於 255")
+    private String accountName;
 
 
     @NotBlank(message = "密碼不能為空")

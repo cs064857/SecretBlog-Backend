@@ -10,6 +10,9 @@ import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
+import com.shijiawei.secretblog.user.DTO.UmsChangePasswordDTO;
+import com.shijiawei.secretblog.user.DTO.UmsForgotPasswordDTO;
+import com.shijiawei.secretblog.user.DTO.UmsResetPasswordDTO;
 import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.shijiawei.secretblog.user.service.UmsUserInfoService;
 import com.shijiawei.secretblog.user.service.UmsUserService;
@@ -17,6 +20,7 @@ import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import com.shijiawei.secretblog.user.converter.UserConverter;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.redisson.api.RedissonClient;
@@ -31,10 +35,10 @@ import java.util.*;
 /**
  * (ums_user)表控制層
  *
- * @author xxxxx
  */
 @Slf4j
 @RestController
+@Tag(name = "使用者管理", description = "使用者相關的 CRUD 操作")
 @RequestMapping("/ums/user")
 public class UmsUserController {
     /**
@@ -217,5 +221,45 @@ public class UmsUserController {
     public R<UmsUserSummaryDTO> getUserSummary(@PathVariable Long id) {
         UmsUserSummaryDTO userSummary = umsUserService.getUserSummary(id);
         return R.ok(userSummary);
+    }
+
+    /**
+     * 修改密碼（需認證）
+     * @param dto 修改密碼請求
+     * @return 結果
+     */
+    @PutMapping("/change-password")
+    public R changePassword(@Validated @RequestBody UmsChangePasswordDTO dto) {
+        return umsUserService.changePassword(dto);
+    }
+
+    /**
+     * 忘記密碼 - 請求發送重設連結
+     * @param dto 忘記密碼請求（包含 Email）
+     * @return 結果
+     */
+    @PostMapping("/forgot-password")
+    public R forgotPassword(@Validated @RequestBody UmsForgotPasswordDTO dto) {
+        return umsUserService.sendForgotPasswordCode(dto);
+    }
+
+    /**
+     * 驗證密碼重設 Token 是否有效
+     * @param token 重設 Token
+     * @return 結果
+     */
+    @GetMapping("/verify-reset-token")
+    public R verifyResetToken(@RequestParam String token) {
+        return umsUserService.verifyResetToken(token);
+    }
+
+    /**
+     * 重設密碼
+     * @param dto 重設密碼請求（包含 Token、新密碼）
+     * @return 結果
+     */
+    @PostMapping("/reset-password")
+    public R resetPassword(@Validated @RequestBody UmsResetPasswordDTO dto) {
+        return umsUserService.resetPassword(dto);
     }
 }

@@ -1,4 +1,6 @@
-
+custom:
+  project-name: SecretBlog
+  front-domain: http://localhost:51733
 user:
   default-avatar: https://shijiawei.oss-cn-beijing.aliyuncs.com/secretblog/avatar/default_avatar.jpg
 spring:
@@ -62,6 +64,20 @@ spring:
       username: ${REDIS_USERNAME:default}
       ssl:
         enabled: ${REDIS_SSL_ENABLED:false}
+  # 郵件服務配置
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: ${MAIL_DEBUG:false}
 #  cache:
 #    redis:
 #      #以下配置為配合SpringCache使用時

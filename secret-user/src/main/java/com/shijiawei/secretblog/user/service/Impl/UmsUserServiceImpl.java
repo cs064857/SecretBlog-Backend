@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
+import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
+import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
@@ -18,6 +20,10 @@ import com.shijiawei.secretblog.common.utils.UserContextHolder;
 import com.shijiawei.secretblog.user.entity.*;
 import com.shijiawei.secretblog.user.feign.ArticleFeignClient;
 import com.shijiawei.secretblog.user.service.*;
+import com.shijiawei.secretblog.user.DTO.UmsChangePasswordDTO;
+import com.shijiawei.secretblog.user.DTO.UmsForgotPasswordDTO;
+import com.shijiawei.secretblog.user.DTO.UmsResetPasswordDTO;
+import com.shijiawei.secretblog.user.DTO.UmsVerifyResetTokenDTO;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RRateLimiter;
@@ -36,6 +42,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shijiawei.secretblog.common.codeEnum.HttpCodeEnum;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.redis.RedisRateLimiterUtils;
+
 import com.shijiawei.secretblog.user.DTO.UmsUserDetailsDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserEmailVerifyDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
@@ -43,9 +50,8 @@ import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.common.enumValue.Role;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
-import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
-import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
@@ -67,6 +73,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Value("${user.default-avatar}")
     private String defaultAvatar;
 
+    @Value("${custom.front-domain}")
+    private String frontendBaseUrl;
+
     @Autowired
     private RedissonClient redissonClient;
 
@@ -87,6 +96,12 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Autowired
     private UmsLocalMessageService umsLocalMessageService;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public R userLogin(UmsUserLoginDTO umsUserLoginDTO) {
@@ -141,10 +156,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Override
     public void saveUmsUser(UmsSaveUserVo umsSaveUserVo) {
         //加密密碼
-//        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
-//        String encode = bCryptPasswordEncoder.encode(umsSaveUserVo.getPassword());
-//        umsSaveUserVo.setPassword(encode);
-//        log.info("加密過後密碼:{}",encode);
+        String encode = passwordEncoder.encode(umsSaveUserVo.getPassword());
+        umsSaveUserVo.setPassword(encode);
+        log.info("加密過後密碼:{}",encode);
 
 //        Role roleId = umsSaveUserVo.getRoleId();
 //        log.info("roleId:{}",roleId);
@@ -438,25 +452,6 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                 .build();
     }
 
-//    @Override
-//    public void updateAvatar(Long userId, String avatar) {
-//        checkPermission(userId);
-//        UmsUser user = new UmsUser();
-//        user.setId(userId);
-//        user.setAvatar(avatar);
-//        this.updateById(user);
-//
-//        // 同步更新文章模組的作者資訊
-//        /// TODO: 使用 RabbitMQ 異步處理
-//        try {
-//            AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, avatar , System.currentTimeMillis());
-//            rabbitTemplate.convertAndSend("Auth Notification Queue", authorInfoUpdateMessage);
-//            log.info("Sent author info update message to queue: {}", authorInfoUpdateMessage);
-//            //            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, null, avatar));
-//        } catch (Exception e) {
-//            log.error("Failed to sync avatar to article service", e);
-//        }
-//    }
 
     @Override
     public void updateNickname(Long userId, String nickName) {
@@ -496,12 +491,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         UmsUser umsUser = new UmsUser();
         UmsUserInfo umsUserInfo = new UmsUserInfo();
 
-
-
-        /// TODO 在儲存用戶密碼時加密
-
-
-
+        // 儲存用戶密碼時加密
+        umsUserRegisterDTO.setPassword(passwordEncoder.encode(umsUserRegisterDTO.getPassword()));
 
         BeanUtils.copyProperties(umsUserRegisterDTO, umsUser);
         BeanUtils.copyProperties(umsUserRegisterDTO, umsUserInfo);
@@ -528,6 +519,14 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         String vaildCode = umsUserRegisterDTO.getEmailValidCode();
         //獲得用戶的信箱
         String email = umsUserRegisterDTO.getEmail();
+
+        // 設置預設帳號名稱 (Email 前綴)
+        if (StringUtils.isBlank(umsUserInfo.getAccountName())) {
+            String defaultAccountName = email.split("@")[0];
+            umsUserInfo.setAccountName(defaultAccountName);
+            log.info("為新用戶設置預設帳號名稱: {}", defaultAccountName);
+        }
+
         //從Redis中取得驗證碼並校驗，桶名為umsuser:validcode:abcd@gmail.com:
         String bucket = "umsuser:validcode_"+email;
         String validCodeFromRedis = (String) redissonClient.getBucket(bucket).get();
@@ -600,14 +599,25 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
             Random random = new Random();
             String VaildCodeString = String.format("%06d", random.nextInt(90000) + 10000);
-            ///TODO 取消顯示驗證碼
-            log.info("驗證碼：{}", VaildCodeString);
+//            log.debug("驗證碼：{}", VaildCodeString);
 
             //將驗證碼保存在Redis中，設置過期時間為15分鐘，桶名為umsuser:validcode:abcd@gmail.com:
             String bucket = "umsuser:validcode_"+email;
             //Redis快取中儲存新的驗證碼
             redissonClient.getBucket(bucket).set(VaildCodeString, Duration.of(15,ChronoUnit.MINUTES));
-            ///TODO 發送驗證碼到用戶的信箱中
+
+            // 發送驗證碼到用戶的信箱中
+            try {
+                emailService.sendVerificationCodeEmail(email, VaildCodeString);
+            } catch (Exception e) {
+                log.error("郵件發送失敗: {}", e.getMessage());
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
+                        .detailMessage("郵件發送失敗，請稍後再試")
+                        .data(Map.of("email", StringUtils.defaultString(email, "")))
+                        .build();
+            }
+
             return R.ok("驗證碼已發送至您的郵箱");
         } else {
             // 超過請求限流，拒絕請求
@@ -670,6 +680,184 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                     .detailMessage("無權修改該用戶資料")
                     .build();
         }
+    }
+
+    @Override
+    public R changePassword(UmsChangePasswordDTO dto) {
+        // 從 UserContextHolder 獲取當前用戶 ID
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入")
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+
+        // 驗證新密碼和確認密碼是否一致
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("新密碼與確認密碼不一致")
+                    .build();
+        }
+
+        // 根據 userId 查詢用戶的認證資訊
+        UmsAuths umsAuths = umsAuthsService.getOne(
+                new LambdaQueryWrapper<UmsAuths>().eq(UmsAuths::getUserId, userId)
+        );
+
+        if (umsAuths == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("用戶認證資訊不存在")
+                    .data(Map.of("userId", ObjectUtils.defaultIfNull(userId, "")))
+                    .build();
+        }
+
+        // 驗證舊密碼是否正確
+        if (!passwordEncoder.matches(dto.getOldPassword(), umsAuths.getPassword())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("舊密碼不正確")
+                    .build();
+        }
+
+        // 更新密碼
+        umsAuths.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        umsAuths.setPasswordUpdatedAt(LocalDateTime.now());
+        umsAuths.setUpdateAt(LocalDateTime.now());
+        umsAuthsService.updateById(umsAuths);
+
+        log.info("用戶 {} 已成功修改密碼", userId);
+        return R.ok("密碼修改成功");
+    }
+
+    @Override
+    public R sendForgotPasswordCode(UmsForgotPasswordDTO dto) {
+        String email = dto.getEmail();
+
+        // 根據 IP 進行限流
+        String remoteAddr = httpServletRequest.getRemoteAddr();
+        String rateLimitBucket = "umsuser:forgot_password_ratelimit_ipaddr_" + remoteAddr;
+        RRateLimiter rateLimiter = redisRateLimiterUtils.setRedisRateLimiter(
+                rateLimitBucket, RateType.PER_CLIENT, 3, 60, RateIntervalUnit.SECONDS
+        );
+        // 設置過期時間, 避免永久存在導致占用Redis
+        rateLimiter.expire(Duration.of(5, ChronoUnit.MINUTES));
+
+        // 檢查 Email 是否存在
+        UmsCredentials credentials = umsCredentialsService.getOne(
+                new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email)
+        );
+
+        if (credentials == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("該電子郵件地址未註冊")
+                    .data(Map.of("email", StringUtils.defaultString(email, "")))
+                    .build();
+        }
+
+        if (redisRateLimiterUtils.tryAcquire(rateLimiter)) {
+            // 生成 UUID Token
+            String token = java.util.UUID.randomUUID().toString();
+            log.info("密碼重設Token已生成，Email: {}", email);
+
+            // 將 Token -> UserId 映射保存在 Redis 中，過期時間 30 分鐘
+            String bucket = "umsuser:password_reset_token_" + token;
+            redissonClient.getBucket(bucket).set(credentials.getUserId(), Duration.of(30, ChronoUnit.MINUTES));
+
+            // 構建重設密碼 URL
+            String resetUrl = frontendBaseUrl + "/reset-password?token=" + token;
+
+            // 發送郵件
+            try {
+                emailService.sendPasswordResetEmail(email, resetUrl);
+            } catch (Exception e) {
+                log.error("郵件發送失敗: {}", e.getMessage());
+                // 刪除已儲存的 Token
+                redissonClient.getBucket(bucket).deleteAsync();
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
+                        .detailMessage("郵件發送失敗，請稍後再試")
+                        .data(Map.of("email", StringUtils.defaultString(email, "")))
+                        .build();
+            }
+
+            return R.ok("密碼重設連結已發送至您的郵箱");
+        } else {
+            return new R(HttpCodeEnum.TOO_MANY_REQUESTS.getCode(), HttpCodeEnum.TOO_MANY_REQUESTS.getDescription());
+        }
+    }
+
+    @Override
+    public R verifyResetToken(String token) {
+        if (StringUtils.isBlank(token)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("Token 不能為空")
+                    .build();
+        }
+
+        String bucket = "umsuser:password_reset_token_" + token;
+        Long userId = (Long) redissonClient.getBucket(bucket).get();
+
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("連結已過期或無效，請重新申請密碼重設")
+                    .build();
+        }
+
+        return R.ok("Token 有效");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public R resetPassword(UmsResetPasswordDTO dto) {
+        String token = dto.getToken();
+
+        // 驗證新密碼和確認密碼是否一致
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("新密碼與確認密碼不一致")
+                    .build();
+        }
+
+        // 從 Redis 中獲取 Token 對應的 UserId
+        String bucket = "umsuser:password_reset_token_" + token;
+        Long userId = (Long) redissonClient.getBucket(bucket).get();
+
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("連結已過期或無效，請重新申請密碼重設")
+                    .build();
+        }
+
+        // 更新密碼
+        UmsAuths umsAuths = umsAuthsService.getOne(
+                new LambdaQueryWrapper<UmsAuths>().eq(UmsAuths::getUserId, userId)
+        );
+
+        if (umsAuths == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("用戶認證資訊不存在")
+                    .build();
+        }
+
+        umsAuths.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        umsAuths.setPasswordUpdatedAt(LocalDateTime.now());
+        umsAuths.setUpdateAt(LocalDateTime.now());
+        umsAuthsService.updateById(umsAuths);
+
+        // 刪除 Redis 中的 Token（一次性使用）
+        redissonClient.getBucket(bucket).deleteAsync();
+
+        log.info("用戶 {} 已成功重設密碼", userId);
+        return R.ok("密碼重設成功");
     }
 
 }

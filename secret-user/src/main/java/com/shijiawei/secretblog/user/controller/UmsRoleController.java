@@ -5,6 +5,7 @@ import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.entity.UmsRole;
 import com.shijiawei.secretblog.user.service.Impl.UmsRoleServiceImpl;
 import com.shijiawei.secretblog.user.service.UmsRoleService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,11 +15,11 @@ import java.util.List;
 
 /**
  * (ums_role)表控制層
- *
- * @author xxxxx
+
  */
 @RestController
 @Slf4j
+@Tag(name = "角色管理", description = "角色狀態相關的 CRUD 操作")
 @RequestMapping("/ums/role")
 public class UmsRoleController {
     /**

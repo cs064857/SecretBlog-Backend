@@ -7,7 +7,6 @@ import java.util.List;
 /**
  * ClassName: UmsCredentialsService
  * Description: ums_credentials 服務介面
- * 註解均採用繁體中文
  */
 public interface UmsCredentialsService extends IService<UmsCredentials> {
 

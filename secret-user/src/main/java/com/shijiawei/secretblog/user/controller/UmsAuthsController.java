@@ -3,14 +3,15 @@ package com.shijiawei.secretblog.user.controller;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.entity.UmsAuths;
 import com.shijiawei.secretblog.user.service.UmsAuthsService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * (ums_auths)表 控制層
- * 註解均採用繁體中文
  */
 @RestController
+@Tag(name = "認證管理", description = "認證狀態相關的 CRUD 操作")
 @RequestMapping("/ums/auths")
 public class UmsAuthsController {
 

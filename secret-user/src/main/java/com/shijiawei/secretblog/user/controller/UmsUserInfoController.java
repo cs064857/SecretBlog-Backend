@@ -4,6 +4,7 @@ import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.entity.UmsUserInfo;
 import com.shijiawei.secretblog.user.service.Impl.UmsUserInfoServiceImpl;
 import com.shijiawei.secretblog.user.service.UmsUserInfoService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -12,10 +13,9 @@ import java.util.List;
 
 /**
  * (ums_userInfo)表控制層
- *
- * @author xxxxx
  */
 @RestController
+@Tag(name = "使用者資訊管理", description = "使用者資訊相關的 CRUD 操作")
 @RequestMapping("/ums/userInfo")
 public class UmsUserInfoController {
     /**

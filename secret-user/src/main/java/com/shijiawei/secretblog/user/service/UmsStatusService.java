@@ -7,7 +7,6 @@ import java.util.List;
 /**
  * ClassName: UmsStatusService
  * Description: ums_status 服務介面
- * 註解均採用繁體中文
  */
 public interface UmsStatusService extends IService<UmsStatus> {
 
