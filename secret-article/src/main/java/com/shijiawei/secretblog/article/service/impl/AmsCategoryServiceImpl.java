@@ -137,6 +137,8 @@ public class AmsCategoryServiceImpl extends ServiceImpl<AmsCategoryMapper, AmsCa
 
     }
 
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_PREFIX,
+            key = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_KEY)
     @Override
     public void updateTreeCategoryName(Long id, String categoryName) {
         // 根據 ID 從資料庫中獲取 AmsCategory 對象
