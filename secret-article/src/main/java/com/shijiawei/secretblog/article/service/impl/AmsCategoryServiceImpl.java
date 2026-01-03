@@ -11,6 +11,7 @@ import com.shijiawei.secretblog.article.mapper.AmsCategoryMapper;
 import com.shijiawei.secretblog.article.vo.AmsCategoryTreeVo;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,7 @@ public class AmsCategoryServiceImpl extends ServiceImpl<AmsCategoryMapper, AmsCa
      * 封裝全部數據並返回給前端展示樹形分類結構
      * @return
      */
-    @OpenCache(prefix = "AmsCategory",key = "treeCategoryVos",time = 30,chronoUnit = ChronoUnit.MINUTES)
+    @OpenCache(prefix = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_PREFIX, key = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_KEY, time = 30, chronoUnit = ChronoUnit.MINUTES)
     @OpenLog
     @Override
     public List<AmsCategoryTreeVo> getTreeCategoryVo() {
@@ -78,8 +79,8 @@ public class AmsCategoryServiceImpl extends ServiceImpl<AmsCategoryMapper, AmsCa
      * 儲存該分類數據
      * @param amsCategory
      */
-//    @DelayDoubleDelete(prefix = "AmsCategory",key = "'treeCategoryVos_'+ #amsCategory.id",delay = 60)
-    @DelayDoubleDelete(prefix = "AmsCategory",key = "treeCategoryVos")
+//    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_PREFIX, key = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_BY_AMS_CATEGORY_ID_KEY, delay = 60)
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_PREFIX, key = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_KEY)
     @OpenLog
     @Override
     public void saveCategory(AmsCategory amsCategory) {

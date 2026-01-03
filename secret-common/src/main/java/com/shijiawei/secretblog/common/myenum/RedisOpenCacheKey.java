@@ -67,6 +67,27 @@ public class RedisOpenCacheKey {
         public static final String ARTICLE_PREVIEWS_BY_VO_KEY = "categoryId_#{#amsSaveArticleVo.categoryId}:routerPage_#{#routePage}";
 
     }
+
+    /*
+     * 文章分類相關常數
+     */
+    public static class ArticleCategories {
+        private ArticleCategories() {}
+
+        public static final String CATEGORY_TREE_PREFIX = "AmsCategory";
+        public static final String CATEGORY_TREE_KEY = "treeCategoryVos";
+        public static final String CATEGORY_TREE_BY_AMS_CATEGORY_ID_KEY = "treeCategoryVos_#{#amsCategory.id}";
+    }
+
+    /*
+     * 文章列表相關常數
+     */
+    public static class ArticleList {
+        private ArticleList() {}
+
+        public static final String ARTICLE_LIST_PREFIX = "AmsArticle";
+        public static final String ARTICLE_LIST_KEY = "articles";
+    }
 //    /*
 //     * 文章留言資訊相關常數(點讚數、書簽署)
 //     */

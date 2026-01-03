@@ -535,6 +535,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      * @param articleId 文章ID
      * @return 包含文章中所有留言的靜態資訊的列表
      */
+    @OpenCache(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX, key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY, time = 30, chronoUnit = ChronoUnit.MINUTES)
     @Override
     public List<AmsArtCommentsVo> getArtComments(Long articleId) {
         log.info("查詢文章中的所有留言 - articleId: {}", articleId);

@@ -9,6 +9,7 @@ import com.shijiawei.secretblog.article.vo.AmsUserCommentVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
+import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import com.shijiawei.secretblog.common.utils.R;
 
 import java.time.temporal.ChronoUnit;
@@ -30,7 +31,6 @@ public interface AmsCommentService extends IService<AmsComment> {
 
     IPage<AmsUserCommentVo> getUserCommentsByUserId(Long userId, Integer routePage);
 
-    @OpenCache(prefix = "AmsComments", key = "articleId_#{#articleId}", time = 30, chronoUnit = ChronoUnit.MINUTES)
     List<AmsArtCommentStaticVo> getStaticCommentDetails(Long articleId);
 
     Integer likeComment(Long articleId, Long commentId);
