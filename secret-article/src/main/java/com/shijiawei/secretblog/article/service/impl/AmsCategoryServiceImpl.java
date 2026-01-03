@@ -103,6 +103,8 @@ public class AmsCategoryServiceImpl extends ServiceImpl<AmsCategoryMapper, AmsCa
      * 刪除該分類數據
      * @param id
      */
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_PREFIX,
+            key = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_KEY)
     @Override
     public void deleteById(Long id) {
         this.baseMapper.deleteById(id);
@@ -114,6 +116,8 @@ public class AmsCategoryServiceImpl extends ServiceImpl<AmsCategoryMapper, AmsCa
      * @param afterParentId
      * @param afterLevel
      */
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_PREFIX,
+            key = RedisOpenCacheKey.ArticleCategories.CATEGORY_TREE_KEY)
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateCategory(Long beforeId, Long afterParentId, Integer afterLevel) {
