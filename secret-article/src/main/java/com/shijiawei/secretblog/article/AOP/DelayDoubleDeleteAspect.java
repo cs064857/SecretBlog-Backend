@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.article.AOP;
 
+import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -60,7 +61,8 @@ public class DelayDoubleDeleteAspect {
     }
 
     public void scheduleDelayedCacheDeletion(String keyPrefix, long delay, TimeUnit timeUnit){
-        RQueue<Object> cacheDeletionQueue = redissonClient.getQueue("cacheDeletionQueue:" + keyPrefix);
+        String queueKey = RedisCacheKey.CACHE_DELETION_QUEUE.format(keyPrefix);
+        RQueue<Object> cacheDeletionQueue = redissonClient.getQueue(queueKey);
         RDelayedQueue<Object> delayedQueue = redissonClient.getDelayedQueue(cacheDeletionQueue);
         delayedQueue.offer(keyPrefix, delay, timeUnit);
 
@@ -95,4 +97,3 @@ public class DelayDoubleDeleteAspect {
 
 
     }
-

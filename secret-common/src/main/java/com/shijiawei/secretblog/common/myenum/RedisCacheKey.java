@@ -56,7 +56,7 @@ public enum RedisCacheKey {
     ARTICLE_COMMENTS_BOOKMARKS("ams:article:comment:%s:bookmarks_count", "文章留言書籤數（計數用）", null),
 
     /**
-     * ===== 留言相關（方案 B：Hash 聚合）=====
+     * 留言相關
      */
 
     // 文章的留言列表索引（ZSet，按時間排序）
@@ -74,7 +74,23 @@ public enum RedisCacheKey {
     COMMENT_LIKED_USERS("ams:comment:%s:liked_users", "留言點讚用戶集合", null),
 
     // 留言被哪些用戶書籤（Set: 用戶ID集合）
-    COMMENT_MARKED_USERS("ams:comment:%s:marked_users", "留言書籤用戶集合", null);
+    COMMENT_MARKED_USERS("ams:comment:%s:marked_users", "留言書籤用戶集合", null),
+
+    /**
+     * 使用者 / 認證相關
+     */
+    JWT_BLACKLIST_SESSION("blacklist:jwt:%s", "JWT 黑名單（以 sessionId 作為鍵）", null),
+
+    USER_EMAIL_VALID_CODE("umsuser:validcode_%s", "用戶註冊信箱驗證碼", Duration.ofMinutes(15)),
+    USER_EMAIL_VALID_CODE_RATE_LIMIT_IP("umsuser:validcode_ratelimit_ipaddr_%s", "信箱驗證碼寄送限流（依 IP）", null),
+
+    USER_FORGOT_PASSWORD_RATE_LIMIT_IP("umsuser:forgot_password_ratelimit_ipaddr_%s", "忘記密碼限流（依 IP）", null),
+    USER_PASSWORD_RESET_TOKEN("umsuser:password_reset_token_%s", "密碼重設 Token -> UserId 映射", Duration.ofMinutes(30)),
+
+    /**
+     * ===== 快取維護 / 基礎設施 =====
+     */
+    CACHE_DELETION_QUEUE("cacheDeletionQueue:%s", "延遲雙刪佇列（依 keyPrefix 分流）", null);
 
 
 

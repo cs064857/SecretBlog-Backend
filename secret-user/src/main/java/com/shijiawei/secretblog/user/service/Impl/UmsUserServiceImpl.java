@@ -16,6 +16,7 @@ import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
 import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
+import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.utils.UserContextHolder;
 import com.shijiawei.secretblog.user.entity.*;
 import com.shijiawei.secretblog.user.feign.ArticleFeignClient;
@@ -527,8 +528,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             log.info("為新用戶設置預設帳號名稱: {}", defaultAccountName);
         }
 
-        //從Redis中取得驗證碼並校驗，桶名為umsuser:validcode:abcd@gmail.com:
-        String bucket = "umsuser:validcode_"+email;
+        // 從 Redis 取得驗證碼並校驗（Key 統一由 RedisCacheKey 管理）
+        String bucket = RedisCacheKey.USER_EMAIL_VALID_CODE.format(email);
         String validCodeFromRedis = (String) redissonClient.getBucket(bucket).get();
         //判斷驗證碼是否正確
         if(vaildCode.equals(validCodeFromRedis)){
@@ -568,8 +569,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         /*
          * Redis限流
          */
-        //Redis中IP嘗試計數的桶名
-        String rateLimitBucket = "umsuser:validcode_ratelimit_ipaddr_"+remoteAddr;
+        // Redis 中 IP 嘗試計數的 Key（寄送驗證碼限流）
+        String rateLimitBucket = RedisCacheKey.USER_EMAIL_VALID_CODE_RATE_LIMIT_IP.format(remoteAddr);
 
 //
         ///TODO 調整驗證碼嘗試限流時間，目前30秒3次
@@ -601,8 +602,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             String VaildCodeString = String.format("%06d", random.nextInt(90000) + 10000);
 //            log.debug("驗證碼：{}", VaildCodeString);
 
-            //將驗證碼保存在Redis中，設置過期時間為15分鐘，桶名為umsuser:validcode:abcd@gmail.com:
-            String bucket = "umsuser:validcode_"+email;
+            // 將驗證碼保存在 Redis 中，設置過期時間為 15 分鐘（Key 統一由 RedisCacheKey 管理）
+            String bucket = RedisCacheKey.USER_EMAIL_VALID_CODE.format(email);
             //Redis快取中儲存新的驗證碼
             redissonClient.getBucket(bucket).set(VaildCodeString, Duration.of(15,ChronoUnit.MINUTES));
 
@@ -738,7 +739,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         // 根據 IP 進行限流
         String remoteAddr = httpServletRequest.getRemoteAddr();
-        String rateLimitBucket = "umsuser:forgot_password_ratelimit_ipaddr_" + remoteAddr;
+        String rateLimitBucket = RedisCacheKey.USER_FORGOT_PASSWORD_RATE_LIMIT_IP.format(remoteAddr);
         RRateLimiter rateLimiter = redisRateLimiterUtils.setRedisRateLimiter(
                 rateLimitBucket, RateType.PER_CLIENT, 3, 60, RateIntervalUnit.SECONDS
         );
@@ -764,7 +765,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             log.info("密碼重設Token已生成，Email: {}", email);
 
             // 將 Token -> UserId 映射保存在 Redis 中，過期時間 30 分鐘
-            String bucket = "umsuser:password_reset_token_" + token;
+            String bucket = RedisCacheKey.USER_PASSWORD_RESET_TOKEN.format(token);
             redissonClient.getBucket(bucket).set(credentials.getUserId(), Duration.of(30, ChronoUnit.MINUTES));
 
             // 構建重設密碼 URL
@@ -799,7 +800,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                     .build();
         }
 
-        String bucket = "umsuser:password_reset_token_" + token;
+        String bucket = RedisCacheKey.USER_PASSWORD_RESET_TOKEN.format(token);
         Long userId = (Long) redissonClient.getBucket(bucket).get();
 
         if (userId == null) {
@@ -826,7 +827,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         }
 
         // 從 Redis 中獲取 Token 對應的 UserId
-        String bucket = "umsuser:password_reset_token_" + token;
+        String bucket = RedisCacheKey.USER_PASSWORD_RESET_TOKEN.format(token);
         Long userId = (Long) redissonClient.getBucket(bucket).get();
 
         if (userId == null) {
