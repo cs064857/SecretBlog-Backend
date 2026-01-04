@@ -9,7 +9,6 @@ import org.apache.ibatis.annotations.Param;
 /**
  * ClassName: UmsCredentialsMapper
  * Description: ums_credentials 資料訪問層
- * 註解均採用繁體中文
  */
 @Mapper
 public interface UmsCredentialsMapper extends BaseMapper<UmsCredentials> {

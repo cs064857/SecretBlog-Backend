@@ -26,7 +26,7 @@ public class SearchConsumer {
      * 處理文章同步至 Elasticsearch 的消息
      * @param message 同步消息
      */
-    @RabbitListener(queues = RabbitMqConsts.search.syncArticleToES.queue)
+    @RabbitListener(queues = RabbitMqConsts.Search.SyncArticleToES.QUEUE)
     public void handleSyncArticleToES(SyncArticleToESMessage message) {
         log.info("RabbitMQ 收到文章同步至 ES 消息，articleId={}，operationType={}",
                 message.getArticleId(), message.getOperationType());

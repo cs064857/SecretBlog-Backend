@@ -9,7 +9,6 @@ import org.apache.ibatis.annotations.Param;
 /**
  * ClassName: UmsStatusMapper
  * Description: ums_status 資料訪問層
- * 註解均採用繁體中文
  */
 @Mapper
 public interface UmsStatusMapper extends BaseMapper<UmsStatus> {

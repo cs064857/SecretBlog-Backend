@@ -12,11 +12,7 @@ import com.shijiawei.secretblog.article.entity.*;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
 import com.shijiawei.secretblog.article.feign.SearchFeignClient;
 
-import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
-import com.shijiawei.secretblog.common.message.UpdateArticleActionMessage;
-import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkMessage;
-import com.shijiawei.secretblog.common.message.UpdateArticleBookmarkActionMessage;
-import com.shijiawei.secretblog.common.message.SyncArticleToESMessage;
+import com.shijiawei.secretblog.common.message.*;
 import com.shijiawei.secretblog.article.service.*;
 import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 import com.shijiawei.secretblog.article.vo.*;
@@ -292,6 +288,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                 .articleId(amsArticle.getId())
                 .operationType(SyncArticleToESMessage.OPERATION_CREATE)
                 .build();
+
         amsLocalMessageService.createPendingMessage(syncMessage);
         log.info("已建立文章 ES 同步本地消息，articleId={}，operationType=CREATE", amsArticle.getId());
 
@@ -792,29 +789,6 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         /**
-         *  透過 RabbitMQ 訊息佇列異步更新使用者對該文章的點讚狀態至 AmsArtAction
-         */
-        UpdateArticleActionMessage actionMessage = UpdateArticleActionMessage.builder()
-                .articleId(articleId)
-                .userId(userId)
-                .isLiked((byte) 1)
-                .build();
-        amsLocalMessageService.createPendingMessage(actionMessage);
-
-        /**
-         * 調用RabbitMq將點讚數遞增同步至資料庫中
-         */
-
-        UpdateArticleLikedMessage updateArticleLikedMessage = UpdateArticleLikedMessage.builder()
-                .articleId(articleId)
-                .delta(1)
-                .build();
-
-
-        amsLocalMessageService.createPendingMessage(updateArticleLikedMessage);
-
-
-        /**
          * Redis操作
          * 1、將用戶ID加入到該文章的點讚用戶集合中
          * 2、增加該文章的點讚數
@@ -854,6 +828,68 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     .build();
         }
 
+//        /**
+//         *  透過 RabbitMQ 訊息佇列異步更新使用者對該文章的點讚狀態至 AmsArtAction
+//         */
+//        UpdateArticleActionMessage actionMessage = UpdateArticleActionMessage.builder()
+//                .articleId(articleId)
+//                .userId(userId)
+//                .isLiked((byte) 1)
+//                .build();
+//        amsLocalMessageService.createPendingMessage(actionMessage);
+//
+//        /**
+//         * 將點讚數遞增同步至資料庫中
+//         */
+//
+//        UpdateArticleLikedMessage updateArticleLikedMessage = UpdateArticleLikedMessage.builder()
+//                .articleId(articleId)
+//                .delta(1)
+//                .build();
+//
+//
+//        amsLocalMessageService.createPendingMessage(updateArticleLikedMessage);
+
+        /**
+         * 調用RabbitMq
+         * 1、將點讚數遞增同步至資料庫中
+         * 2、透過 RabbitMQ 訊息佇列異步
+         */
+        ArticleLikeChangedMessage articleLikeChangedMessage = ArticleLikeChangedMessage.builder()
+                .articleId(articleId)
+                .userId(userId)
+                .isLiked((byte) 1)
+                .delta(1)
+                .build();
+
+        amsLocalMessageService.createPendingMessage(articleLikeChangedMessage);
+
+
+        /**
+         * 文章被點讚後，以 Email 通知作者（使用本地消息表 + RabbitMQ 異步處理）
+         */
+        AmsArtinfo authorInfo = amsArtinfoService.getOne(new LambdaQueryWrapper<AmsArtinfo>()
+                .select(AmsArtinfo::getUserId)
+                .eq(AmsArtinfo::getArticleId, articleId)
+                .last("limit 1"));
+        Long authorUserId = authorInfo == null ? null : authorInfo.getUserId();
+
+        if (authorUserId != null && !authorUserId.equals(userId)) {
+            AmsArticle article = this.getOne(new LambdaQueryWrapper<AmsArticle>()
+                    .select(AmsArticle::getTitle)
+                    .eq(AmsArticle::getId, articleId)
+                    .last("limit 1"));
+            String articleTitle = article == null ? null : article.getTitle();
+
+//            ArticleLikedEmailNotifyMessage notifyMessage = ArticleLikedEmailNotifyMessage.builder()
+//                    .authorUserId(authorUserId)
+//                    .articleId(articleId)
+//                    .articleTitle(articleTitle)
+//                    .likedUserId(userId)
+//                    .likedUserNickname(UserContextHolder.getCurrentUserNickname())
+//                    .build();
+//            amsLocalMessageService.createPendingMessage(notifyMessage);
+        }
 
         log.info("文章點讚數增加完成，文章ID:{}，新的文章點讚數:{}", articleId, result);
 
@@ -887,6 +923,9 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("用戶取消文章點讚, 用戶ID:{} , 文章ID:{}", userId, articleId);
 
+
+
+
         /**
          * 檢查用戶是否已經點讚過該文章
          * 先檢查Redis中的點讚用戶集合
@@ -904,28 +943,6 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     ))
                     .build();
         }
-
-        /**
-         *  透過 RabbitMQ 訊息佇列異步更新使用者對該文章的點讚狀態至 AmsArtAction
-         */
-        UpdateArticleActionMessage actionMessage = UpdateArticleActionMessage.builder()
-                .articleId(articleId)
-                .userId(userId)
-                .isLiked((byte) 0)
-                .build();
-        amsLocalMessageService.createPendingMessage(actionMessage);
-
-        /**
-         * 調用RabbitMq將點讚數遞減同步至資料庫中
-         */
-
-        UpdateArticleLikedMessage updateArticleLikedMessage = UpdateArticleLikedMessage.builder()
-                .articleId(articleId)
-                .delta(-1)
-                .build();
-
-
-        amsLocalMessageService.createPendingMessage(updateArticleLikedMessage);
 
         /**
          * Redis操作
@@ -964,6 +981,44 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     ))
                     .build();
         }
+
+
+//        /**
+//         *  透過 RabbitMQ 訊息佇列異步更新使用者對該文章的點讚狀態至 AmsArtAction
+//         */
+//        UpdateArticleActionMessage actionMessage = UpdateArticleActionMessage.builder()
+//                .articleId(articleId)
+//                .userId(userId)
+//                .isLiked((byte) 0)
+//                .build();
+//        amsLocalMessageService.createPendingMessage(actionMessage);
+//
+//        /**
+//         * 調用RabbitMq將點讚數遞減同步至資料庫中
+//         */
+//
+//        UpdateArticleLikedMessage updateArticleLikedMessage = UpdateArticleLikedMessage.builder()
+//                .articleId(articleId)
+//                .delta(-1)
+//                .build();
+//        amsLocalMessageService.createPendingMessage(updateArticleLikedMessage);
+
+        /**
+         * 調用RabbitMq
+         * 1、將點讚數遞增同步至資料庫中
+         * 2、透過 RabbitMQ 訊息佇列異步
+         */
+        ArticleLikeChangedMessage articleLikeChangedMessage = ArticleLikeChangedMessage.builder()
+                    .articleId(articleId)
+                    .userId(userId)
+                    .isLiked((byte) 0)
+                    .delta(-1)
+                    .build();
+
+        amsLocalMessageService.createPendingMessage(articleLikeChangedMessage);
+
+
+
 
         log.info("文章點讚數減少完成，文章ID:{}，新的文章點讚數:{}", articleId, result);
 

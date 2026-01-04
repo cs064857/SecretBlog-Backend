@@ -16,7 +16,6 @@ import lombok.Data;
  * Description: 使用者認證資訊表對應實體
  * 建表: secretblog_ums.ums_auths
  *
- * 註解均採用繁體中文
  */
 @Data
 @Schema

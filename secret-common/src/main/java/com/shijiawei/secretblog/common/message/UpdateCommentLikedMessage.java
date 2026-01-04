@@ -39,8 +39,8 @@ public class UpdateCommentLikedMessage implements Serializable, RabbitMessage {
     private Long timestamp = System.currentTimeMillis();
 
     @JsonIgnore
-    private final String exchange = RabbitMqConsts.ams.topicExchange;
+    private final String exchange = RabbitMqConsts.Ams.TOPIC_EXCHANGE;
 
     @JsonIgnore
-    private final String routingKey = RabbitMqConsts.ams.updateCommentLiked.routingKey;
+    private final String routingKey = RabbitMqConsts.Ams.UpdateCommentLiked.ROUTING_KEY;
 }

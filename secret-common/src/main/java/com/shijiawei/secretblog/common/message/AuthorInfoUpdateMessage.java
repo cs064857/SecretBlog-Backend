@@ -30,7 +30,7 @@ public class AuthorInfoUpdateMessage implements Serializable , RabbitMessage {
      */
     private Long timestamp;
     @JsonIgnore
-    private final String exchange = RabbitMqConsts.user.topicExchange;
+    private final String exchange = RabbitMqConsts.User.TOPIC_EXCHANGE;
     @JsonIgnore
-    private final String routingKey = RabbitMqConsts.user.userAvatarUpdate.routingKey;
+    private final String routingKey = RabbitMqConsts.User.UserAvatarUpdate.ROUTING_KEY;
 }

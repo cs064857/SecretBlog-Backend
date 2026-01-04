@@ -18,24 +18,36 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitConfig {
 
-    @Bean(value = RabbitMqConsts.user.userAvatarUpdate.queue)
+    @Bean(value = RabbitMqConsts.User.UserAvatarUpdate.QUEUE)
     public Queue userAvatarUpdateQueue() {
-        return new Queue(RabbitMqConsts.user.userAvatarUpdate.queue);
+        return new Queue(RabbitMqConsts.User.UserAvatarUpdate.QUEUE);
     }
 
-    @Bean(value = RabbitMqConsts.user.topicExchange)
+    @Bean(value = RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE)
+    public Queue articleLikedEmailNotifyQueue() {
+        return new Queue(RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE);
+    }
+
+    @Bean(value = RabbitMqConsts.User.TOPIC_EXCHANGE)
     public TopicExchange userTopicDirectExchange() {
-        return new TopicExchange(RabbitMqConsts.user.topicExchange);
+        return new TopicExchange(RabbitMqConsts.User.TOPIC_EXCHANGE);
     }
 
     @Bean
     public Binding bindCommentActionQueueToTopicExchange(
-            @Qualifier(value = RabbitMqConsts.user.userAvatarUpdate.queue)Queue queue,
-            @Qualifier(value = RabbitMqConsts.user.topicExchange) TopicExchange exchange)
+            @Qualifier(value = RabbitMqConsts.User.UserAvatarUpdate.QUEUE)Queue queue,
+            @Qualifier(value = RabbitMqConsts.User.TOPIC_EXCHANGE) TopicExchange exchange)
     {
 
         System.out.println("Spring 正在執行這個方法2");
-        return BindingBuilder.bind(queue).to(exchange).with(RabbitMqConsts.user.userAvatarUpdate.routingKey);
+        return BindingBuilder.bind(queue).to(exchange).with(RabbitMqConsts.User.UserAvatarUpdate.ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding bindArticleLikedEmailNotifyQueueToTopicExchange(
+            @Qualifier(value = RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE) Queue queue,
+            @Qualifier(value = RabbitMqConsts.User.TOPIC_EXCHANGE) TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(RabbitMqConsts.User.ArticleLikedEmailNotify.ROUTING_KEY);
     }
 
     @Bean
@@ -60,4 +72,3 @@ public class RabbitConfig {
 
 
 }
-

@@ -46,12 +46,12 @@ public class UpdateArticleBookmarkActionMessage implements Serializable, RabbitM
     @JsonIgnore
     @Override
     public String getExchange() {
-        return RabbitMqConsts.ams.topicExchange;
+        return RabbitMqConsts.Ams.TOPIC_EXCHANGE;
     }
 
     @JsonIgnore
     @Override
     public String getRoutingKey() {
-        return RabbitMqConsts.ams.updateArticleBookmarkAction.routingKey;
+        return RabbitMqConsts.Ams.UpdateArticleBookmarkAction.ROUTING_KEY;
     }
 }

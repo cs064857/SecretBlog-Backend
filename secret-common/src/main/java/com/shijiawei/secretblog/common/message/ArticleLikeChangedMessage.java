@@ -11,16 +11,16 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * ClassName: UpdateArticleBookmarkMessage
- * Description: 文章書籤數量變更訊息（透過 RabbitMQ 異步同步至資料庫）
+ * ClassName: ArticleLikeChangedMessage
+ * Description: 用於傳遞用戶對文章的互動行為變更（點讚/取消點讚）
  *
- * @Create 2025/12/6
+ * @Create 2025/12/6 下午6:28
  */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UpdateArticleBookmarkMessage implements Serializable, RabbitMessage {
+public class ArticleLikeChangedMessage implements Serializable, RabbitMessage {
 
     /**
      * 文章ID
@@ -28,9 +28,18 @@ public class UpdateArticleBookmarkMessage implements Serializable, RabbitMessage
     private Long articleId;
 
     /**
-     * 變更量 (1: 加入書籤, -1: 移除書籤)
+     * 用戶ID
      */
-    private Integer delta;
+    private Long userId;
+
+    /**
+     * 點讚狀態 (1: 點讚, 0: 取消點讚)
+     */
+    private Byte isLiked;
+    /**
+     * 點讚數變更量(正數為增加 ; 負數為減少)
+     */
+    private Integer delta;//變更量
 
     /**
      * 訊息時間戳
@@ -39,14 +48,8 @@ public class UpdateArticleBookmarkMessage implements Serializable, RabbitMessage
     private Long timestamp = System.currentTimeMillis();
 
     @JsonIgnore
-    @Override
-    public String getExchange() {
-        return RabbitMqConsts.Ams.TOPIC_EXCHANGE;
-    }
+    private final String exchange = RabbitMqConsts.Ams.TOPIC_EXCHANGE;
 
     @JsonIgnore
-    @Override
-    public String getRoutingKey() {
-        return RabbitMqConsts.Ams.UpdateArticleBookmark.ROUTING_KEY;
-    }
+    private final String routingKey = RabbitMqConsts.Ams.ArticleLikeChanged.ROUTING_KEY;
 }

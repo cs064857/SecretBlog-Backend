@@ -11,16 +11,19 @@
 //import java.io.Serializable;
 //
 ///**
-// * ClassName: UpdateArticleActionMessage
-// * Description: 用於傳遞用戶對文章的互動行為變更（點讚/取消點讚）
+// * 文章被點讚後的 Email 通知消息
 // *
-// * @Create 2025/12/6 下午6:28
 // */
 //@Data
 //@Builder
 //@AllArgsConstructor
 //@NoArgsConstructor
-//public class UpdateArticleActionMessage implements Serializable, RabbitMessage {
+//public class ArticleLikedEmailNotifyMessage implements Serializable, RabbitMessage {
+//
+//    /**
+//     * 作者用戶ID
+//     */
+//    private Long authorUserId;
 //
 //    /**
 //     * 文章ID
@@ -28,14 +31,19 @@
 //    private Long articleId;
 //
 //    /**
-//     * 用戶ID
+//     * 文章標題（可為空）
 //     */
-//    private Long userId;
+//    private String articleTitle;
 //
 //    /**
-//     * 點讚狀態 (1: 點讚, 0: 取消點讚)
+//     * 點讚者用戶ID
 //     */
-//    private Byte isLiked;
+//    private Long likedUserId;
+//
+//    /**
+//     * 點讚者暱稱（可為空）
+//     */
+//    private String likedUserNickname;
 //
 //    /**
 //     * 訊息時間戳
@@ -44,8 +52,9 @@
 //    private Long timestamp = System.currentTimeMillis();
 //
 //    @JsonIgnore
-//    private final String exchange = RabbitMqConsts.Ams.TOPIC_EXCHANGE;
+//    private final String exchange = RabbitMqConsts.User.TOPIC_EXCHANGE;
 //
 //    @JsonIgnore
-//    private final String routingKey = RabbitMqConsts.Ams.UpdateArticleAction.ROUTING_KEY;
+//    private final String routingKey = RabbitMqConsts.User.ArticleLikedEmailNotify.ROUTING_KEY;
 //}
+//

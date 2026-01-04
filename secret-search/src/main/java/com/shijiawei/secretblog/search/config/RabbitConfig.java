@@ -21,17 +21,17 @@ public class RabbitConfig {
     /**
      * 搜索服務 Topic Exchange
      */
-    @Bean(value = RabbitMqConsts.search.topicExchange)
+    @Bean(value = RabbitMqConsts.Search.TOPIC_EXCHANGE)
     public TopicExchange searchTopicExchange() {
-        return new TopicExchange(RabbitMqConsts.search.topicExchange);
+        return new TopicExchange(RabbitMqConsts.Search.TOPIC_EXCHANGE);
     }
 
     /**
      * 文章同步至 ES 佇列
      */
-    @Bean(value = RabbitMqConsts.search.syncArticleToES.queue)
+    @Bean(value = RabbitMqConsts.Search.SyncArticleToES.QUEUE)
     public Queue syncArticleToESQueue() {
-        return new Queue(RabbitMqConsts.search.syncArticleToES.queue);
+        return new Queue(RabbitMqConsts.Search.SyncArticleToES.QUEUE);
     }
 
     /**
@@ -39,9 +39,9 @@ public class RabbitConfig {
      */
     @Bean
     public Binding syncArticleToESBinding(
-            @Qualifier(RabbitMqConsts.search.syncArticleToES.queue) Queue queue,
-            @Qualifier(RabbitMqConsts.search.topicExchange) TopicExchange topicExchange) {
-        return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.search.syncArticleToES.routingKey);
+            @Qualifier(RabbitMqConsts.Search.SyncArticleToES.QUEUE) Queue queue,
+            @Qualifier(RabbitMqConsts.Search.TOPIC_EXCHANGE) TopicExchange topicExchange) {
+        return BindingBuilder.bind(queue).to(topicExchange).with(RabbitMqConsts.Search.SyncArticleToES.ROUTING_KEY);
     }
 
     /**

@@ -4,6 +4,7 @@ import com.shijiawei.secretblog.user.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -38,6 +39,13 @@ public class EmailServiceImpl implements EmailService {
     public void sendPasswordResetEmail(String to, String resetUrl) {
         String subject = "【" + applicationName + "】密碼重設請求";
         String content = buildPasswordResetEmailContent(resetUrl);
+        sendHtmlEmail(to, subject, content);
+    }
+
+    @Override
+    public void sendArticleLikedNotificationEmail(String to, String articleTitle, String likedUserNickname, Long articleId) {
+        String subject = "【" + applicationName + "】你的文章被點讚了";
+        String content = buildArticleLikedNotificationEmailContent(articleTitle, likedUserNickname, articleId);
         sendHtmlEmail(to, subject, content);
     }
 
@@ -142,5 +150,61 @@ public class EmailServiceImpl implements EmailService {
             </body>
             </html>
             """.formatted(resetUrl, resetUrl, java.time.Year.now().getValue(), applicationName);
+    }
+
+    /**
+     * 構建文章被點讚通知郵件 HTML 內容
+     */
+    private String buildArticleLikedNotificationEmailContent(String articleTitle, String likedUserNickname, Long articleId) {
+        String safeTitle = StringUtils.defaultIfBlank(articleTitle, "（未命名文章）");
+        String safeNickname = StringUtils.defaultIfBlank(likedUserNickname, "某位使用者");
+        String safeArticleId = articleId == null ? "（未知）" : String.valueOf(articleId);
+
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Microsoft JhengHei', Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .header { text-align: center; color: #333; margin-bottom: 30px; }
+                    .info { color: #666; font-size: 14px; line-height: 1.6; }
+                    .highlight { color: #007bff; font-weight: bold; }
+                    .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="header">文章被點讚通知</h2>
+                    <p class="info">您好，</p>
+                    <p class="info">你的文章 <span class="highlight">%s</span> 已被 <span class="highlight">%s</span> 點讚。</p>
+                    <p class="info">文章ID：%s</p>
+                    <div class="footer">
+                        <p>此郵件由系統自動發送，請勿直接回覆。</p>
+                        <p>© %s %s</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(
+                escapeHtml(safeTitle),
+                escapeHtml(safeNickname),
+                escapeHtml(safeArticleId),
+                java.time.Year.now().getValue(),
+                applicationName
+            );
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 }

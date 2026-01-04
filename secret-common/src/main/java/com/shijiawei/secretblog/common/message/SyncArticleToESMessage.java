@@ -40,10 +40,10 @@ public class SyncArticleToESMessage implements Serializable, RabbitMessage {
     private Long timestamp = System.currentTimeMillis();
 
     @JsonIgnore
-    private final String exchange = RabbitMqConsts.search.topicExchange;
+    private final String exchange = RabbitMqConsts.Search.TOPIC_EXCHANGE;
 
     @JsonIgnore
-    private final String routingKey = RabbitMqConsts.search.syncArticleToES.routingKey;
+    private final String routingKey = RabbitMqConsts.Search.SyncArticleToES.ROUTING_KEY;
 
     /**
      * 操作類型常量

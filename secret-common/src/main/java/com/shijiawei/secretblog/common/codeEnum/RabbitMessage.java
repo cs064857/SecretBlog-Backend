@@ -1,9 +1,8 @@
 package com.shijiawei.secretblog.common.codeEnum;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
+
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.shijiawei.secretblog.common.message.AuthorInfoUpdateMessage;
-import com.shijiawei.secretblog.common.message.UpdateArticleLikedMessage;
+
 
 /**
  * RabbitMQ 消息通用介面
