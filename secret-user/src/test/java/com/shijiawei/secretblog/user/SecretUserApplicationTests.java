@@ -8,15 +8,30 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.util.EncodingUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 @SpringBootTest
 class SecretUserApplicationTests {
 
+
     @Test
     void contextLoads() {
         System.out.println("測試");
+    }
+
+    @Autowired
+    PasswordEncoder passwordEncoder;
+
+    @Test
+    public void testPasswordBCrtptLogin() {
+        // 測試
+        boolean result = passwordEncoder.matches(
+                "Password20250705",
+                "$2a$10$n9lWMcr.8wQDVgJDEXz63eueKZJkK28wu0n.x6Dm3rKEOGte1bham"
+        );
+        System.out.println("密碼驗證結果: " + result);
     }
 
     @Test
@@ -27,7 +42,6 @@ class SecretUserApplicationTests {
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         String encode = bCryptPasswordEncoder.encode(password);
         log.info("加密過後密碼:{}", encode); // 例如$2a$10$GcU00vz3BNauywcvey8rtuGnuSQ3GhqRijnoMnpDGOFG.0qH4CiPC
-
 
 
         // 檢查現有雜湊值是否需要升級（例如提升 cost factor）
@@ -42,13 +56,12 @@ class SecretUserApplicationTests {
         log.info("matches:{}", matches);
         log.info("matches2:{}", matches);
     }
+
     @Test
-    public void testArgon2(){
+    public void testArgon2() {
 
     }
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Test
     public void testPasswordEncoderBean() {

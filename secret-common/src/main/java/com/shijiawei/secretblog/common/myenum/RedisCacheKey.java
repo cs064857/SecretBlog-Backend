@@ -87,6 +87,8 @@ public enum RedisCacheKey {
     USER_FORGOT_PASSWORD_RATE_LIMIT_IP("umsuser:forgot_password_ratelimit_ipaddr_%s", "忘記密碼限流（依 IP）", null),
     USER_PASSWORD_RESET_TOKEN("umsuser:password_reset_token_%s", "密碼重設 Token -> UserId 映射", Duration.ofMinutes(30)),
 
+    USER_NOTIFY_ENABLED("umsuser:notify_enabled:%s", "使用者通知總開關快取（notify_enabled）", Duration.ofMinutes(30)),
+
     /**
      * ===== 快取維護 / 基礎設施 =====
      */

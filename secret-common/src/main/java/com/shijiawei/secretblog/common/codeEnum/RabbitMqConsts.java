@@ -45,6 +45,26 @@ public final class RabbitMqConsts {
             public static final String ROUTING_KEY = "user.article.liked.email.notify";
         }
 
+        /**
+         * 文章被回覆（新增文章留言）後，以 Email 通知文章作者
+         */
+        public static final class ArticleRepliedEmailNotify {
+            private ArticleRepliedEmailNotify() {}
+
+            public static final String QUEUE = "user.article.replied.email.notify.queue";
+            public static final String ROUTING_KEY = "user.article.replied.email.notify";
+        }
+
+        /**
+         * 留言被回覆（新增子留言）後，以 Email 通知父留言作者
+         */
+        public static final class CommentRepliedEmailNotify {
+            private CommentRepliedEmailNotify() {}
+
+            public static final String QUEUE = "user.comment.replied.email.notify.queue";
+            public static final String ROUTING_KEY = "user.comment.replied.email.notify";
+        }
+
     }
 
     /**

@@ -3,11 +3,15 @@ package com.shijiawei.secretblog.article.AOP;
 
 import com.alibaba.fastjson2.JSON;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
+import com.shijiawei.secretblog.common.codeEnum.ResultCode;
+import com.shijiawei.secretblog.common.exception.BusinessException;
+import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.DefaultParameterNameDiscoverer;
@@ -21,6 +25,9 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 使用範例：@OpenCache(prefix = "AmsArticles", key = "categoryId_#{#categoryId}:routerPage_#{#routePage}:articles")
@@ -65,55 +72,68 @@ public class OpenCacheAspect {
         String key = prefix + ":" + keyExpression;
         log.info("Generated cache key: {}", key);
         //試圖從Redis緩存中獲得文章列表數據
-        String redisCache = (String) redissonClient.getBucket(key).get();
+        String redisCache = getRedisCache(key);
         //若成功獲得文章列表數據
         if (redisCache != null) {
             log.info("緩存命中...");
             // 使用 Fastjson 解析，將String轉換成原方法中的返回值類型
             return JSON.parseObject(redisCache, method.getGenericReturnType());
         }
-        //若Redis沒有緩存該資料須查詢資料時,加上分散式鎖,只放一名用戶進入資料庫中查詢,解決緩存擊穿問題
-        if (redissonClient.getLock(key + "_Lock").tryLock()) {
-            try {
-                log.info("獲得 Redisson 分散式鎖...");
-                // Double check
-                //查詢資料庫前再次嘗試從Redis緩存中取得數據
-                redisCache = (String) redissonClient.getBucket(key).get();
-                //若成功獲得資料
+
+        long waitTime = 5000;//最多等待多久來搶這個鎖
+        long leaseTime = 10000;//搶到鎖後，多久會自動釋放
+
+        String lockKey = key + "_Lock";
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean isLocked = false;
+
+        try {
+            // 嘗試獲取鎖。如果在 waitTime 內有人釋放鎖，這裡會立即返回 true
+            isLocked = lock.tryLock(waitTime, leaseTime, TimeUnit.MILLISECONDS);
+
+            if (isLocked) {
+                log.info("獲得 Redisson 分散式鎖 (或等待後獲得)...");
+                // Double Check
+                // 無論是第一個拿到的，還是等待後拿到的，都要先檢查 Redis
+                // 如果是等待後拿到的，前一個人應該已經寫入 Cache 了
+                redisCache = getRedisCache(key);
                 if (redisCache != null) {
-                    log.info("分散式鎖中緩存命中...");
-                    //將String轉換成原方法中的返回值類型並回傳
+                    log.info("分散式鎖中緩存命中 (Double Check)...");
                     return JSON.parseObject(redisCache, method.getGenericReturnType());
                 }
-
+                // 真的沒有快取，查詢資料庫
                 log.info("查詢資料庫中...");
-                // 執行原方法
-                Object proceed = null;
-                try {
-                    proceed = joinPoint.proceed();
-                    log.debug("原方法返回 proceed = {}", proceed);
-                } catch (Throwable t) {
-                    log.error("proceed 發生錯誤", t);
-                    throw t;
-                }
-
+                Object proceed = joinPoint.proceed();
                 if (proceed != null) {
-
-                    //從方法上的註解獲取緩存時間資訊,默認為24,ChronoUnit.HOURS
                     Duration duration = Duration.of(openCache.time(), openCache.chronoUnit());
-                    // //將資料保存至Redis緩存中,默認過期時間為24小時,將結果寫入 Fastjson 字串
                     redissonClient.getBucket(key).setAsync(JSON.toJSONString(proceed), duration);
                     return proceed;
+                } else {
+                    //防止快取穿透
+                    redissonClient.getBucket(key).setAsync("", Duration.ofMinutes(5));
+                    return null;
                 }
-            } finally {
-                // 無論成功或失敗強制解鎖
-                // 解鎖前檢查線程持有權
-                if (redissonClient.getLock(key+"_Lock").isHeldByCurrentThread()) {
-                    redissonClient.getLock(key+"_Lock").unlock();
-                }
+            } else {
+                // 等了 5 秒還是沒拿到鎖 (系統極度繁忙或 DB 死鎖)
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.REDIS_INTERNAL_ERROR)
+                        .data(Map.of("key", key))
+                        .build();
+            }
+        } catch (InterruptedException e) {
+            log.error("獲取鎖時被中斷", e);
+            Thread.currentThread().interrupt();
+            throw e;
+        } finally {
+            // 解鎖
+            if (isLocked && lock.isHeldByCurrentThread()) {
+                lock.unlock();
             }
         }
-        return null;
+    }
+
+    private String getRedisCache(String key) {
+        return (String) redissonClient.getBucket(key).get();
     }
 
     private String generateKey(String keyExpression, Method method, Object[] args) {

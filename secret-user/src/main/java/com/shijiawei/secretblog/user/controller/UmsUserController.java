@@ -146,6 +146,12 @@ public class UmsUserController {
         return R.ok();
     }
 
+    @PutMapping("/{userId}/notify-enabled")
+    public R<Void> updateNotifyEnabled(@PathVariable Long userId, @RequestParam("notifyEnabled") Byte notifyEnabled) {
+        umsUserService.updateNotifyEnabled(userId, notifyEnabled);
+        return R.ok();
+    }
+
     @PutMapping("/update-avatar")
     public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
         log.info("updateUmsUserAvatar dto:{}", dto);

@@ -200,8 +200,8 @@ public class RedisBloomFilterUtils {
 
 
         if(!rMap.isExists()){
-            log.error("事務提交後同步 Redis 失敗 (DB已提交) , Redis鍵尚未存在. rMapName: {}, MapSize: {}",
-                    rMap.getName(), map);
+            log.debug("Redis 鍵尚未存在，將自動建立 (冷啟動場景). rMapName: {}, MapSize: {}",
+                    rMap.getName(), map.size());
         }
         rMap.putAll(map);
         log.debug("成功將 Map 資料同步至 Redis: rMapName={}, mapSize={}", rMap.getName(), map.size());

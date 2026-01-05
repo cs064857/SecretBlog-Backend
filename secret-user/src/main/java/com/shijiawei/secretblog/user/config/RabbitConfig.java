@@ -28,6 +28,16 @@ public class RabbitConfig {
         return new Queue(RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE);
     }
 
+    @Bean(value = RabbitMqConsts.User.ArticleRepliedEmailNotify.QUEUE)
+    public Queue articleRepliedEmailNotifyQueue() {
+        return new Queue(RabbitMqConsts.User.ArticleRepliedEmailNotify.QUEUE);
+    }
+
+    @Bean(value = RabbitMqConsts.User.CommentRepliedEmailNotify.QUEUE)
+    public Queue commentRepliedEmailNotifyQueue() {
+        return new Queue(RabbitMqConsts.User.CommentRepliedEmailNotify.QUEUE);
+    }
+
     @Bean(value = RabbitMqConsts.User.TOPIC_EXCHANGE)
     public TopicExchange userTopicDirectExchange() {
         return new TopicExchange(RabbitMqConsts.User.TOPIC_EXCHANGE);
@@ -48,6 +58,20 @@ public class RabbitConfig {
             @Qualifier(value = RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE) Queue queue,
             @Qualifier(value = RabbitMqConsts.User.TOPIC_EXCHANGE) TopicExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(RabbitMqConsts.User.ArticleLikedEmailNotify.ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding bindArticleRepliedEmailNotifyQueueToTopicExchange(
+            @Qualifier(value = RabbitMqConsts.User.ArticleRepliedEmailNotify.QUEUE) Queue queue,
+            @Qualifier(value = RabbitMqConsts.User.TOPIC_EXCHANGE) TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(RabbitMqConsts.User.ArticleRepliedEmailNotify.ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding bindCommentRepliedEmailNotifyQueueToTopicExchange(
+            @Qualifier(value = RabbitMqConsts.User.CommentRepliedEmailNotify.QUEUE) Queue queue,
+            @Qualifier(value = RabbitMqConsts.User.TOPIC_EXCHANGE) TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(RabbitMqConsts.User.CommentRepliedEmailNotify.ROUTING_KEY);
     }
 
     @Bean

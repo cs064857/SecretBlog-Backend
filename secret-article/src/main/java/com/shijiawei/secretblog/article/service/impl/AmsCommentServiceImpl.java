@@ -9,6 +9,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shijiawei.secretblog.article.annotation.DelayDoubleDelete;
 import com.shijiawei.secretblog.article.entity.AmsArtStatus;
+import com.shijiawei.secretblog.article.entity.AmsArticle;
+import com.shijiawei.secretblog.article.entity.AmsArtinfo;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.entity.AmsCommentAction;
 import com.shijiawei.secretblog.article.entity.AmsCommentInfo;
@@ -24,12 +26,14 @@ import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
 import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
-import com.shijiawei.secretblog.common.message.RabbitMessageProducer;
-import com.shijiawei.secretblog.common.message.UpdateCommentLikedMessage;
-import com.shijiawei.secretblog.common.message.UpdateCommentActionMessage;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessException;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+import com.shijiawei.secretblog.common.message.ArticleRepliedEmailNotifyMessage;
+import com.shijiawei.secretblog.common.message.CommentRepliedEmailNotifyMessage;
+import com.shijiawei.secretblog.common.message.RabbitMessageProducer;
+import com.shijiawei.secretblog.common.message.UpdateCommentActionMessage;
+import com.shijiawei.secretblog.common.message.UpdateCommentLikedMessage;
 import com.shijiawei.secretblog.common.myenum.RedisBloomFilterKey;
 import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.common.myenum.RedisLockKey;
@@ -413,6 +417,15 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             //在事務提交後將 將Redis快取中的文章留言數量++
             redisIncrementUtils.afterCommitIncrement(RedisCacheKey.ARTICLE_COMMENTS.format(articleId));
 
+            // 回覆 Email 通知，實際寄信
+            sendReplyEmailNotifyAfterCommit(
+                    articleId,
+                    commentId,
+                    amsCommentCreateDTO.getParentCommentId(),
+                    userId,
+                    user == null ? null : user.getData(),
+                    amsCommentCreateDTO.getCommentContent()
+            );
 
             log.info("留言創建成功，用戶ID: {}, 文章ID: {}", userId, articleId);
 
@@ -428,6 +441,115 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             return R.error("留言創建失敗，請稍後再試");
         }
         return R.ok();
+    }
+
+    /**
+     * 在留言建立成功後（交易提交後）送出回覆 Email 通知訊息。
+     *
+     * 通知規則：
+     * 1、若userInfo屬性的notifyEnable總開關是關閉狀態(0)則直接跳過通知
+     * 2、parentCommentId 為空：視為「文章被回覆」，通知文章作者
+     * 3、parentCommentId 不為空：視為「留言被回覆」，通知父留言作者
+     * 4、若回覆者與收件人為同一人，則略過通知避免自我提醒。
+     */
+    private void sendReplyEmailNotifyAfterCommit(
+            Long articleId,
+            Long commentId,
+            Long parentCommentId,
+            Long replierUserId,
+            UserBasicDTO replierUser,
+            String replyContent
+    ) {
+        try {
+            String replierNickname = replierUser == null ? null : replierUser.getNickName();
+            String replyContentPreview = buildReplyContentPreview(replyContent);
+
+            String articleTitle = null;
+            try {
+                AmsArticle article = amsArticleService.getOne(new LambdaQueryWrapper<AmsArticle>()
+                        .select(AmsArticle::getTitle)
+                        .eq(AmsArticle::getId, articleId)
+                        .last("limit 1"));
+                articleTitle = article == null ? null : article.getTitle();
+            } catch (Exception e) {
+                log.warn("查詢文章標題失敗，將以空值寄送通知，articleId={}", articleId, e);
+            }
+
+            if (parentCommentId == null) {
+                // 文章被回覆：通知文章作者
+                AmsArtinfo artinfo = amsArtinfoService.getOne(new LambdaQueryWrapper<AmsArtinfo>()
+                        .select(AmsArtinfo::getUserId)
+                        .eq(AmsArtinfo::getArticleId, articleId)
+                        .last("limit 1"));
+                Long recipientUserId = artinfo == null ? null : artinfo.getUserId();
+
+                if (recipientUserId == null) {
+                    log.warn("查無文章作者，略過 Email 通知，articleId={}", articleId);
+                    return;
+                }
+                if (recipientUserId.equals(replierUserId)) {
+                    log.info("作者自行回覆文章，略過 Email 通知，articleId={}", articleId);
+                    return;
+                }
+
+                ArticleRepliedEmailNotifyMessage notifyMessage = ArticleRepliedEmailNotifyMessage.builder()
+                        .recipientUserId(recipientUserId)
+                        .articleId(articleId)
+                        .articleTitle(articleTitle)
+                        .commentId(commentId)
+                        .replierUserId(replierUserId)
+                        .replierNickname(replierNickname)
+                        .replyContent(replyContentPreview)
+                        .build();
+
+                rabbitMessageProducer.sendAfterCommit(notifyMessage);
+                return;
+            }
+
+            // 留言被回覆：通知父留言作者
+            AmsCommentInfo parentCommentInfo = amsCommentInfoService.getOne(new LambdaQueryWrapper<AmsCommentInfo>()
+                    .select(AmsCommentInfo::getUserId)
+                    .eq(AmsCommentInfo::getCommentId, parentCommentId)
+                    .last("limit 1"));
+
+            Long recipientUserId = parentCommentInfo == null ? null : parentCommentInfo.getUserId();
+            if (recipientUserId == null) {
+                log.warn("查無父留言作者，略過 Email 通知，commentId={}, parentCommentId={}", commentId, parentCommentId);
+                return;
+            }
+            if (recipientUserId.equals(replierUserId)) {
+                log.info("使用者自行回覆留言，略過 Email 通知，commentId={}, parentCommentId={}", commentId, parentCommentId);
+                return;
+            }
+
+            CommentRepliedEmailNotifyMessage notifyMessage = CommentRepliedEmailNotifyMessage.builder()
+                    .recipientUserId(recipientUserId)
+                    .articleId(articleId)
+                    .articleTitle(articleTitle)
+                    .parentCommentId(parentCommentId)
+                    .commentId(commentId)
+                    .replierUserId(replierUserId)
+                    .replierNickname(replierNickname)
+                    .replyContent(replyContentPreview)
+                    .build();
+
+            rabbitMessageProducer.sendAfterCommit(notifyMessage);
+        } catch (Exception e) {
+            log.warn("建立回覆 Email 通知訊息失敗（不影響留言建立），articleId={}, commentId={}, parentCommentId={}",
+                    articleId, commentId, parentCommentId, e);
+        }
+    }
+
+    private String buildReplyContentPreview(String content) {
+        if (content == null) {
+            return null;
+        }
+        String trimmed = content.strip();
+        int maxLength = 120;
+        if (trimmed.length() <= maxLength) {
+            return trimmed;
+        }
+        return trimmed.substring(0, maxLength) + "…";
     }
 
 //    @OpenCache(prefix = "AmsComments",key = "articleId_#{#articleId}",time = 30,chronoUnit = ChronoUnit.MINUTES)
@@ -990,8 +1112,6 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     ))
                     .build();
         }
-
-
     }
 
     /**

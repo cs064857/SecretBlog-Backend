@@ -49,6 +49,35 @@ public class EmailServiceImpl implements EmailService {
         sendHtmlEmail(to, subject, content);
     }
 
+    @Override
+    public void sendArticleRepliedNotificationEmail(
+            String to,
+            String articleTitle,
+            String replierNickname,
+            Long articleId,
+            String replyContent,
+            Long commentId
+    ) {
+        String subject = "【" + applicationName + "】你的文章有新的回覆";
+        String content = buildArticleRepliedNotificationEmailContent(articleTitle, replierNickname, articleId, replyContent, commentId);
+        sendHtmlEmail(to, subject, content);
+    }
+
+    @Override
+    public void sendCommentRepliedNotificationEmail(
+            String to,
+            String articleTitle,
+            String replierNickname,
+            Long articleId,
+            Long parentCommentId,
+            String replyContent,
+            Long commentId
+    ) {
+        String subject = "【" + applicationName + "】你的留言有新的回覆";
+        String content = buildCommentRepliedNotificationEmailContent(articleTitle, replierNickname, articleId, parentCommentId, replyContent, commentId);
+        sendHtmlEmail(to, subject, content);
+    }
+
     /**
      * 發送 HTML 格式郵件
      */
@@ -191,6 +220,126 @@ public class EmailServiceImpl implements EmailService {
                 escapeHtml(safeTitle),
                 escapeHtml(safeNickname),
                 escapeHtml(safeArticleId),
+                java.time.Year.now().getValue(),
+                applicationName
+            );
+    }
+
+    /**
+     * 構建文章被回覆通知郵件 HTML 內容
+     */
+    private String buildArticleRepliedNotificationEmailContent(
+            String articleTitle,
+            String replierNickname,
+            Long articleId,
+            String replyContent,
+            Long commentId
+    ) {
+        String safeTitle = StringUtils.defaultIfBlank(articleTitle, "（未命名文章）");
+        String safeNickname = StringUtils.defaultIfBlank(replierNickname, "某位使用者");
+        String safeArticleId = articleId == null ? "（未知）" : String.valueOf(articleId);
+        String safeCommentId = commentId == null ? "（未知）" : String.valueOf(commentId);
+        String safeReplyContent = StringUtils.defaultIfBlank(replyContent, "（未提供內容）");
+
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Microsoft JhengHei', Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .header { text-align: center; color: #333; margin-bottom: 30px; }
+                    .info { color: #666; font-size: 14px; line-height: 1.6; }
+                    .highlight { color: #007bff; font-weight: bold; }
+                    .quote { background-color: #f8f9fa; border-left: 4px solid #007bff; border-radius: 6px; padding: 12px; white-space: pre-wrap; color: #333; }
+                    .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="header">文章回覆通知</h2>
+                    <p class="info">您好，</p>
+                    <p class="info">你的文章 <span class="highlight">%s</span> 收到來自 <span class="highlight">%s</span> 的新回覆。</p>
+                    <p class="info">回覆內容摘要：</p>
+                    <div class="quote">%s</div>
+                    <p class="info">文章ID：%s</p>
+                    <p class="info">留言ID：%s</p>
+                    <div class="footer">
+                        <p>此郵件由系統自動發送，請勿直接回覆。</p>
+                        <p>© %s %s</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(
+                escapeHtml(safeTitle),
+                escapeHtml(safeNickname),
+                escapeHtml(safeReplyContent),
+                escapeHtml(safeArticleId),
+                escapeHtml(safeCommentId),
+                java.time.Year.now().getValue(),
+                applicationName
+            );
+    }
+
+    /**
+     * 構建留言被回覆通知郵件 HTML 內容
+     */
+    private String buildCommentRepliedNotificationEmailContent(
+            String articleTitle,
+            String replierNickname,
+            Long articleId,
+            Long parentCommentId,
+            String replyContent,
+            Long commentId
+    ) {
+        String safeTitle = StringUtils.defaultIfBlank(articleTitle, "（未命名文章）");
+        String safeNickname = StringUtils.defaultIfBlank(replierNickname, "某位使用者");
+        String safeArticleId = articleId == null ? "（未知）" : String.valueOf(articleId);
+        String safeParentCommentId = parentCommentId == null ? "（未知）" : String.valueOf(parentCommentId);
+        String safeCommentId = commentId == null ? "（未知）" : String.valueOf(commentId);
+        String safeReplyContent = StringUtils.defaultIfBlank(replyContent, "（未提供內容）");
+
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Microsoft JhengHei', Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .header { text-align: center; color: #333; margin-bottom: 30px; }
+                    .info { color: #666; font-size: 14px; line-height: 1.6; }
+                    .highlight { color: #007bff; font-weight: bold; }
+                    .quote { background-color: #f8f9fa; border-left: 4px solid #007bff; border-radius: 6px; padding: 12px; white-space: pre-wrap; color: #333; }
+                    .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="header">留言回覆通知</h2>
+                    <p class="info">您好，</p>
+                    <p class="info">你的留言在文章 <span class="highlight">%s</span> 中收到來自 <span class="highlight">%s</span> 的新回覆。</p>
+                    <p class="info">回覆內容摘要：</p>
+                    <div class="quote">%s</div>
+                    <p class="info">文章ID：%s</p>
+                    <p class="info">父留言ID：%s</p>
+                    <p class="info">新留言ID：%s</p>
+                    <div class="footer">
+                        <p>此郵件由系統自動發送，請勿直接回覆。</p>
+                        <p>© %s %s</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(
+                escapeHtml(safeTitle),
+                escapeHtml(safeNickname),
+                escapeHtml(safeReplyContent),
+                escapeHtml(safeArticleId),
+                escapeHtml(safeParentCommentId),
+                escapeHtml(safeCommentId),
                 java.time.Year.now().getValue(),
                 applicationName
             );

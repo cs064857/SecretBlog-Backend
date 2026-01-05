@@ -72,6 +72,13 @@ public class UmsUserInfo implements Serializable {
     @Size(max = 255,message = "居住地址最大長度要小於 255")
     private String address;
 
+    /**
+     * 通知總開關（1:啟用、0:關閉）
+     */
+    @TableField(value = "notify_enabled")
+    @Schema(description = "通知總開關（1:啟用、0:關閉）")
+    private Byte notifyEnabled;
+
 
     /**
      * 註冊時間

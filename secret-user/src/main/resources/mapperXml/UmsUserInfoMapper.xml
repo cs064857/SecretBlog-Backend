@@ -8,6 +8,7 @@
         <result column="birthday" jdbcType="DATE" property="birthday"/>
         <result column="gender" jdbcType="TINYINT" property="gender"/>
         <result column="address" jdbcType="VARCHAR" property="address"/>
+        <result column="notify_enabled" jdbcType="TINYINT" property="notifyEnabled"/>
         <result column="create_At" jdbcType="TIMESTAMP" property="createAt"/>
         <result column="update_At" jdbcType="TIMESTAMP" property="updateAt"/>
     </resultMap>

@@ -161,4 +161,15 @@ public interface UmsUserService extends IService<UmsUser>{
      * @return
      */
     R resetPassword(UmsResetPasswordDTO dto);
+
+    /**
+     * 更新使用者通知總開關（notify_enabled）。
+     *
+     * 權限規則：
+     * 僅允許本人或管理員修改
+     *
+     * @param userId 目標用戶 ID
+     * @param notifyEnabled 通知總開關（1:啟用、0:關閉）
+     */
+    void updateNotifyEnabled(Long userId, Byte notifyEnabled);
 }

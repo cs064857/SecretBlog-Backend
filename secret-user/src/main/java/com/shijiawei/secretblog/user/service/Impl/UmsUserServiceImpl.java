@@ -185,6 +185,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         //設置userInfo資料
         userInfo.setId(userInfo_id);
         userInfo.setUserId(user_id);
+        userInfo.setNotifyEnabled((byte) 1);
 
 
         userInfo.setGender(umsSaveUserVo.getGender());
@@ -512,6 +513,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         //設置userInfo資料
         umsUserInfo.setId(userInfo_id);
         umsUserInfo.setUserId(user_id);
+        umsUserInfo.setNotifyEnabled((byte) 1);
 
         
         ///TODO 確認信箱驗證碼
@@ -859,6 +861,55 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         log.info("用戶 {} 已成功重設密碼", userId);
         return R.ok("密碼重設成功");
+    }
+
+    @Override
+    public void updateNotifyEnabled(Long userId, Byte notifyEnabled) {
+        checkPermission(userId);
+
+        if (notifyEnabled == null || (notifyEnabled != 0 && notifyEnabled != 1)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("notifyEnabled 僅允許為 0 或 1")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "notifyEnabled", ObjectUtils.defaultIfNull(notifyEnabled, "")
+                    ))
+                    .build();
+        }
+
+        boolean updated = umsUserInfoService.update(new LambdaUpdateWrapper<UmsUserInfo>()
+                .eq(UmsUserInfo::getUserId, userId)
+                .set(UmsUserInfo::getNotifyEnabled, notifyEnabled)
+                .set(UmsUserInfo::getUpdateAt, LocalDateTime.now())
+        );
+
+        if (!updated) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UPDATE_FAILED)
+                    .detailMessage("更新通知總開關失敗")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "notifyEnabled", ObjectUtils.defaultIfNull(notifyEnabled, "")
+                    ))
+                    .build();
+        }
+
+        syncNotifyEnabledCache(userId, notifyEnabled);
+    }
+
+    private void syncNotifyEnabledCache(Long userId, Byte notifyEnabled) {
+        String cacheKey = RedisCacheKey.USER_NOTIFY_ENABLED.format(userId);
+        try {
+            Duration ttl = RedisCacheKey.USER_NOTIFY_ENABLED.getTtl();
+            if (ttl != null) {
+                redissonClient.getBucket(cacheKey).set(notifyEnabled.intValue(), ttl);
+            } else {
+                redissonClient.getBucket(cacheKey).set(notifyEnabled.intValue());
+            }
+        } catch (Exception e) {
+            log.warn("同步通知總開關快取失敗，將依快取 TTL 自然過期或下次查詢回填，userId={}", userId, e);
+        }
     }
 
 }

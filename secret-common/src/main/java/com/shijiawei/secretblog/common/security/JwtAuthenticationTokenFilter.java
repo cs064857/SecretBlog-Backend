@@ -95,9 +95,14 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
      * @return Token 字串，若無則返回 null
      */
     private String extractToken(HttpServletRequest request) {
+        // 1. 優先從 Authorization Header 提取 (相容 Feign 內部呼叫)
+        String headerToken = extractBearerToken(request);
+        if (StringUtils.hasText(headerToken)) {
+            log.debug("從 Authorization Header 提取 Token");
+            return headerToken;
+        }
 
-
-        // 從 Cookie 提取 jwtToken
+        // 2. 其次從 Cookie 提取 jwtToken (相容前端瀏覽器請求)
         String token = extractTokenFromCookie(request);
         if (StringUtils.hasText(token)) {
             log.debug("從 Cookie 提取 Token");
@@ -107,21 +112,21 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
         return null;
     }
 
-//    /**
-//     * 從請求頭中提取Bearer Token
-//     * @param request
-//     * @return
-//     */
-//    private String extractBearerToken(HttpServletRequest request) {
-//        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
-//        if (!StringUtils.hasText(authorization)) {
-//            return null;
-//        }
-//        if (authorization.startsWith("Bearer ")) {
-//            return authorization.substring(7);
-//        }
-//        return authorization;
-//    }
+    /**
+     * 從請求頭中提取Bearer Token
+     * @param request
+     * @return
+     */
+    private String extractBearerToken(HttpServletRequest request) {
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (!StringUtils.hasText(authorization)) {
+            return null;
+        }
+        if (authorization.startsWith("Bearer ")) {
+            return authorization.substring(7);
+        }
+        return authorization;
+    }
 
     /**
      * 從 Cookie 中提取 Token

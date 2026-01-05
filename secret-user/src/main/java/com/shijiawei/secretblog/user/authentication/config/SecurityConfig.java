@@ -75,7 +75,7 @@ public class SecurityConfig {
                 // 配置授權規則（登入端點放行，其餘需要身份認證）
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("ums/user/login/username").permitAll()
+                        .requestMatchers("/ums/user/login/username").permitAll()
                         // 公開端點：註冊、傳送驗證碼、忘記密碼
                         .requestMatchers("/ums/user/register", "/ums/user/email-verify-code","/ums/user/reset-password","/ums/user/verify-reset-token", "/ums/user/forgot-password").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
