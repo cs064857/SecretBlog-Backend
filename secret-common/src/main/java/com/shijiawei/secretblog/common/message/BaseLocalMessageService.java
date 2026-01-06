@@ -33,9 +33,9 @@ public abstract class BaseLocalMessageService<M extends BaseMapper<T>, T extends
 
 
     /**
-     * 通用的建立待發送消息方法
+     * 通用的建立待發送消息方法（並寫入本地消息表）
      * @param message RabbitMQ 消息
-     * @return 已設置好的本地消息實體
+     * @return 已建立並持久化的本地消息實體
      */
     public T createPendingMessage(RabbitMessage message) {
         T localMessage = getLocalMessage();
@@ -58,6 +58,7 @@ public abstract class BaseLocalMessageService<M extends BaseMapper<T>, T extends
         localMessage.setCreateAt(now);
         localMessage.setUpdateAt(now);
 
+        this.save(localMessage);
         return localMessage;
     }
 

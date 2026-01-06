@@ -1,6 +1,5 @@
 package com.shijiawei.secretblog.user.service.Impl;
 
-import com.shijiawei.secretblog.common.codeEnum.RabbitMessage;
 import com.shijiawei.secretblog.user.entity.UmsLocalMessage;
 import com.shijiawei.secretblog.user.mapper.UmsLocalMessageMapper;
 import com.shijiawei.secretblog.user.service.UmsLocalMessageService;
@@ -24,13 +23,6 @@ public class UmsLocalMessageServiceImpl
     @Override
     protected UmsLocalMessage getLocalMessage() {
         return new UmsLocalMessage();
-    }
-
-    @Override
-    public UmsLocalMessage createPendingMessage(RabbitMessage message) {
-        UmsLocalMessage umsLocalMessage = super.createPendingMessage(message);
-        this.save(umsLocalMessage);
-        return umsLocalMessage;
     }
 
     /**
