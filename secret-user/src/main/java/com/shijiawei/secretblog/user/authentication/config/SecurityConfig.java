@@ -4,6 +4,7 @@ import com.shijiawei.secretblog.common.security.JwtAuthenticationTokenFilter;
 import com.shijiawei.secretblog.common.security.JwtService;
 import com.shijiawei.secretblog.user.authentication.handler.exception.CustomAuthenticationExceptionHandler;
 import com.shijiawei.secretblog.user.authentication.handler.exception.CustomAuthorizationExceptionHandler;
+import com.shijiawei.secretblog.user.authentication.handler.exception.oauth2.OAuth2LoginSuccessHandler;
 import com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -20,6 +21,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 /**
  * ClassName: SecurityConfig
@@ -47,6 +50,9 @@ public class SecurityConfig {
 
     @Autowired
     private CustomAuthorizationExceptionHandler customAuthorizationExceptionHandler;
+
+    @Autowired
+    private OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler; //
 
     @Bean
     public PasswordEncoder passwordEncoder (){
@@ -79,6 +85,11 @@ public class SecurityConfig {
                         // 公開端點：註冊、傳送驗證碼、忘記密碼
                         .requestMatchers("/ums/user/register", "/ums/user/email-verify-code","/ums/user/reset-password","/ums/user/verify-reset-token", "/ums/user/forgot-password").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/me").authenticated()
+                        .requestMatchers(
+                                "/oauth2/**",          // OAuth2 登入觸發點 (如 /oauth2/authorization/google)
+                                "/login/oauth2/code/*"// OAuth2 登入成功後的 redirect url
+                        ).permitAll()
                         // 管理員端點
                         .requestMatchers(
                                 "/ums/role/**",
@@ -89,8 +100,9 @@ public class SecurityConfig {
                         ).hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                // 開啟跨域訪問（目前由 Gateway 處理，這裡先維持禁用）
+                // 開啟跨域訪問
                 .cors(AbstractHttpConfigurer::disable)
+                .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler))
                 // 添加JWT認證過濾器（統一 Authorization Bearer）
                 .addFilterBefore(new JwtAuthenticationTokenFilter(jwtService, tokenBlacklistService), UsernamePasswordAuthenticationFilter.class)
                 // 配置例外處理

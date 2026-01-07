@@ -9,7 +9,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 
 /**
@@ -19,6 +22,9 @@ import org.apache.commons.lang3.ObjectUtils;
  *
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema
 @TableName("ums_credentials")
 public class UmsCredentials implements Serializable {

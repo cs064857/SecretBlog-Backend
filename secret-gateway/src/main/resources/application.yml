@@ -50,6 +50,11 @@ spring:
             - Path=/api/ums/user/**
           filters:
             - RewritePath=/api/?(?<segment>.*), /$\{segment}
+        - id: user_oauth2_route
+          uri: lb://secret-user
+          predicates:
+            - Path=/oauth2/**, /login/oauth2/code/**
+
         - id: storage_route
           uri: lb://secret-storage
           predicates:

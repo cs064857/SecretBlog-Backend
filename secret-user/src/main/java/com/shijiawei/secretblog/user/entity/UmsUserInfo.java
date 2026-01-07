@@ -11,7 +11,10 @@ import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 
 /**
@@ -21,6 +24,9 @@ import org.apache.commons.lang3.ObjectUtils;
  */
 @Schema
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName(value = "ums_userInfo")
 public class UmsUserInfo implements Serializable {
     /**
