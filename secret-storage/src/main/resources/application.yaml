@@ -1,5 +1,5 @@
 var:
-  endPoint: ${MINIO_ENDPOINT:https://storage.passerby.me}
+  endPoint: ${var.endPoint}
   secretblog:
     bucket:
       pub:

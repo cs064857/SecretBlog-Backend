@@ -18,6 +18,7 @@ import com.shijiawei.secretblog.user.mapper.UmsUserInfoMapper;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 import com.shijiawei.secretblog.user.service.UmsAuthsService;
 import com.shijiawei.secretblog.user.service.UmsCredentialsService;
+import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -59,13 +60,16 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
 
     private final PasswordEncoder passwordEncoder;
 
+    private final AvatarUrlHelper avatarUrlHelper;
+
     public GoogleAuthServiceImpl(
             UmsUserMapper umsUserMapper,
             UmsUserInfoMapper umsUserInfoMapper,
             UmsCredentialsService umsCredentialsService,
             UmsAuthsService umsAuthsService,
             JwtService jwtService,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AvatarUrlHelper avatarUrlHelper
     ) {
         this.umsUserMapper = umsUserMapper;
         this.umsUserInfoMapper = umsUserInfoMapper;
@@ -73,6 +77,7 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
         this.umsAuthsService = umsAuthsService;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.avatarUrlHelper = avatarUrlHelper;
     }
 
     /**
@@ -163,11 +168,13 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
     private void writeJwtCookie(HttpServletResponse response, UmsUser user, UmsUserInfo userInfo) {
         long expiredAt = TimeTool.nowMilli() + TimeUnit.DAYS.toMillis(30);
 
+        String avatarUrl = avatarUrlHelper.toPublicUrl(user.getAvatar());
+
         JwtUserInfo jwtUserInfo = new JwtUserInfo();
         jwtUserInfo.setSessionId(UUID.randomUUID().toString());
         jwtUserInfo.setUserId(user.getId());
         jwtUserInfo.setNickname(StringUtils.defaultIfBlank(user.getNickName(), userInfo.getAccountName()));
-        jwtUserInfo.setAvatar(user.getAvatar());
+        jwtUserInfo.setAvatar(avatarUrl);
         jwtUserInfo.setExpiredTime(expiredAt);
         jwtUserInfo.setRoleId(user.getRoleId());
 
@@ -191,7 +198,7 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
                 .sameSite("Lax")
                 .build();
 
-        ResponseCookie avatarCookie = ResponseCookie.from("avatar", StringUtils.defaultString(user.getAvatar(), ""))
+        ResponseCookie avatarCookie = ResponseCookie.from("avatar", StringUtils.defaultString(avatarUrl, ""))
                 .path("/")
                 .maxAge(maxAgeSeconds)
                 .httpOnly(false)
@@ -210,11 +217,12 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
         String accountName = generateUniqueAccountName(email);
         String nickName = StringUtils.defaultIfBlank(name, accountName);
         String avatar = StringUtils.defaultIfBlank(pictureUrl, defaultAvatar);
+        String storedAvatar = avatarUrlHelper.toStoragePath(avatar);
 
         UmsUser user = UmsUser.builder()
                 .nickName(nickName)
                 .roleId(Role.NORMALUSER)
-                .avatar(avatar)
+                .avatar(storedAvatar)
                 .status(Status.NORMAL)
                 .deleted((byte) 0)
                 .createAt(now)

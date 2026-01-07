@@ -51,6 +51,7 @@ import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.common.enumValue.Role;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
+import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.servlet.http.HttpServletRequest;
@@ -104,6 +105,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AvatarUrlHelper avatarUrlHelper;
+
     @Override
     public R userLogin(UmsUserLoginDTO umsUserLoginDTO) {
         return null;
@@ -146,7 +150,11 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Override
     public UmsUser selectByPrimaryKey(Long id) {
-        return this.baseMapper.selectById(id);
+        UmsUser user = this.baseMapper.selectById(id);
+        if (user != null) {
+            user.setAvatar(avatarUrlHelper.toPublicUrl(user.getAvatar()));
+        }
+        return user;
     }
 
     /**
@@ -181,6 +189,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         ///TODO 判斷是否有權限設定RoleId
         umsUser.setRoleId(umsSaveUserVo.getRoleId());//RoleName經過mybatisPlus枚舉轉換器映射成資料庫中roleId需要的類型
         BeanUtils.copyProperties(umsSaveUserVo, umsUser,"roleId");
+        umsUser.setAvatar(avatarUrlHelper.toStoragePath(defaultAvatar));
 
         //設置userInfo資料
         userInfo.setId(userInfo_id);
@@ -275,6 +284,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 //
             umsAuthsList.stream().filter(item ->Objects.equals(item.getUserId(),umsUser.getId())).findFirst().ifPresent(item->BeanUtils.copyProperties(item,umsUserDetailsDTO,"id"));
             umsCredentialsList.stream().filter(item ->Objects.equals(item.getUserId(),umsUser.getId())).findFirst().ifPresent(item->BeanUtils.copyProperties(item,umsUserDetailsDTO,"id"));
+            umsUserDetailsDTO.setAvatar(avatarUrlHelper.toPublicUrl(umsUserDetailsDTO.getAvatar()));
             log.info("umsUserDetailsDTO:{}", umsUserDetailsDTO);
             return umsUserDetailsDTO;
         }).toList();
@@ -288,7 +298,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Override
     public List<UmsUser> listUmsUser() {
 
-        return this.baseMapper.selectList(new LambdaQueryWrapper<UmsUser>().eq(UmsUser::getDeleted,0));
+        List<UmsUser> users = this.baseMapper.selectList(new LambdaQueryWrapper<UmsUser>().eq(UmsUser::getDeleted,0));
+        users.forEach(user -> user.setAvatar(avatarUrlHelper.toPublicUrl(user.getAvatar())));
+        return users;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -324,6 +336,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Override
     public void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId) {
         if(!updateUserDetailsVO.isEmpty()){//若有需要修改的屬性
+            updateUserDetailsVO.setAvatar(avatarUrlHelper.toStoragePath(updateUserDetailsVO.getAvatar()));
             UmsUser user = new UmsUser();
             UmsUserInfo userInfo = new UmsUserInfo();
             UmsCredentials umsCredentials = new UmsCredentials();
@@ -417,6 +430,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         String imgUrl = dto.getAvatar();
         Long userId = dto.getUserId();
+        String storedAvatar = avatarUrlHelper.toStoragePath(imgUrl);
 
         if (userId == null) {
             throw BusinessRuntimeException.builder()
@@ -436,11 +450,12 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         UmsUser umsUser = this.baseMapper.selectById(userId);
         if (umsUser != null && !umsUser.isEmpty()) {
-            umsUser.setAvatar(imgUrl);
+            umsUser.setAvatar(storedAvatar);
             int update = this.baseMapper.updateById(umsUser);
             if (update > 0) {
                 // 使用本地消息表記錄作者資訊更新消息，確保最終一致性
-                AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, imgUrl, System.currentTimeMillis());
+                String publicAvatar = avatarUrlHelper.toPublicUrl(storedAvatar);
+                AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, publicAvatar, System.currentTimeMillis());
 
 
                 umsLocalMessageService.createPendingMessage(authorInfoUpdateMessage);
@@ -504,18 +519,17 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         long userInfo_id = IdWorker.getId(umsUserInfo);
 
 
-
         //設置user資料
         umsUser.setId(user_id);
         umsUser.setUserinfoId(userInfo_id);
         umsUser.setRoleId(Role.NORMALUSER);//設置角色為普通用戶
-        umsUser.setAvatar(defaultAvatar);//設置默認頭像
+        umsUser.setAvatar(avatarUrlHelper.toStoragePath(defaultAvatar));//設置默認頭像
         //設置userInfo資料
         umsUserInfo.setId(userInfo_id);
         umsUserInfo.setUserId(user_id);
         umsUserInfo.setNotifyEnabled((byte) 1);
 
-        
+
         ///TODO 確認信箱驗證碼
         ///TODO 再次判斷用戶是否已註冊
         //獲得用戶輸入的驗證碼
@@ -523,7 +537,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         //獲得用戶的信箱
         String email = umsUserRegisterDTO.getEmail();
 
-        // 設置預設帳號名稱 (Email 前綴)
+        // 設置預設帳號名稱 (Email 前綺)
         if (StringUtils.isBlank(umsUserInfo.getAccountName())) {
             String defaultAccountName = email.split("@")[0];
             umsUserInfo.setAccountName(defaultAccountName);
@@ -574,7 +588,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         // Redis 中 IP 嘗試計數的 Key（寄送驗證碼限流）
         String rateLimitBucket = RedisCacheKey.USER_EMAIL_VALID_CODE_RATE_LIMIT_IP.format(remoteAddr);
 
-//
+
         ///TODO 調整驗證碼嘗試限流時間，目前30秒3次
 //        RRateLimiter rateLimiter = redissonClient.getRateLimiter(rateLimitBucket);
 //        rateLimiter.trySetRate(RateType.OVERALL,3,30, RateIntervalUnit.SECONDS);
@@ -630,7 +644,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Override
     public List<UserBasicDTO> selectUserBasicInfoByIds(List<Long> ids) {
-        return this.baseMapper.selectUserBasicInfoByIds(ids);
+        List<UserBasicDTO> userBasicDTOS = this.baseMapper.selectUserBasicInfoByIds(ids);
+        userBasicDTOS.forEach(dto -> dto.setAvatar(avatarUrlHelper.toPublicUrl(dto.getAvatar())));
+        return userBasicDTOS;
     }
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -666,7 +682,11 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Override
     public UmsUserSummaryDTO getUserSummary(Long id) {
-        return this.baseMapper.selectUserSummaryById(id);
+        UmsUserSummaryDTO dto = this.baseMapper.selectUserSummaryById(id);
+        if (dto != null) {
+            dto.setAvatar(avatarUrlHelper.toPublicUrl(dto.getAvatar()));
+        }
+        return dto;
     }
 
     private void checkPermission(Long userId) {

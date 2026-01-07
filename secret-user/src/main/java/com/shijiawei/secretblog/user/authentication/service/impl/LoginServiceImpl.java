@@ -10,6 +10,7 @@ import com.shijiawei.secretblog.common.security.JwtUserInfo;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.authentication.entity.LoginUser;
 import com.shijiawei.secretblog.user.authentication.service.LoginService;
+import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ public class LoginServiceImpl implements LoginService {
     //注入JwtService，用於生成jwtToken
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private AvatarUrlHelper avatarUrlHelper;
 
     public R login(UmsUserLoginDTO umsUserLoginDTO, HttpServletResponse response){
 
@@ -110,6 +114,7 @@ public class LoginServiceImpl implements LoginService {
         UmsUserLoginDTO userLoginDTO = currentUser.getUmsUserLoginDTO();
         Long userId = userLoginDTO.getUserId();
         String avatar = userLoginDTO.getAvatar();
+        String avatarUrl = avatarUrlHelper.toPublicUrl(avatar);
         /**
          * 生成jwtToken並返回
           */
@@ -120,7 +125,7 @@ public class LoginServiceImpl implements LoginService {
         jwtUserInfo.setSessionId(UUID.randomUUID().toString());
         jwtUserInfo.setUserId(userId);
         jwtUserInfo.setNickname(userLoginDTO.getAccountName());
-        jwtUserInfo.setAvatar(avatar);
+        jwtUserInfo.setAvatar(avatarUrl);
         jwtUserInfo.setExpiredTime(expiredAt);
         jwtUserInfo.setRoleId(userLoginDTO.getRoleId());
 
@@ -149,7 +154,7 @@ public class LoginServiceImpl implements LoginService {
                 .secure(true)
                 .sameSite("Lax")
                 .build();
-        ResponseCookie avatarCookie = ResponseCookie.from("avatar",avatar)
+        ResponseCookie avatarCookie = ResponseCookie.from("avatar",avatarUrl)
                 .path("/")
                 .maxAge(maxAgeSeconds)
                 .httpOnly(false)

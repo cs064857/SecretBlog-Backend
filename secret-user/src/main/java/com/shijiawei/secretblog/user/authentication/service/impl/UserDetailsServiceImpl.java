@@ -12,6 +12,7 @@ import com.shijiawei.secretblog.user.mapper.UmsUserInfoMapper;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 import com.shijiawei.secretblog.user.service.UmsAuthsService;
 import com.shijiawei.secretblog.user.service.UmsCredentialsService;
+import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -47,6 +48,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Autowired
     private UmsCredentialsService umsCredentialsService;
+
+    @Autowired
+    private AvatarUrlHelper avatarUrlHelper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -120,7 +124,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         dto.setPassword(auths.getPassword());
         dto.setRoleId(user.getRoleId());
         dto.setDeleted(user.getDeleted());
-        dto.setAvatar(user.getAvatar());
+        dto.setAvatar(avatarUrlHelper.toPublicUrl(user.getAvatar()));
 
         //  改由 UmsCredentials 提供 email
         UmsCredentials credentials = umsCredentialsService.getOne(

@@ -33,23 +33,22 @@ public class FeignInterceptorConfig {
             ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (servletRequestAttributes != null) {
                 HttpServletRequest request = servletRequestAttributes.getRequest();
-                // 1. 優先嘗試從原始請求的 Authorization Header 獲取（如果已經存在）
-                String authorization = request.getHeader("Authorization");
-                if (StringUtils.hasText(authorization)) {
-                    template.header("Authorization", authorization);
-                    return;
-                }
 
-                // 2. 如果沒有 Header，則從 Cookie 中尋找 jwtToken
+                // 1. 優先嘗試從原始請求，則從 Cookie 中尋找 jwtToken
                 Cookie[] cookies = request.getCookies();
                 if (cookies != null) {
                     for (Cookie cookie : cookies) {
                         if ("jwtToken".equals(cookie.getName())) {
                             // 轉換為標準的 Bearer Token 格式透傳給下游服務
                             template.header("Authorization", "Bearer " + cookie.getValue());
-                            break;
+                            return;
                         }
                     }
+                }
+                // 2. 嘗試從原始請求的 Authorization Header 獲取
+                String authorization = request.getHeader("Authorization");
+                if (StringUtils.hasText(authorization)) {
+                    template.header("Authorization", authorization);
                 }
             }
         }

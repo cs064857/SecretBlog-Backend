@@ -1,6 +1,7 @@
 custom:
   project-name: SecretBlog
-  front-domain: http://localhost:51733
+  front-domain: ${FRONT_ENDPOINT}
+  minio-domain: ${MINIO_ENDPOINT}
 user:
   default-avatar: https://shijiawei.oss-cn-beijing.aliyuncs.com/secretblog/avatar/default_avatar.jpg
 spring:
