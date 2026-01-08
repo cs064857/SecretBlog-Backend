@@ -172,4 +172,7 @@ public interface UmsUserService extends IService<UmsUser>{
      * @param notifyEnabled 通知總開關（1:啟用、0:關閉）
      */
     void updateNotifyEnabled(Long userId, Byte notifyEnabled);
+
+    R createCaptcha();
+
 }

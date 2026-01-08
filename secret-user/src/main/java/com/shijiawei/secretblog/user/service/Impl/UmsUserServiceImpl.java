@@ -1,13 +1,13 @@
 package com.shijiawei.secretblog.user.service.Impl;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 
+import com.pig4cloud.captcha.SpecCaptcha;
+import com.pig4cloud.captcha.utils.CaptchaUtil;
 import com.shijiawei.secretblog.user.vo.UmsSaveUserVo;
 import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -25,6 +25,7 @@ import com.shijiawei.secretblog.user.DTO.UmsChangePasswordDTO;
 import com.shijiawei.secretblog.user.DTO.UmsForgotPasswordDTO;
 import com.shijiawei.secretblog.user.DTO.UmsResetPasswordDTO;
 import com.shijiawei.secretblog.user.DTO.UmsVerifyResetTokenDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RRateLimiter;
@@ -54,7 +55,6 @@ import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -497,7 +497,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     }
 
     /**
-     * 用戶註冊街口
+     * 用戶註冊接口
      * @param umsUserRegisterDTO
      * @return
      */
@@ -530,8 +530,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         umsUserInfo.setNotifyEnabled((byte) 1);
 
 
-        ///TODO 確認信箱驗證碼
-        ///TODO 再次判斷用戶是否已註冊
+
         //獲得用戶輸入的驗證碼
         String vaildCode = umsUserRegisterDTO.getEmailValidCode();
         //獲得用戶的信箱
@@ -542,6 +541,24 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             String defaultAccountName = email.split("@")[0];
             umsUserInfo.setAccountName(defaultAccountName);
             log.info("為新用戶設置預設帳號名稱: {}", defaultAccountName);
+        }
+
+        // 再次判斷帳號/信箱是否已被占用（避免繞過寄送驗證碼流程）
+        long emailIsExists = umsCredentialsService.count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
+        if (emailIsExists > 0) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_EMAIL_ALREADY_EXIST)
+                    .data(Map.of("email", StringUtils.defaultString(email, "")))
+                    .build();
+        }
+
+        String accountName = umsUserInfo.getAccountName();
+        long accountNameIsExists = umsUserInfoService.count(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName, accountName));
+        if (accountNameIsExists > 0) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_ACCOUNT_ALREADY_EXIST)
+                    .data(Map.of("accountName", StringUtils.defaultString(accountName, "")))
+                    .build();
         }
 
         // 從 Redis 取得驗證碼並校驗（Key 統一由 RedisCacheKey 管理）
@@ -581,7 +598,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         //根據IP判斷進行限流,短時間內嘗試過多次則暫時禁止
         String remoteAddr = httpServletRequest.getRemoteAddr();
-        log.info("remoteAddr：{}",remoteAddr);
+//        log.info("remoteAddr：{}",remoteAddr);
+
+
         /*
          * Redis限流
          */
@@ -594,25 +613,55 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 //        rateLimiter.trySetRate(RateType.OVERALL,3,30, RateIntervalUnit.SECONDS);
         RRateLimiter rateLimiter = redisRateLimiterUtils.setRedisRateLimiter(rateLimitBucket, RateType.PER_CLIENT, 3, 30, RateIntervalUnit.SECONDS);
 
-//            String accountName = umsUserEmailVerifyDTO.getAccountName();
         String email = umsUserEmailVerifyDTO.getEmail();
+        String accountName = StringUtils.trimToNull(umsUserEmailVerifyDTO.getAccountName());
+        if (accountName == null && StringUtils.isNotBlank(email) && email.contains("@")) {
+            accountName = email.split("@")[0];
+        }
 
         long emailIsExists = umsCredentialsService.count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
         if(emailIsExists>0){
-//            throw new CustomRuntimeException("此電子郵件地址已被註冊");
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.USER_EMAIL_ALREADY_EXIST)
                     .data(Map.of("email", StringUtils.defaultString(email,"")))
                     .build();
         }
 
-//        umsUserInfoService.getOne(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName,))
+        if (StringUtils.isNotBlank(accountName)) {
+            long accountNameIsExists = umsUserInfoService.count(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName, accountName));
+            if (accountNameIsExists > 0) {
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.USER_ACCOUNT_ALREADY_EXIST)
+                        .data(Map.of("accountName", StringUtils.defaultString(accountName, "")))
+                        .build();
+            }
+        }
 
         // 嘗試獲取許可
         if (redisRateLimiterUtils.tryAcquire(rateLimiter)) {
             /*
               成功獲取許可，執行業務邏輯
              */
+
+            // 1. 校驗圖形驗證碼
+            String captchaKey = umsUserEmailVerifyDTO.getCaptchaKey();
+            String captchaCode = umsUserEmailVerifyDTO.getCaptchaCode();
+            String captchaBucketKey = RedisCacheKey.USER_CAPTCHA.format(captchaKey);
+            String captchaInRedis = (String) redissonClient.getBucket(captchaBucketKey).get();
+
+            if (StringUtils.isBlank(captchaInRedis) || !captchaInRedis.equalsIgnoreCase(captchaCode)) {
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.CAPTCHA_INVALID)
+                        .detailMessage("圖形驗證碼校驗失敗")
+                        .data(Map.of(
+                                "captchaKey", StringUtils.defaultString(captchaKey, ""),
+                                "captchaExists", StringUtils.isNotBlank(captchaInRedis)
+                        ))
+                        .build();
+            }
+
+            // 2. 校驗成功後立即刪除驗證碼，防止重用
+            redissonClient.getBucket(captchaBucketKey).deleteAsync();
 
             Random random = new Random();
             String VaildCodeString = String.format("%06d", random.nextInt(90000) + 10000);
@@ -637,8 +686,15 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
             return R.ok("驗證碼已發送至您的郵箱");
         } else {
-            // 超過請求限流，拒絕請求
-            return new R(HttpCodeEnum.TOO_MANY_REQUESTS.getCode(), HttpCodeEnum.TOO_MANY_REQUESTS.getDescription());
+            // 超過請求限流，改以例外回應
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.TOO_MANY_REQUESTS)
+                    .detailMessage("寄送信箱驗證碼觸發限流")
+                    .data(Map.of(
+                            "ip", StringUtils.defaultString(remoteAddr, ""),
+                            "email", StringUtils.defaultString(email, "")
+                    ))
+                    .build();
         }
     }
 
@@ -916,6 +972,20 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         }
 
         syncNotifyEnabledCache(userId, notifyEnabled);
+    }
+
+    @Override
+    public R createCaptcha() {
+
+        SpecCaptcha specCaptcha = new SpecCaptcha(130, 48, 5);
+        String verCode = specCaptcha.text().toLowerCase();
+        String key = UUID.randomUUID().toString();
+        // 存入redis並設置過期時間為30分鐘
+        String cacheKey = RedisCacheKey.USER_CAPTCHA.format(key);
+        redissonClient.getBucket(cacheKey).set(verCode, RedisCacheKey.USER_CAPTCHA.getTtl());
+
+        // 將key和base64返回給前端
+        return R.ok(Map.of("key", key, "base64", specCaptcha.toBase64()));
     }
 
     private void syncNotifyEnabledCache(Long userId, Byte notifyEnabled) {

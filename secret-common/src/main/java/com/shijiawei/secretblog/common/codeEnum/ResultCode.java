@@ -35,6 +35,8 @@ public enum ResultCode implements IErrorCode{
     EDIT_FAILED(HttpStatus.BAD_REQUEST,"1010", "編輯失敗"),
     EDIT_TIME_EXPIRED(HttpStatus.BAD_REQUEST,"1011", "編輯時間已過期"),
 //    INIT_INDEX_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,"1012", "初始化索引失敗"),
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "1013", "請求次數過多，請稍後再試。"),
+
     /**
      * 2000~2999 文章模組
      */
@@ -58,7 +60,10 @@ public enum ResultCode implements IErrorCode{
     AUTH_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "4005", "認證服務內部異常"),
     JWT_BLACKLISTED(HttpStatus.UNAUTHORIZED, "4006", "憑證已失效，請重新登入"),
     USER_INTERNAL_ERROR(HttpStatus.NOT_FOUND,"4007", "系統服務繁忙，請稍後再試"),
+    USER_ACCOUNT_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "4008", "此帳號名稱已被使用"),
     USER_EMAIL_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "4009", "此電子郵件地址已被註冊"),
+    // 圖形驗證碼無效或已過期
+    CAPTCHA_INVALID(HttpStatus.BAD_REQUEST, "4010", "圖形驗證碼錯誤或已過期"),
 
     /**
      * 5000~5999 系統/中間件錯誤

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
  * ClassName: RedisRateLimiterUtils
  * Redis 基於 Redisson 的分佈式限流器工具類
  * 用於控制 API 的請求頻率
- *
  * @Create 2025/2/26 上午1:06
  */
 @Slf4j
@@ -22,7 +21,7 @@ public class RedisRateLimiterUtils {
     private final RedissonClient redissonClient;
 
     @Autowired
-    public RedisRateLimiterUtils(RedissonClient redissonClient){
+    public RedisRateLimiterUtils(RedissonClient redissonClient) {
         this.redissonClient = redissonClient;
     }
 
@@ -35,22 +34,42 @@ public class RedisRateLimiterUtils {
      * @param rateIntervalUnit 時間間隔單位
      * @return 配置好的限流器實例
      */
-
-    public RRateLimiter setRedisRateLimiter(String bucket,RateType rateType, long rate, long rateInterval, RateIntervalUnit rateIntervalUnit){
+    public RRateLimiter setRedisRateLimiter(String bucket, RateType rateType, long rate, long rateInterval, RateIntervalUnit rateIntervalUnit) {
         RRateLimiter rateLimiter = redissonClient.getRateLimiter(bucket);
-        boolean isSetRate = rateLimiter.trySetRate(rateType, rate, rateInterval, rateIntervalUnit);
-        if(!isSetRate){
-            log.error("Failed to set rate limit for bucket: {}", bucket);
+
+        try {
+            boolean initialized = rateLimiter.trySetRate(rateType, rate, rateInterval, rateIntervalUnit);
+            if (initialized) {
+                log.debug(
+                        "已初始化 Redis 限流器 bucket={} rateType={} rate={} rateInterval={} rateIntervalUnit={}",
+                        bucket,
+                        rateType,
+                        rate,
+                        rateInterval,
+                        rateIntervalUnit
+                );
+            } else {
+                log.debug("Redis 限流器已存在，略過初始化 bucket={}", bucket);
+            }
+        } catch (Exception e) {
+            log.error("初始化 Redis 限流器失敗 bucket={}", bucket, e);
+            throw e;
         }
+
         return rateLimiter;
     }
 
-
-    public boolean tryAcquire(RRateLimiter rateLimiter){
-        boolean isTryAcquire = rateLimiter.tryAcquire();
-        if(!isTryAcquire){
-            log.error("Failed to set try acquire for bucket");
+    /**
+     * 嘗試取得許可
+     *
+     * @param rateLimiter 已設定好的限流器
+     * @return 是否成功取得許可
+     */
+    public boolean tryAcquire(RRateLimiter rateLimiter) {
+        boolean acquired = rateLimiter.tryAcquire();
+        if (!acquired) {
+            log.warn("觸發限流（未取得許可） bucket={}", rateLimiter.getName());
         }
-        return isTryAcquire;
+        return acquired;
     }
 }

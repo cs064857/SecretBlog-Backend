@@ -82,8 +82,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/ums/user/login/username").permitAll()
-                        // 公開端點：註冊、傳送驗證碼、忘記密碼
-                        .requestMatchers("/ums/user/register", "/ums/user/email-verify-code","/ums/user/reset-password","/ums/user/verify-reset-token", "/ums/user/forgot-password").permitAll()
+                        // 公開端點：註冊、傳送驗證碼、忘記密碼、圖形驗證碼
+                        .requestMatchers("/ums/user/register", "/ums/user/email-verify-code","/ums/user/reset-password","/ums/user/verify-reset-token", "/ums/user/forgot-password","/ums/user/captcha").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/me").authenticated()
                         .requestMatchers(

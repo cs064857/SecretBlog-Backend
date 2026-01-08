@@ -88,6 +88,7 @@ public enum RedisCacheKey {
     USER_PASSWORD_RESET_TOKEN("umsuser:password_reset_token_%s", "密碼重設 Token -> UserId 映射", Duration.ofMinutes(30)),
 
     USER_NOTIFY_ENABLED("umsuser:notify_enabled:%s", "使用者通知總開關快取（notify_enabled）", Duration.ofMinutes(30)),
+    USER_CAPTCHA("umsuser:captcha:%s", "圖片驗證碼", Duration.ofMinutes(30)),
 
     /**
      * ===== 快取維護 / 基礎設施 =====

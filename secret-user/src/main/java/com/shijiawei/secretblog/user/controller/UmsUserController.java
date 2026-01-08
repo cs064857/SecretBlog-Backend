@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.user.controller;
 
+import com.pig4cloud.captcha.utils.CaptchaUtil;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
@@ -214,8 +215,16 @@ public class UmsUserController {
      */
     @PostMapping("/register")
     public R register(@Validated @RequestBody UmsUserRegisterDTO umsUserRegisterDTO){
-        log.info("umsUserRegisterDTO:{}",umsUserRegisterDTO);
         return umsUserService.UmsUserRegister(umsUserRegisterDTO);
+    }
+
+    /**
+     * 創建圖形驗證碼
+     * @return
+     */
+    @GetMapping("/captcha")
+    public R createCaptcha(){
+        return umsUserService.createCaptcha();
     }
 
     @PostMapping("/email-verify-code")
