@@ -3,7 +3,7 @@ custom:
   front-domain: ${FRONT_ENDPOINT}
   minio-domain: ${MINIO_ENDPOINT}
 user:
-  default-avatar: https://shijiawei.oss-cn-beijing.aliyuncs.com/secretblog/avatar/default_avatar.jpg
+  default-avatar: user-assets-pub/default.svg
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

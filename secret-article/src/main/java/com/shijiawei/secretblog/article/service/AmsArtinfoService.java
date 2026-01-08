@@ -6,7 +6,7 @@ import com.shijiawei.secretblog.article.vo.AmsSaveArtInfoVo;
 
 /**
 * @author User
-* @description 针对表【ams_artInfo】的数据库操作Service
+* @description 針對表【ams_artInfo】的資料庫操作Service
 * @createDate 2024-09-12 04:30:14
 */
 public interface AmsArtinfoService extends IService<AmsArtinfo> {

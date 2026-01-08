@@ -5,10 +5,12 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Arrays;
 
+import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.DefaultParameterNameDiscoverer;
@@ -65,6 +67,7 @@ public class OpenCacheAspect {
         //從方法上的註解獲取prefix、key值並組合成最終key
         //例如：AmsArticles:categoryId_3415518L:routerPage_1:articles
         String key = prefix + ":" + keyExpression;
+        String lockKey = RedisLockKey.OPEN_CACHE_LOCK.getFormat(key);
         log.info("Generated cache key: {}", key);
         //試圖從Redis緩存中獲得文章列表數據
         String redisCache = (String) redissonClient.getBucket(key).get();
@@ -75,7 +78,8 @@ public class OpenCacheAspect {
             return JSON.parseObject(redisCache, method.getGenericReturnType());
         }
         //若Redis沒有緩存該資料須查詢資料時,加上分散式鎖,只放一名用戶進入資料庫中查詢,解決緩存擊穿問題
-        if (redissonClient.getLock(key + "_Lock").tryLock()) {
+        RLock lock = redissonClient.getLock(lockKey);
+        if (lock.tryLock()) {
             try {
                 log.info("獲得 Redisson 分散式鎖...");
                 // Double check
@@ -102,8 +106,8 @@ public class OpenCacheAspect {
             } finally {
                 // 無論成功或失敗強制解鎖
                 // 解鎖前檢查線程持有權
-                if (redissonClient.getLock(key+"_Lock").isHeldByCurrentThread()) {
-                    redissonClient.getLock(key+"_Lock").unlock();
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
                 }
             }
         }

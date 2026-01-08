@@ -16,16 +16,16 @@ import org.springframework.security.core.Authentication;
 import java.util.List;
 
 /**
-* @author User
-* @description 针对表【ams_article(文章內容)】的数据库操作Service
-* @createDate 2024-08-26 00:17:06
-*/
+ * @author User
+ * @description 針對表【ams_article(文章內容)】的數據庫操作Service
+ * @createDate 2024-08-26 00:17:06
+ */
 
 public interface AmsArticleService extends IService<AmsArticle> {
 
     long saveArticles(AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication);
 
-//    List<AmsArticle> getListArticle();
+    //    List<AmsArticle> getListArticle();
 //
     IPage<AmsArticlePreviewVo> getArticlesPreviewPage(Integer routePage, Long categoryId);
 

@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Param;
 
 /**
 * @author User
-* @description 针对表【ams_artInfo】的数据库操作Mapper
+* @description 針對表【ams_artInfo】的資料庫操作Mapper
 * @createDate 2024-09-12 04:30:14
 * @Entity com.shijiawei.secretblog.article.entity.AmsArtinfo
 */

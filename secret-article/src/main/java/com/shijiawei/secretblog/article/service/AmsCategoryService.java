@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
 * @author User
-* @description 针对表【ams_category】的数据库操作Service
+* @description 針對表【ams_category】的資料庫操作Service
 * @createDate 2024-08-28 17:47:50
 */
 

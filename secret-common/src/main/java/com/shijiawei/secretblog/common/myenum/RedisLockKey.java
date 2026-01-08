@@ -22,7 +22,10 @@ public enum RedisLockKey {
     ARTICLE_COMMENTS_EXISTS_LOCK("lock:article:comments:exists:%s"),
     ARTICLE_STATUS_LOCK("lock:article:status:%s"),
     ARTICLE_TAGS_LOCK("lock:article:tags"),
-    ARTICLE_COMMENTS_LIKES_LOCK("lock:article:comments:likes:%s");
+    ARTICLE_COMMENTS_LIKES_LOCK("lock:article:comments:likes:%s"),
+
+    //OpenCacheAspect 使用的鎖鍵：以快取 key 為基底加上"_Lock""後綴。
+    OPEN_CACHE_LOCK("%s_Lock");
 
     @Getter
     private final String pattern;

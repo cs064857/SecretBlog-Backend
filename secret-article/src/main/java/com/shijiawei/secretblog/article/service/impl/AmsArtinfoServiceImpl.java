@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 
 /**
 * @author User
-* @description 针对表【ams_artInfo】的数据库操作Service实现
+* @description 針對表【ams_artInfo】的資料庫操作Service实现
 * @createDate 2024-09-12 04:30:14
 */
 @Slf4j

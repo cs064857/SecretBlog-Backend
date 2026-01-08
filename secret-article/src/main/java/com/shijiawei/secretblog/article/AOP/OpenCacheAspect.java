@@ -6,6 +6,7 @@ import com.shijiawei.secretblog.common.annotation.OpenCache;
 import com.shijiawei.secretblog.common.codeEnum.ResultCode;
 import com.shijiawei.secretblog.common.exception.BusinessException;
 import com.shijiawei.secretblog.common.exception.BusinessRuntimeException;
+import com.shijiawei.secretblog.common.myenum.RedisLockKey;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -83,7 +84,7 @@ public class OpenCacheAspect {
         long waitTime = 5000;//最多等待多久來搶這個鎖
         long leaseTime = 10000;//搶到鎖後，多久會自動釋放
 
-        String lockKey = key + "_Lock";
+        String lockKey = RedisLockKey.OPEN_CACHE_LOCK.getFormat(key);
         RLock lock = redissonClient.getLock(lockKey);
         boolean isLocked = false;
 

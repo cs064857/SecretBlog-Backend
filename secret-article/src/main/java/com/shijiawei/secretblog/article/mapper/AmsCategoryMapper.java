@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
 * @author User
-* @description 针对表【ams_category】的数据库操作Mapper
+* @description 針對表【ams_category】的資料庫操作Mapper
 * @createDate 2024-08-28 17:47:50
 * @Entity com.shijiawei.secretblog.article.entity.AmsCategory
 */

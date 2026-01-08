@@ -2231,7 +2231,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
         // 2. 清除分類文章預覽列表快取（使用模式匹配）
         if (categoryId != null) {
-            String categoryPattern = "AmsArticles:categoryId_" + categoryId + "*";
+            String categoryPattern = RedisOpenCacheKey.ArticlePreviews.buildCategoryPattern(categoryId);
             RKeys keys = redissonClient.getKeys();
             Iterable<String> keysToDelete = keys.getKeysByPattern(categoryPattern);
             long count = 0;
@@ -2243,8 +2243,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         // 3. 清除文章留言相關快取
-        String commentPattern = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX
-                + ":" + articleId + "*";
+        String commentPattern = RedisOpenCacheKey.ArticleComments.buildCommentDetailsPattern(articleId);
         RKeys commentKeys = redissonClient.getKeys();
         Iterable<String> commentKeysToDelete = commentKeys.getKeysByPattern(commentPattern);
         long commentCount = 0;

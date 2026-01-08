@@ -32,6 +32,14 @@ public class RedisOpenCacheKey {
         public static final String COMMENT_DETAILS_PREFIX = ARTICLE + "comment";
         public static final String COMMENT_DETAILS_KEY = "#{#articleId}:comment_details";
 
+        /*
+         * 依文章ID匹配該文章底下的留言快取 Key(供getKeysByPattern使用)
+         * 範例：`ams:article:comment:123*`
+         */
+        public static String buildCommentDetailsPattern(Long articleId) {
+            return COMMENT_DETAILS_PREFIX + ":" + articleId + "*";
+        }
+
     }
 
     /*
@@ -65,6 +73,14 @@ public class RedisOpenCacheKey {
         public static final String ARTICLE_PREVIEWS_PREFIX = ARTICLE + "previews";
         public static final String ARTICLE_PREVIEWS_KEY = "categoryId_#{#categoryId}:routerPage_#{#routePage}";
         public static final String ARTICLE_PREVIEWS_BY_VO_KEY = "categoryId_#{#amsSaveArticleVo.categoryId}:routerPage_#{#routePage}";
+
+        /**
+         * 依分類ID匹配文章預覽列表快取 Key(供getKeysByPattern使用)
+         * 範例：`ams:article:previews:categoryId_3415518*`
+         */
+        public static String buildCategoryPattern(Long categoryId) {
+            return ARTICLE_PREVIEWS_PREFIX + ":categoryId_" + categoryId + "*";
+        }
 
     }
 
