@@ -11,18 +11,20 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 文章被回覆（新增文章留言）後的 Email 通知消息
+ * 文章被回覆(新增文章留言)後的通知消息(可於 Email 與 Inbox)
  *
- * 由 secret-article 發送，secret-user 消費後寄送 Email 給文章作者
+ * 由 secret-article 發送，secret-user 消費後可依不同 Queue 執行：
+ * 1、寄送 Email 給文章作者
+ * 2、寫入通知收件匣(DB/Redis)並推送 SSE
  */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ArticleRepliedEmailNotifyMessage implements Serializable, RabbitMessage {
+public class ArticleRepliedNotifyMessage implements Serializable, RabbitMessage {
 
     /**
-     * 收件人用戶ID（文章作者）
+     * 收件人用戶ID(文章作者)
      */
     private Long recipientUserId;
 
@@ -32,7 +34,7 @@ public class ArticleRepliedEmailNotifyMessage implements Serializable, RabbitMes
     private Long articleId;
 
     /**
-     * 文章標題（可為空）
+     * 文章標題(可為空)
      */
     private String articleTitle;
 
@@ -47,12 +49,17 @@ public class ArticleRepliedEmailNotifyMessage implements Serializable, RabbitMes
     private Long replierUserId;
 
     /**
-     * 回覆者暱稱（可為空）
+     * 回覆者暱稱(可為空)
      */
     private String replierNickname;
 
     /**
-     * 回覆內容（可為空）
+     * 回覆者頭像(可為空)
+     */
+    private String replierAvatar;
+
+    /**
+     * 回覆內容(可為空)
      */
     private String replyContent;
 
@@ -66,6 +73,5 @@ public class ArticleRepliedEmailNotifyMessage implements Serializable, RabbitMes
     private final String exchange = RabbitMqConsts.User.TOPIC_EXCHANGE;
 
     @JsonIgnore
-    private final String routingKey = RabbitMqConsts.User.ArticleRepliedEmailNotify.ROUTING_KEY;
+    private final String routingKey = RabbitMqConsts.User.ArticleRepliedNotify.ROUTING_KEY;
 }
-

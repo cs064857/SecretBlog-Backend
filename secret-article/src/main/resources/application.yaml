@@ -1,3 +1,6 @@
+custom:
+  minio-domain: ${MINIO_ENDPOINT:}
+
 spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss

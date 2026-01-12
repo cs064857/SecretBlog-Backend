@@ -1,7 +1,5 @@
 package com.shijiawei.secretblog.common.codeEnum;
 
-import com.shijiawei.secretblog.common.message.ArticleLikeChangedMessage;
-
 /**
  * ClassName: RabbitMqConsts
  * Description:
@@ -42,17 +40,27 @@ public final class RabbitMqConsts {
             private ArticleLikedEmailNotify() {}
 
             public static final String QUEUE = "user.article.liked.email.notify.queue";
-            public static final String ROUTING_KEY = "user.article.liked.email.notify";
+            public static final String ROUTING_KEY = "user.article.liked.notify";
         }
 
         /**
          * 文章被回覆（新增文章留言）後，以 Email 通知文章作者
          */
-        public static final class ArticleRepliedEmailNotify {
-            private ArticleRepliedEmailNotify() {}
+        public static final class ArticleRepliedNotify {
+            private ArticleRepliedNotify() {}
 
-            public static final String QUEUE = "user.article.replied.email.notify.queue";
-            public static final String ROUTING_KEY = "user.article.replied.email.notify";
+            public static final String QUEUE = "user.article.replied.notify.queue";
+            public static final String ROUTING_KEY = "user.article.replied.notify";
+        }
+
+        /**
+         * 文章被回覆（新增文章留言）後，以 Inbox 通知文章作者
+         */
+        public static final class ArticleRepliedInboxNotify {
+            private ArticleRepliedInboxNotify() {}
+
+            public static final String QUEUE = "user.article.replied.inbox.notify.queue";
+            public static final String ROUTING_KEY = ArticleRepliedNotify.ROUTING_KEY;
         }
 
         /**
@@ -62,9 +70,18 @@ public final class RabbitMqConsts {
             private CommentRepliedEmailNotify() {}
 
             public static final String QUEUE = "user.comment.replied.email.notify.queue";
-            public static final String ROUTING_KEY = "user.comment.replied.email.notify";
+            public static final String ROUTING_KEY = "user.comment.replied";
         }
 
+        /**
+         * 留言被回覆（新增子留言）後，以 Inbox 通知父留言作者
+         */
+        public static final class CommentRepliedInboxNotify {
+            private CommentRepliedInboxNotify() {}
+
+            public static final String QUEUE = "user.comment.replied.inbox.notify.queue";
+            public static final String ROUTING_KEY = "user.comment.replied";
+        }
     }
 
     /**

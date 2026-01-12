@@ -5,6 +5,7 @@ import com.shijiawei.secretblog.common.dto.UserBasicDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -35,7 +36,12 @@ public interface UserFeignClient {
     R<List<UserBasicDTO>> selectUserBasicInfoByIds(@RequestParam("ids") List<Long> ids);
 //    R<List<UserBasicDTO>> getUsersByIds(@RequestParam("ids") List<Long> ids);
 
-
-
+    /**
+     * 獲取用戶的通知總開關狀態
+     * @param userId 用戶ID
+     * @return 通知開關狀態（1:啟用、0:關閉）
+     */
+    @GetMapping("/{userId}/notify-enabled")
+    R<Byte> getNotifyEnabled(@PathVariable("userId") Long userId);
 
 }

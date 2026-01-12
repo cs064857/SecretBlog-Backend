@@ -11,18 +11,20 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 留言被回覆（新增子留言）後的 Email 通知消息
+ * 留言被回覆（新增子留言)後的通知消息（用於 Email 與 Inbox)
  *
- * 由 secret-article 發送，secret-user 消費後寄送 Email 給父留言作者
+ * 由 secret-article 發送，secret-user 消費後可依不同 Queue 執行：
+ * 1、寄送 Email 給父留言作者
+ * 2、寫入通知收件匣（DB/Redis)並推送 SSE
  */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CommentRepliedEmailNotifyMessage implements Serializable, RabbitMessage {
+public class CommentRepliedNotifyMessage implements Serializable, RabbitMessage {
 
     /**
-     * 收件人用戶ID（父留言作者）
+     * 收件人用戶ID（父留言作者)
      */
     private Long recipientUserId;
 
@@ -32,7 +34,7 @@ public class CommentRepliedEmailNotifyMessage implements Serializable, RabbitMes
     private Long articleId;
 
     /**
-     * 文章標題（可為空）
+     * 文章標題（可為空)
      */
     private String articleTitle;
 
@@ -52,12 +54,17 @@ public class CommentRepliedEmailNotifyMessage implements Serializable, RabbitMes
     private Long replierUserId;
 
     /**
-     * 回覆者暱稱（可為空）
+     * 回覆者暱稱（可為空)
      */
     private String replierNickname;
 
     /**
-     * 回覆內容（可為空）
+     * 回覆者頭像（可為空)
+     */
+    private String replierAvatar;
+
+    /**
+     * 回覆內容（可為空)
      */
     private String replyContent;
 
@@ -73,4 +80,3 @@ public class CommentRepliedEmailNotifyMessage implements Serializable, RabbitMes
     @JsonIgnore
     private final String routingKey = RabbitMqConsts.User.CommentRepliedEmailNotify.ROUTING_KEY;
 }
-

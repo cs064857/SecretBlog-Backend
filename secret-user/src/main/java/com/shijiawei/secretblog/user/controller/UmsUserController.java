@@ -153,6 +153,17 @@ public class UmsUserController {
         return R.ok();
     }
 
+    /**
+     * 獲取用戶的通知總開關狀態
+     * @param userId 用戶ID
+     * @return 通知開關狀態（1:啟用、0:關閉）
+     */
+    @GetMapping("/{userId}/notify-enabled")
+    public R<Byte> getNotifyEnabled(@PathVariable Long userId) {
+        Byte notifyEnabled = umsUserInfoService.getNotifyEnabledByUserId(userId);
+        return R.ok(notifyEnabled);
+    }
+
     @PutMapping("/update-avatar")
     public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
         log.info("updateUmsUserAvatar dto:{}", dto);

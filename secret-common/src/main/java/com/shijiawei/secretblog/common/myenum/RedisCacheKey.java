@@ -89,7 +89,7 @@ public enum RedisCacheKey {
 
     USER_NOTIFY_ENABLED("umsuser:notify_enabled:%s", "使用者通知總開關快取（notify_enabled）", Duration.ofMinutes(30)),
     USER_CAPTCHA("umsuser:captcha:%s", "圖片驗證碼", Duration.ofMinutes(30)),
-
+    USER_INBOX("umsuser:inbox:%s","使用者的消息欄", Duration.ofDays(7)),
     /**
      * ===== 快取維護 / 基礎設施 =====
      */

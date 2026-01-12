@@ -18,8 +18,7 @@ import java.util.List;
  * 
  * 預設提供 dispatch() 方法進行定時調度，子類可覆寫以自訂調度策略
  *
- * @param <T> 消息實體類型（如 UmsLocalMessage, AmsLocalMessage）
- */
+*/
 @Slf4j
 public abstract class BaseLocalMessageDispatcher<T extends LocalMessage> {
 
@@ -42,14 +41,14 @@ public abstract class BaseLocalMessageDispatcher<T extends LocalMessage> {
     private RabbitMessageProducer rabbitMessageProducer;
 
     /**
-     * 獲取本地消息服務（由子類實現）
+     * 獲取本地消息服務（由子類實現)
      * @return 本地消息服務實例
      */
     protected abstract LocalMessageService<T> getLocalMessageService();
 
     /**
-     * 定時調度待發送的消息（默認實現）
-     * 子類可覆寫此方法以自訂調度策略（如不同的調度頻率或條件判斷）
+     * 定時調度待發送的消息（默認實現)
+     * 子類可覆寫此方法以自訂調度策略（如不同的調度頻率或條件判斷)
      */
     @Scheduled(fixedDelayString = "${local-message.dispatcher.fixed-delay-ms:5000}")
     public void dispatch() {
@@ -57,7 +56,7 @@ public abstract class BaseLocalMessageDispatcher<T extends LocalMessage> {
     }
 
     protected void processMessage(T message) throws Exception {
-        // 反序列化消息內容（使用 Jackson 多態類型自動識別具體類型）
+        // 反序列化消息內容（使用 Jackson 多態類型自動識別具體類型)
         RabbitMessage payload = objectMapper.readValue(
                 message.getContent(),
                 RabbitMessage.class

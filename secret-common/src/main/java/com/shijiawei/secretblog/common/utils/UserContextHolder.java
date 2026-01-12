@@ -43,6 +43,14 @@ public class UserContextHolder {
     }
 
     /**
+     * 獲取當前用戶暱稱
+     */
+    public static String getCurrentAvatar() {
+        JwtUserInfo userInfo = getCurrentUserInfoFromSecurityContext();
+        return userInfo != null ? userInfo.getAvatar() : null;
+    }
+
+    /**
      * 獲取 Token 過期時間
      */
     public static Long getTokenExpiredTime() {

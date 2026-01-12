@@ -33,5 +33,10 @@ public interface UmsUserInfoService extends IService<UmsUserInfo>{
 
         List<UmsUserInfo> listUmsUserInfo();
 
-        void passwordMatchesDatabase(Long userInfoId, String password);
+    /**
+     * 根據用戶ID獲取通知總開關狀態
+     * @param userId 用戶ID
+     * @return 通知開關狀態（1:啟用、0:關閉），找不到時回傳 null
+     */
+    Byte getNotifyEnabledByUserId(Long userId);
     }

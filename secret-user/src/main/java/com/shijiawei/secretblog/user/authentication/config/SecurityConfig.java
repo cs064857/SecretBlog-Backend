@@ -85,6 +85,9 @@ public class SecurityConfig {
                         // 公開端點：註冊、傳送驗證碼、忘記密碼、圖形驗證碼
                         .requestMatchers("/ums/user/register", "/ums/user/email-verify-code","/ums/user/reset-password","/ums/user/verify-reset-token", "/ums/user/forgot-password","/ums/user/captcha").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/ums/user/").permitAll()
+                        // 公開SSE端點，避免被Security攔截，在創建SSE的地方再去判斷使用者是否已登入
+                        .requestMatchers("/ums/user/sse/subscribe").permitAll()
                         .requestMatchers("/me").authenticated()
                         .requestMatchers(
                                 "/oauth2/**",          // OAuth2 登入觸發點 (如 /oauth2/authorization/google)

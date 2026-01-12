@@ -81,12 +81,23 @@ public class UmsUserInfoServiceImpl extends ServiceImpl<UmsUserInfoMapper, UmsUs
     public List<UmsUserInfo> listUmsUserInfo() {
         return this.baseMapper.selectList(new LambdaQueryWrapper<UmsUserInfo>());
     }
+
     /**
-     * 判斷密碼是否符合
+     * 根據用戶ID獲取通知總開關狀態
+     * @param userId 用戶ID
+     * @return 通知開關狀態（1:啟用、0:關閉），找不到時回傳 null
      */
     @Override
-    public void passwordMatchesDatabase(Long userInfoId, String password){
-        ///TODO DDL變更: UmsUserInfo 已無 password 欄位，原密碼校驗流程需重新設計（例如移至其它表或改用認證服務）
-        // 暫時不進行任何校驗，直接返回
+    public Byte getNotifyEnabledByUserId(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        UmsUserInfo userInfo = this.baseMapper.selectOne(
+                new LambdaQueryWrapper<UmsUserInfo>()
+                        .select(UmsUserInfo::getNotifyEnabled)
+                        .eq(UmsUserInfo::getUserId, userId)
+                        .last("LIMIT 1")
+        );
+        return userInfo == null ? null : userInfo.getNotifyEnabled();
     }
 }
