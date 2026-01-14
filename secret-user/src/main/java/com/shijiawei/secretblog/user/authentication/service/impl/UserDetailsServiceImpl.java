@@ -12,9 +12,10 @@ import com.shijiawei.secretblog.user.mapper.UmsUserInfoMapper;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
 import com.shijiawei.secretblog.user.service.UmsAuthsService;
 import com.shijiawei.secretblog.user.service.UmsCredentialsService;
-import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
+import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -49,8 +50,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Autowired
     private UmsCredentialsService umsCredentialsService;
 
-    @Autowired
-    private AvatarUrlHelper avatarUrlHelper;
+    @Value("${custom.minio-domain}")
+    private String minioDomain;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -124,7 +125,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         dto.setPassword(auths.getPassword());
         dto.setRoleId(user.getRoleId());
         dto.setDeleted(user.getDeleted());
-        dto.setAvatar(avatarUrlHelper.toPublicUrl(user.getAvatar()));
+        dto.setAvatar(AvatarUrlHelper.toPublicUrl(user.getAvatar(), minioDomain));
 
         //  改由 UmsCredentials 提供 email
         UmsCredentials credentials = umsCredentialsService.getOne(

@@ -52,7 +52,7 @@ import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.common.enumValue.Role;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
-import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
+import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
@@ -77,6 +77,9 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Value("${custom.front-domain}")
     private String frontendBaseUrl;
+
+    @Value("${custom.minio-domain}")
+    private String minioDomain;
 
     @Autowired
     private RedissonClient redissonClient;
@@ -104,9 +107,6 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private AvatarUrlHelper avatarUrlHelper;
 
     @Override
     public R userLogin(UmsUserLoginDTO umsUserLoginDTO) {
@@ -152,7 +152,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     public UmsUser selectByPrimaryKey(Long id) {
         UmsUser user = this.baseMapper.selectById(id);
         if (user != null) {
-            user.setAvatar(avatarUrlHelper.toPublicUrl(user.getAvatar()));
+            user.setAvatar(AvatarUrlHelper.toPublicUrl(user.getAvatar(), minioDomain));
         }
         return user;
     }
@@ -189,7 +189,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         ///TODO 判斷是否有權限設定RoleId
         umsUser.setRoleId(umsSaveUserVo.getRoleId());//RoleName經過mybatisPlus枚舉轉換器映射成資料庫中roleId需要的類型
         BeanUtils.copyProperties(umsSaveUserVo, umsUser,"roleId");
-        umsUser.setAvatar(avatarUrlHelper.toStoragePath(defaultAvatar));
+        umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));
 
         //設置userInfo資料
         userInfo.setId(userInfo_id);
@@ -284,7 +284,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 //
             umsAuthsList.stream().filter(item ->Objects.equals(item.getUserId(),umsUser.getId())).findFirst().ifPresent(item->BeanUtils.copyProperties(item,umsUserDetailsDTO,"id"));
             umsCredentialsList.stream().filter(item ->Objects.equals(item.getUserId(),umsUser.getId())).findFirst().ifPresent(item->BeanUtils.copyProperties(item,umsUserDetailsDTO,"id"));
-            umsUserDetailsDTO.setAvatar(avatarUrlHelper.toPublicUrl(umsUserDetailsDTO.getAvatar()));
+            umsUserDetailsDTO.setAvatar(AvatarUrlHelper.toPublicUrl(umsUserDetailsDTO.getAvatar(), minioDomain));
             log.info("umsUserDetailsDTO:{}", umsUserDetailsDTO);
             return umsUserDetailsDTO;
         }).toList();
@@ -299,7 +299,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     public List<UmsUser> listUmsUser() {
 
         List<UmsUser> users = this.baseMapper.selectList(new LambdaQueryWrapper<UmsUser>().eq(UmsUser::getDeleted,0));
-        users.forEach(user -> user.setAvatar(avatarUrlHelper.toPublicUrl(user.getAvatar())));
+        users.forEach(user -> user.setAvatar(AvatarUrlHelper.toPublicUrl(user.getAvatar(), minioDomain)));
         return users;
     }
 
@@ -336,7 +336,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Override
     public void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId) {
         if(!updateUserDetailsVO.isEmpty()){//若有需要修改的屬性
-            updateUserDetailsVO.setAvatar(avatarUrlHelper.toStoragePath(updateUserDetailsVO.getAvatar()));
+            updateUserDetailsVO.setAvatar(AvatarUrlHelper.toStoragePath(updateUserDetailsVO.getAvatar(), minioDomain));
             UmsUser user = new UmsUser();
             UmsUserInfo userInfo = new UmsUserInfo();
             UmsCredentials umsCredentials = new UmsCredentials();
@@ -430,7 +430,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         String imgUrl = dto.getAvatar();
         Long userId = dto.getUserId();
-        String storedAvatar = avatarUrlHelper.toStoragePath(imgUrl);
+        String storedAvatar = AvatarUrlHelper.toStoragePath(imgUrl, minioDomain);
 
         if (userId == null) {
             throw BusinessRuntimeException.builder()
@@ -454,7 +454,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             int update = this.baseMapper.updateById(umsUser);
             if (update > 0) {
                 // 使用本地消息表記錄作者資訊更新消息，確保最終一致性
-                String publicAvatar = avatarUrlHelper.toPublicUrl(storedAvatar);
+                String publicAvatar = AvatarUrlHelper.toPublicUrl(storedAvatar, minioDomain);
                 AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, publicAvatar, System.currentTimeMillis());
 
 
@@ -523,7 +523,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         umsUser.setId(user_id);
         umsUser.setUserinfoId(userInfo_id);
         umsUser.setRoleId(Role.NORMALUSER);//設置角色為普通用戶
-        umsUser.setAvatar(avatarUrlHelper.toStoragePath(defaultAvatar));//設置默認頭像
+        umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));//設置默認頭像
         //設置userInfo資料
         umsUserInfo.setId(userInfo_id);
         umsUserInfo.setUserId(user_id);
@@ -701,7 +701,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Override
     public List<UserBasicDTO> selectUserBasicInfoByIds(List<Long> ids) {
         List<UserBasicDTO> userBasicDTOS = this.baseMapper.selectUserBasicInfoByIds(ids);
-        userBasicDTOS.forEach(dto -> dto.setAvatar(avatarUrlHelper.toPublicUrl(dto.getAvatar())));
+        userBasicDTOS.forEach(dto -> dto.setAvatar(AvatarUrlHelper.toPublicUrl(dto.getAvatar(), minioDomain)));
         return userBasicDTOS;
     }
     @Transactional(rollbackFor = Exception.class)
@@ -740,7 +740,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     public UmsUserSummaryDTO getUserSummary(Long id) {
         UmsUserSummaryDTO dto = this.baseMapper.selectUserSummaryById(id);
         if (dto != null) {
-            dto.setAvatar(avatarUrlHelper.toPublicUrl(dto.getAvatar()));
+            dto.setAvatar(AvatarUrlHelper.toPublicUrl(dto.getAvatar(), minioDomain));
         }
         return dto;
     }

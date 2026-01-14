@@ -1,11 +1,11 @@
 package com.shijiawei.secretblog.user.converter;
 
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
+import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 
 import com.shijiawei.secretblog.user.entity.UmsUser;
 import com.shijiawei.secretblog.user.entity.UmsUserInfo;
-import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
 @Component
 public class UserConverter {
 
-    @Autowired
-    private AvatarUrlHelper avatarUrlHelper;
+    @Value("${custom.minio-domain}")
+    private String minioDomain;
 
     /**
      * 將實體轉換為DTO
@@ -33,7 +33,7 @@ public class UserConverter {
         UserBasicDTO userBasicDTO = new UserBasicDTO();
         userBasicDTO.setUserId(umsUser.getId());
         userBasicDTO.setNickName(umsUser.getNickName());
-        userBasicDTO.setAvatar(avatarUrlHelper.toPublicUrl(umsUser.getAvatar()));
+        userBasicDTO.setAvatar(AvatarUrlHelper.toPublicUrl(umsUser.getAvatar(), minioDomain));
         userBasicDTO.setAccountName(userInfo.getAccountName());
         // 注意：不暴露敏感信息
         return userBasicDTO;

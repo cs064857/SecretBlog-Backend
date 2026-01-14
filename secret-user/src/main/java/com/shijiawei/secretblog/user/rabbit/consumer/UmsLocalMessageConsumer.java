@@ -16,7 +16,7 @@ import com.shijiawei.secretblog.user.service.UmsCredentialsService;
 import com.shijiawei.secretblog.user.service.UmsUserInboxService;
 import com.shijiawei.secretblog.user.service.UmsUserInfoService;
 import com.shijiawei.secretblog.user.service.UmsUserService;
-import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
+import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 import com.shijiawei.secretblog.user.utils.SseClient;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -24,6 +24,7 @@ import org.redisson.api.RList;
 import org.redisson.api.RedissonClient;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -65,8 +66,8 @@ public class UmsLocalMessageConsumer {
     @Autowired
     private SseClient sseClient;
 
-    @Autowired
-    private AvatarUrlHelper avatarUrlHelper;
+    @Value("${custom.minio-domain}")
+    private String minioDomain;
 
     @RabbitListener(queues = RabbitMqConsts.User.UserAvatarUpdate.QUEUE)
     public void handleAuthorInfoUpdate(AuthorInfoUpdateMessage authorInfoUpdateMessage) {
@@ -98,8 +99,8 @@ public class UmsLocalMessageConsumer {
         }
 
         try {
-            String storedAvatar = fromAvatar == null ? null : avatarUrlHelper.toStoragePath(fromAvatar);
-            String publicAvatar = storedAvatar == null ? null : avatarUrlHelper.toPublicUrl(storedAvatar);
+            String storedAvatar = fromAvatar == null ? null : AvatarUrlHelper.toStoragePath(fromAvatar, minioDomain);
+            String publicAvatar = storedAvatar == null ? null : AvatarUrlHelper.toPublicUrl(storedAvatar, minioDomain);
 
             //收件匣頭像欄位只保存路徑；對外輸出以完整 URL 傳遞
             fromAvatar = storedAvatar;
@@ -222,7 +223,7 @@ public class UmsLocalMessageConsumer {
         }
 
         if (fromAvatar != null) {
-            fromAvatar = avatarUrlHelper.toStoragePath(fromAvatar);
+            fromAvatar = AvatarUrlHelper.toStoragePath(fromAvatar, minioDomain);
         }
 
         LocalDateTime notifyTime = message.getTimestamp() == null
@@ -270,7 +271,7 @@ public class UmsLocalMessageConsumer {
         // 推送至SSE中
         try {
             //SSE對外推送時需輸出完整 URL（資料庫只存路徑）
-            inbox.setFromAvatar(avatarUrlHelper.toPublicUrl(inbox.getFromAvatar()));
+            inbox.setFromAvatar(AvatarUrlHelper.toPublicUrl(inbox.getFromAvatar(), minioDomain));
 
 //            // 構建SSE推送的 JSON payload
 //            String ssePayload = String.format(
@@ -357,7 +358,7 @@ public class UmsLocalMessageConsumer {
         }
 
         if (fromAvatar != null) {
-            fromAvatar = avatarUrlHelper.toStoragePath(fromAvatar);
+            fromAvatar = AvatarUrlHelper.toStoragePath(fromAvatar, minioDomain);
         }
 
         emailService.sendArticleRepliedNotificationEmail(

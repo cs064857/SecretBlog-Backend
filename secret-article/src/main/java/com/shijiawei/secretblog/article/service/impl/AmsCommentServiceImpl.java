@@ -41,7 +41,6 @@ import com.shijiawei.secretblog.common.myenum.RedisOpenCacheKey;
 import com.shijiawei.secretblog.common.redisutils.RedisLuaScripts;
 import com.shijiawei.secretblog.common.security.JwtService;
 import com.shijiawei.secretblog.common.utils.*;
-import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
 import com.shijiawei.secretblog.common.utils.redis.RedisBloomFilterUtils;
 import com.shijiawei.secretblog.common.utils.redis.RedisCacheLoaderUtils;
 import com.shijiawei.secretblog.common.utils.redis.RedisIncrementUtils;
@@ -123,8 +122,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
     @Autowired
     private AmsLocalMessageService amsLocalMessageService;
 
-    @Autowired
-    private AvatarUrlHelper avatarUrlHelper;
+    @Value("${custom.minio-domain:}")
+    private String minioDomain;
 
     @Value("${comment.edit-window-minutes:15}")
     private Integer editWindowMinutes;
@@ -486,7 +485,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     .last("limit 1"));
             Long articleAuthorId = artinfo == null ? null : artinfo.getUserId();
             String currentUserNickname = UserContextHolder.getCurrentUserNickname();
-            String currentAvatar = avatarUrlHelper.toStoragePath(UserContextHolder.getCurrentAvatar());
+            String currentAvatar = AvatarUrlHelper.toStoragePath(UserContextHolder.getCurrentAvatar(), minioDomain);
 
 
             if (articleAuthorId == null) {

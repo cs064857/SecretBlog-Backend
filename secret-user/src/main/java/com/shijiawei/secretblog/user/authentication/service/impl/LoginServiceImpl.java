@@ -7,13 +7,14 @@ import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.common.utils.TimeTool;
 import com.shijiawei.secretblog.common.security.JwtService;
 import com.shijiawei.secretblog.common.security.JwtUserInfo;
+import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.authentication.entity.LoginUser;
 import com.shijiawei.secretblog.user.authentication.service.LoginService;
-import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -45,8 +46,8 @@ public class LoginServiceImpl implements LoginService {
     @Autowired
     private JwtService jwtService;
 
-    @Autowired
-    private AvatarUrlHelper avatarUrlHelper;
+    @Value("${custom.minio-domain}")
+    private String minioDomain;
 
     public R login(UmsUserLoginDTO umsUserLoginDTO, HttpServletResponse response){
 
@@ -114,7 +115,7 @@ public class LoginServiceImpl implements LoginService {
         UmsUserLoginDTO userLoginDTO = currentUser.getUmsUserLoginDTO();
         Long userId = userLoginDTO.getUserId();
         String avatar = userLoginDTO.getAvatar();
-        String avatarUrl = avatarUrlHelper.toPublicUrl(avatar);
+        String avatarUrl = AvatarUrlHelper.toPublicUrl(avatar, minioDomain);
         /**
          * 生成jwtToken並返回
           */

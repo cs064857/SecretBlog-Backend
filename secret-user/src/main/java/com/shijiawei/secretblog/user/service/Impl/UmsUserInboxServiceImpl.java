@@ -13,11 +13,12 @@ import com.shijiawei.secretblog.common.myenum.RedisCacheKey;
 import com.shijiawei.secretblog.user.entity.UmsUserInbox;
 import com.shijiawei.secretblog.user.mapper.UmsUserInboxMapper;
 import com.shijiawei.secretblog.user.service.UmsUserInboxService;
-import com.shijiawei.secretblog.user.utils.AvatarUrlHelper;
+import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RList;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,8 +33,8 @@ public class UmsUserInboxServiceImpl extends ServiceImpl<UmsUserInboxMapper, Ums
     @Autowired
     private RedissonClient redissonClient;
 
-    @Autowired
-    private AvatarUrlHelper avatarUrlHelper;
+    @Value("${custom.minio-domain}")
+    private String minioDomain;
 
     @Override
     public Page<UmsUserInbox> getUserInboxPage(Long userId, Integer routePage, Boolean onlyUnread) {
@@ -79,7 +80,7 @@ public class UmsUserInboxServiceImpl extends ServiceImpl<UmsUserInboxMapper, Ums
                     if (inbox == null) {
                         continue;
                     }
-                    inbox.setFromAvatar(avatarUrlHelper.toPublicUrl(inbox.getFromAvatar()));
+                    inbox.setFromAvatar(AvatarUrlHelper.toPublicUrl(inbox.getFromAvatar(), minioDomain));
                 }
                 page.setRecords(pageRecords);
                 return page;
@@ -106,7 +107,7 @@ public class UmsUserInboxServiceImpl extends ServiceImpl<UmsUserInboxMapper, Ums
                 if (inbox == null) {
                     continue;
                 }
-                inbox.setFromAvatar(avatarUrlHelper.toPublicUrl(inbox.getFromAvatar()));
+                inbox.setFromAvatar(AvatarUrlHelper.toPublicUrl(inbox.getFromAvatar(), minioDomain));
             }
         }
         return result;

@@ -1,36 +1,32 @@
-package com.shijiawei.secretblog.user.utils;
+package com.shijiawei.secretblog.common.utils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
- * avatar URL/路徑轉換工具。
+ * Avatar URL/路徑轉換工具(靜態工具類)。
  * 設計目標：
- * 1、資料庫僅保存 MinIO 物件的相對路徑。
- * 2、對外輸出時再以設定的 MinIO 網域拼接成完整 URL。
+ * 1、資料庫僅保存minio物件的相對路徑。
+ * 2、對外輸出時，再以設定的minio網域拼接成完整URL。
+ * 
  */
-@Component
-public class AvatarUrlHelper {
+public final class AvatarUrlHelper {
 
-    private final String minioDomain;
-
-    public AvatarUrlHelper(@Value("${custom.minio-domain}") String minioDomain) {
-        this.minioDomain = StringUtils.trimToEmpty(minioDomain);
+    private AvatarUrlHelper() {
+        // 工具類不允許被實例化
     }
 
     /**
      * 將輸入的 avatar 轉為資料庫儲存用的相對路徑。
      *
-     * 
-     *   1、若輸入為 MinIO 完整 URL（host/port 與設定相符），回傳去除網域後的相對路徑。
-     *   2、若輸入為相對路徑，回傳去除前置 '/' 後的相對路徑。
-     *   3、若輸入為其他網域的完整 URL，原樣回傳。
+     * 規則：
+     * 1、若輸入為minio完整URL(host/port與設定相符)，回傳去除網域後的相對路徑。
+     * 2、若輸入為相對路徑，回傳去除前置 '/' 後的相對路徑。
+     * 3、若輸入為其他網域的完整URL，原樣回傳。
      * 
      */
-    public String toStoragePath(String avatar) {
+    public static String toStoragePath(String avatar, String minioDomain) {
         if (StringUtils.isBlank(avatar)) {
             return avatar;
         }
@@ -38,7 +34,7 @@ public class AvatarUrlHelper {
         String trimmed = avatar.trim();
         if (isHttpUrl(trimmed)) {
             URI avatarUri = tryParseUri(trimmed);
-            URI domainUri = tryParseDomainUri(minioDomain);
+            URI domainUri = tryParseDomainUri(StringUtils.trimToEmpty(minioDomain));
             if (avatarUri == null || domainUri == null) {
                 return trimmed;
             }
@@ -60,15 +56,14 @@ public class AvatarUrlHelper {
     }
 
     /**
-     * 將資料庫中的 avatar（路徑或完整 URL）轉為對外輸出的完整 URL。
-     *
-     * 
-     *   1、若已是完整 URL，原樣回傳。
-     *   2、若是相對路徑且有設定 MinIO 網域，回傳 domain + '/' + path。
-     *   3、若未設定 MinIO 網域，回傳原始值。
+     * 將資料庫中的 avatar(路徑或完整URL)轉為對外輸出的完整URL。
+     * 規則：
+     * 1、若已是完整UR，原樣回傳。
+     * 2、若是相對路徑且有設定minio網域，回傳 domain + '/' + path。
+     * 3、若未設定minio網域，回傳原始值。
      * 
      */
-    public String toPublicUrl(String avatar) {
+    public static String toPublicUrl(String avatar, String minioDomain) {
         if (StringUtils.isBlank(avatar)) {
             return avatar;
         }
@@ -108,7 +103,7 @@ public class AvatarUrlHelper {
             return uri;
         }
 
-        // 允許使用者在設定中省略 scheme（
+        // 允許使用者在設定中省略scheme(例如 storage.example.com 或 storage.example.com:9000)
         String trimmed = domain.trim();
         if (!trimmed.contains("://")) {
             URI withScheme = tryParseUri("http://" + trimmed);
