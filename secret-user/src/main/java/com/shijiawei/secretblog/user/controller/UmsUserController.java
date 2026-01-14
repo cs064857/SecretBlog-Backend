@@ -27,10 +27,12 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.redisson.api.RedissonClient;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -60,8 +62,8 @@ public class UmsUserController {
     @Autowired
     private JwtService jwtService; // TEMP 新增
 
-//    @Autowired
-//    private TokenBlacklistService tokenBlacklistService;
+    // @Autowired
+    // private TokenBlacklistService tokenBlacklistService;
 
     /**
      * 通過主鍵查詢單條數據
@@ -72,21 +74,22 @@ public class UmsUserController {
     @GetMapping("selectOne")
     public R<UmsUser> getUserById(Long id) {
         UmsUser user = umsUserService.selectByPrimaryKey(id);
-//        UmsUserInfo userInfo = umsUserInfoService.getOne(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getUserId, id));
-//        if(!user.isEmpty() && !userInfo.isEmpty()){
-//            UserBasicDTO dto = new UserBasicDTO();
-//            dto.setUserId(id);
-//            dto.setNickName(user.getNickName());
-//            dto.setAccountName(userInfo.getAccountName());
-//            dto.setAvatar(user.getAvatar());
-//            return R.ok(dto);
-//        }
-        if(user.isEmpty()){
-//            throw new CustomRuntimeException("500","未能獲得用戶資料");
+        // UmsUserInfo userInfo = umsUserInfoService.getOne(new
+        // LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getUserId, id));
+        // if(!user.isEmpty() && !userInfo.isEmpty()){
+        // UserBasicDTO dto = new UserBasicDTO();
+        // dto.setUserId(id);
+        // dto.setNickName(user.getNickName());
+        // dto.setAccountName(userInfo.getAccountName());
+        // dto.setAvatar(user.getAvatar());
+        // return R.ok(dto);
+        // }
+        if (user.isEmpty()) {
+            // throw new CustomRuntimeException("500","未能獲得用戶資料");
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
                     .detailMessage("未能獲得用戶資料")
-                    .data(Map.of("userId", ObjectUtils.defaultIfNull(id,"")))
+                    .data(Map.of("userId", ObjectUtils.defaultIfNull(id, "")))
                     .build();
         }
 
@@ -97,12 +100,12 @@ public class UmsUserController {
     public R<List<UserBasicDTO>> selectUserBasicInfoByIds(@RequestParam("ids") List<Long> ids) {
 
         List<UserBasicDTO> userBasicDTOS = umsUserService.selectUserBasicInfoByIds(ids);
-        if(userBasicDTOS.isEmpty()){
-//            throw new CustomRuntimeException("500","未能獲得用戶基本資料");
+        if (userBasicDTOS.isEmpty()) {
+            // throw new CustomRuntimeException("500","未能獲得用戶基本資料");
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
                     .detailMessage("未能獲得用戶基本資料")
-                    .data(Map.of("userIds", ObjectUtils.defaultIfNull(ids,"")))
+                    .data(Map.of("userIds", ObjectUtils.defaultIfNull(ids, "")))
                     .build();
         }
         log.info("userBasicDTOS:{}", userBasicDTOS);
@@ -112,28 +115,30 @@ public class UmsUserController {
 
     @GetMapping("/list/byids")
     public R<List<UmsUser>> getUsersByIds(@RequestParam("ids") List<Long> ids) {
-        log.info("getUsersByIds.ids:{}",ids);
+        log.info("getUsersByIds.ids:{}", ids);
         List<UmsUser> umsUserList = umsUserService.listByIds(ids);
         return R.ok(umsUserList);
     }
 
     /**
      * 管理員新增帳號
+     * 
      * @param umsSaveUserVo
      * @return
      */
     @PostMapping
     public R saveUmsUser(@RequestBody UmsSaveUserVo umsSaveUserVo) {
-        log.info("umsSaveUserVo:{}",umsSaveUserVo);
+        log.info("umsSaveUserVo:{}", umsSaveUserVo);
         umsUserService.saveUmsUser(umsSaveUserVo);
         return R.ok();
     }
-//
-//    @PutMapping("/{userId}/avatar")
-//    public R<Void> updateAvatar(@PathVariable Long userId, @RequestParam String avatar) {
-//        umsUserService.updateAvatar(userId, avatar);
-//        return R.ok();
-//    }
+    //
+    // @PutMapping("/{userId}/avatar")
+    // public R<Void> updateAvatar(@PathVariable Long userId, @RequestParam String
+    // avatar) {
+    // umsUserService.updateAvatar(userId, avatar);
+    // return R.ok();
+    // }
 
     @PutMapping("/{userId}/nickname")
     public R<Void> updateNickname(@PathVariable Long userId, @RequestParam String nickname) {
@@ -147,6 +152,20 @@ public class UmsUserController {
         return R.ok();
     }
 
+    @PutMapping("/{userId}/birthday")
+    public R<Void> updateBirthday(@PathVariable Long userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate birthday) {
+        umsUserService.updateBirthday(userId, birthday);
+        return R.ok();
+    }
+
+    @PutMapping("/{userId}/address")
+    public R<Void> updateAddress(@PathVariable Long userId,
+            @RequestParam(required = false) String address) {
+        umsUserService.updateAddress(userId, address);
+        return R.ok();
+    }
+
     @PutMapping("/{userId}/notify-enabled")
     public R<Void> updateNotifyEnabled(@PathVariable Long userId, @RequestParam("notifyEnabled") Byte notifyEnabled) {
         umsUserService.updateNotifyEnabled(userId, notifyEnabled);
@@ -155,6 +174,7 @@ public class UmsUserController {
 
     /**
      * 獲取用戶的通知總開關狀態
+     * 
      * @param userId 用戶ID
      * @return 通知開關狀態（1:啟用、0:關閉）
      */
@@ -165,17 +185,18 @@ public class UmsUserController {
     }
 
     @PutMapping("/update-avatar")
-    public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
+    public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto) {
         log.info("updateUmsUserAvatar dto:{}", dto);
         return umsUserService.updateUmsUserAvatar(dto);
 
     }
 
-//    @PutMapping("/update-avatar")
-//    public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
-//        log.info("updateUmsUserAvatar dto:{}", dto);
-//        return umsUserService.updateUmsUserAvatar(dto.getAvatar(), dto.getUserId().toString());
-//    }
+    // @PutMapping("/update-avatar")
+    // public R<Void> updateUmsUserAvatar(@RequestBody UmsUserAvatarUpdateDTO dto){
+    // log.info("updateUmsUserAvatar dto:{}", dto);
+    // return umsUserService.updateUmsUserAvatar(dto.getAvatar(),
+    // dto.getUserId().toString());
+    // }
 
     /**
      * 獲取所有使用者
@@ -191,55 +212,61 @@ public class UmsUserController {
     @GetMapping("/userDetails")
     public R<List<UmsUserDetailsDTO>> userDetails() {
         List<UmsUserDetailsDTO> umsUserDetailsDTOList = umsUserService.listUmsUserDetails();
-        ///TODO 不要返回密碼
+        /// TODO 不要返回密碼
         return R.ok(umsUserDetailsDTOList);
     }
+
     @PostMapping("/delete/userDetail/{id}")
-    public R deleteUserDetailsById( @PathVariable(name = "id") Long userId) {
-        log.info("userId:{}",userId);
+    public R deleteUserDetailsById(@PathVariable(name = "id") Long userId) {
+        log.info("userId:{}", userId);
         return umsUserService.deleteUserDetailsById(userId);
 
     }
-//    @DeleteMapping("/delete/userDetail")
-//    public R deleteUserDetailsById(@RequestParam(name = "id") Long userId) {
-//        log.info("userId:{}",userId);
-//        R r = umsUserService.deleteUserDetailsById(userId);
-//        return r;
-//    }
+
+    // @DeleteMapping("/delete/userDetail")
+    // public R deleteUserDetailsById(@RequestParam(name = "id") Long userId) {
+    // log.info("userId:{}",userId);
+    // R r = umsUserService.deleteUserDetailsById(userId);
+    // return r;
+    // }
     @DeleteMapping("/delete/userDetails")
     public R deleteUserDetailsByIds(@RequestParam(name = "ids") List<Long> userIdList) {
-        log.info("userIdList:{}",userIdList);
+        log.info("userIdList:{}", userIdList);
         R r = umsUserService.deleteUserDetailsByIds(userIdList);
         return r;
     }
+
     @PutMapping("/userDetails/{userId}")
-    public R updateUmsUserAndUserInfo(@RequestBody UmsUpdateUserDetailsVO updateUserDetailsVO, @PathVariable Long userId){
-        log.info("updateUserDetailsVO:{}",updateUserDetailsVO);
-        umsUserService.updateUmsUserDetails(updateUserDetailsVO,userId);
+    public R updateUmsUserAndUserInfo(@RequestBody UmsUpdateUserDetailsVO updateUserDetailsVO,
+            @PathVariable Long userId) {
+        log.info("updateUserDetailsVO:{}", updateUserDetailsVO);
+        umsUserService.updateUmsUserDetails(updateUserDetailsVO, userId);
         return R.ok();
     }
 
     /**
      * 用戶註冊帳號
+     * 
      * @param umsUserRegisterDTO
      * @return
      */
     @PostMapping("/register")
-    public R register(@Validated @RequestBody UmsUserRegisterDTO umsUserRegisterDTO){
+    public R register(@Validated @RequestBody UmsUserRegisterDTO umsUserRegisterDTO) {
         return umsUserService.UmsUserRegister(umsUserRegisterDTO);
     }
 
     /**
      * 創建圖形驗證碼
+     * 
      * @return
      */
     @GetMapping("/captcha")
-    public R createCaptcha(){
+    public R createCaptcha() {
         return umsUserService.createCaptcha();
     }
 
     @PostMapping("/email-verify-code")
-    public R sendVerificationCode(@RequestBody UmsUserEmailVerifyDTO umsUserEmailVerifyDTO){
+    public R sendVerificationCode(@RequestBody UmsUserEmailVerifyDTO umsUserEmailVerifyDTO) {
         return umsUserService.sendVerificationCode(umsUserEmailVerifyDTO);
     }
 
@@ -251,6 +278,7 @@ public class UmsUserController {
 
     /**
      * 修改密碼（需認證）
+     * 
      * @param dto 修改密碼請求
      * @return 結果
      */
@@ -261,6 +289,7 @@ public class UmsUserController {
 
     /**
      * 忘記密碼 - 請求發送重設連結
+     * 
      * @param dto 忘記密碼請求（包含 Email）
      * @return 結果
      */
@@ -271,6 +300,7 @@ public class UmsUserController {
 
     /**
      * 驗證密碼重設 Token 是否有效
+     * 
      * @param token 重設 Token
      * @return 結果
      */
@@ -281,6 +311,7 @@ public class UmsUserController {
 
     /**
      * 重設密碼
+     * 
      * @param dto 重設密碼請求（包含 Token、新密碼）
      * @return 結果
      */

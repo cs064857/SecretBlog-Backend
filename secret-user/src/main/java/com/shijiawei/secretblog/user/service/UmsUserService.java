@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.user.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
@@ -21,24 +22,26 @@ import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
-* ClassName: UmsUserService
-* Description:
-* @Create 2024/9/14 上午3:57
-*/
-public interface UmsUserService extends IService<UmsUser>{
-
+ * ClassName: UmsUserService
+ * Description:
+ * 
+ * @Create 2024/9/14 上午3:57
+ */
+public interface UmsUserService extends IService<UmsUser> {
 
     R userLogin(UmsUserLoginDTO umsUserLoginDTO);
 
     /**
      * 修改用戶頭像
+     * 
      * @param userId
      * @param avatar
      */
-//    void updateAvatar(Long userId, String avatar);
+    // void updateAvatar(Long userId, String avatar);
 
     /**
      * 修改用戶暱稱
+     * 
      * @param userId
      * @param nickName
      */
@@ -46,13 +49,31 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 修改用戶性別
+     * 
      * @param userId
      * @param gender
      */
     void updateGender(Long userId, Integer gender);
 
     /**
+     * 修改用戶生日
+     * 
+     * @param userId
+     * @param birthday 可為null
+     */
+    void updateBirthday(Long userId, LocalDate birthday);
+
+    /**
+     * 修改用戶地址
+     * 
+     * @param userId
+     * @param address 可為null或空字串
+     */
+    void updateAddress(Long userId, String address);
+
+    /**
      * 依使用者 ID 取得使用者基本資料。
+     * 
      * @param id 使用者 ID
      * @return 使用者資料；找不到時可能為 null
      */
@@ -60,6 +81,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 管理員新增用戶。
+     * 
      * @param umsSaveUserVo 新增用戶資料
      */
     @Transactional(rollbackFor = Exception.class)
@@ -67,18 +89,21 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 取得用戶明細清單。
+     * 
      * @return 用戶明細 DTO 清單
      */
     List<UmsUserDetailsDTO> listUmsUserDetails();
 
     /**
      * 取得用戶清單。
+     * 
      * @return 用戶清單
      */
     List<UmsUser> listUmsUser();
 
     /**
      * 批次刪除用戶，採用邏輯刪除
+     * 
      * @param userIdList 用戶 ID 清單
      * @return
      */
@@ -86,6 +111,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 更新用戶細節資料。
+     * 
      * @param updateUserDetailsVO 欲更新的欄位集合
      * @param userId 目標用戶 ID
      */
@@ -93,6 +119,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 更新用戶頭像。
+     * 
      * @param dto 頭像更新資料
      * @return
      */
@@ -100,6 +127,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 用戶註冊
+     * 
      * @param umsUserRegisterDTO 註冊資料
      * @return
      */
@@ -107,6 +135,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 發送註冊用 Email 驗證碼。
+     * 
      * @param umsUserEmailVerifyDTO Email 驗證請求
      * @return
      */
@@ -114,6 +143,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 批次查詢用戶基礎資訊
+     * 
      * @param ids 用戶 ID 清單
      * @return 用戶基礎資訊清單
      */
@@ -129,6 +159,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 取得用戶摘要資訊。
+     * 
      * @param id 用戶 ID
      * @return 用戶摘要 DTO；找不到時可能為 null
      */
@@ -136,6 +167,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 修改密碼（已登入用戶）
+     * 
      * @param dto 修改密碼請求
      * @return
      */
@@ -143,6 +175,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 發送忘記密碼驗證碼
+     * 
      * @param dto 忘記密碼請求（包含 Email）
      * @return
      */
@@ -150,6 +183,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 驗證密碼重設 Token 是否有效
+     * 
      * @param token 重設 Token
      * @return
      */
@@ -157,6 +191,7 @@ public interface UmsUserService extends IService<UmsUser>{
 
     /**
      * 重設密碼
+     * 
      * @param dto 重設密碼請求（包含 Token、新密碼）
      * @return
      */

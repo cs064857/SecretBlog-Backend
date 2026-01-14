@@ -99,7 +99,8 @@ public class SecurityConfig {
                                 "/ums/status/**",
                                 "/ums/auths/**",
                                 "/ums/credentials/**",
-                                "/ums/user/delete/**"
+                                "/ums/user/delete/**",
+                                "/ums/user/userDetails/**" //使用者管理介面更新用戶資訊端點需要ADMIN權限
                         ).hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

@@ -43,7 +43,9 @@
             u.role_id,
             u.create_at,
             u.update_at,
-            ui.gender
+            ui.gender,
+            ui.birthday,
+            ui.address
         FROM ums_user u
         INNER JOIN ums_userInfo ui ON ui.user_id = u.id
         WHERE u.id = #{id}

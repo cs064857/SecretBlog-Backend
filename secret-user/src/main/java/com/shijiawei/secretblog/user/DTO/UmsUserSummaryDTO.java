@@ -44,6 +44,16 @@ public class UmsUserSummaryDTO {
     private LocalDateTime updateAt;
 
     /**
+     * 生日
+     */
+    private String birthday;
+
+    /**
+     * 地址
+     */
+    private String address;
+
+    /**
      * 性別
      */
     private Gender gender;

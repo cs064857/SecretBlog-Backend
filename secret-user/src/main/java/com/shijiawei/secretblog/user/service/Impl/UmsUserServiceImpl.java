@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.user.service.Impl;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -58,13 +59,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* ClassName: UmsUserServiceImpl
-* Description:
-* @Create 2024/9/14 上午3:57
-*/
+ * ClassName: UmsUserServiceImpl
+ * Description:
+ * 
+ * @Create 2024/9/14 上午3:57
+ */
 @Service
 @Slf4j
-public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> implements UmsUserService{
+public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> implements UmsUserService {
 
     @Autowired
     private UmsUserInfoService umsUserInfoService;
@@ -113,40 +115,37 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         return null;
     }
 
-//    @Override
-//    public int updateBatch(List<UmsUser> list) {
-//        return baseMapper.updateBatch(list);
-//    }
-//
-//    @Override
-//    public int updateBatchSelective(List<UmsUser> list) {
-//        return baseMapper.updateBatchSelective(list);
-//    }
-//    @Override
-//    public int batchInsert(List<UmsUser> list) {
-//        return baseMapper.batchInsert(list);
-//    }
-//    @Override
-//    public int batchInsertSelectiveUseDefaultForNull(List<UmsUser> list) {
-//        return baseMapper.batchInsertSelectiveUseDefaultForNull(list);
-//    }
-//    @Override
-//    public int deleteByPrimaryKeyIn(List<Long> list) {
-//        return baseMapper.deleteByPrimaryKeyIn(list);
-//    }
-//
-//    @Override
-//    public int insertOrUpdateSelective(UmsUser record) {
-//        return baseMapper.insertOrUpdateSelective(record);
-//    }
+    // @Override
+    // public int updateBatch(List<UmsUser> list) {
+    // return baseMapper.updateBatch(list);
+    // }
+    //
+    // @Override
+    // public int updateBatchSelective(List<UmsUser> list) {
+    // return baseMapper.updateBatchSelective(list);
+    // }
+    // @Override
+    // public int batchInsert(List<UmsUser> list) {
+    // return baseMapper.batchInsert(list);
+    // }
+    // @Override
+    // public int batchInsertSelectiveUseDefaultForNull(List<UmsUser> list) {
+    // return baseMapper.batchInsertSelectiveUseDefaultForNull(list);
+    // }
+    // @Override
+    // public int deleteByPrimaryKeyIn(List<Long> list) {
+    // return baseMapper.deleteByPrimaryKeyIn(list);
+    // }
+    //
+    // @Override
+    // public int insertOrUpdateSelective(UmsUser record) {
+    // return baseMapper.insertOrUpdateSelective(record);
+    // }
 
-
-
-//    @Override
-//    public int insertOrUpdate(UmsUser record) {
-//        return baseMapper.insertOrUpdate(record);
-//    }
-
+    // @Override
+    // public int insertOrUpdate(UmsUser record) {
+    // return baseMapper.insertOrUpdate(record);
+    // }
 
     @Override
     public UmsUser selectByPrimaryKey(Long id) {
@@ -159,145 +158,143 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     /**
      * 管理員新增用戶接口
+     * 
      * @param umsSaveUserVo
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void saveUmsUser(UmsSaveUserVo umsSaveUserVo) {
-        //加密密碼
+        // 加密密碼
         String encode = passwordEncoder.encode(umsSaveUserVo.getPassword());
         umsSaveUserVo.setPassword(encode);
-        log.info("加密過後密碼:{}",encode);
+        log.info("加密過後密碼:{}", encode);
 
-//        Role roleId = umsSaveUserVo.getRoleId();
-//        log.info("roleId:{}",roleId);
+        // Role roleId = umsSaveUserVo.getRoleId();
+        // log.info("roleId:{}",roleId);
 
-        UmsUser umsUser = new UmsUser();//缺少avatar
+        UmsUser umsUser = new UmsUser();// 缺少avatar
         UmsUserInfo userInfo = new UmsUserInfo();
 
-
-        //獲取user與userInfo主鍵
+        // 獲取user與userInfo主鍵
         long user_id = IdWorker.getId(umsUser);
         long userInfo_id = IdWorker.getId(userInfo);
         log.info("user_id:{}", user_id);
         log.info("userInfo_id:{}", userInfo_id);
 
-        //設置user資料
-        ///TODO 缺少Avatar屬性
+        // 設置user資料
+        /// TODO 缺少Avatar屬性
         umsUser.setId(user_id);
         umsUser.setUserinfoId(userInfo_id);
-        ///TODO 判斷是否有權限設定RoleId
-        umsUser.setRoleId(umsSaveUserVo.getRoleId());//RoleName經過mybatisPlus枚舉轉換器映射成資料庫中roleId需要的類型
-        BeanUtils.copyProperties(umsSaveUserVo, umsUser,"roleId");
+        /// TODO 判斷是否有權限設定RoleId
+        umsUser.setRoleId(umsSaveUserVo.getRoleId());// RoleName經過mybatisPlus枚舉轉換器映射成資料庫中roleId需要的類型
+        BeanUtils.copyProperties(umsSaveUserVo, umsUser, "roleId");
         umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));
 
-        //設置userInfo資料
+        // 設置userInfo資料
         userInfo.setId(userInfo_id);
         userInfo.setUserId(user_id);
         userInfo.setNotifyEnabled((byte) 1);
 
-
         userInfo.setGender(umsSaveUserVo.getGender());
 
-        BeanUtils.copyProperties(umsSaveUserVo, userInfo,"gender");
-        log.info("umsUserInfo:{}",userInfo);
+        BeanUtils.copyProperties(umsSaveUserVo, userInfo, "gender");
+        log.info("umsUserInfo:{}", userInfo);
         umsUserInfoService.saveUmsUserInfo(userInfo);
 
-        log.info("umsUser:{}",umsUser);
+        log.info("umsUser:{}", umsUser);
         this.baseMapper.insert(umsUser);
 
-
         UmsCredentials umsCredentials = new UmsCredentials();
-        BeanUtils.copyProperties(umsSaveUserVo,umsCredentials);
+        BeanUtils.copyProperties(umsSaveUserVo, umsCredentials);
         umsCredentials.setUserId(user_id);
-        log.info("umsCredentials:{}",umsCredentials);
+        log.info("umsCredentials:{}", umsCredentials);
         umsCredentialsService.save(umsCredentials);
 
         UmsAuths umsAuths = new UmsAuths();
         umsAuths.setPassword(umsSaveUserVo.getPassword());
         umsAuths.setUserId(user_id);
 
-        log.info("umsAuths:{}",umsAuths);
+        log.info("umsAuths:{}", umsAuths);
         umsAuthsService.save(umsAuths);
 
     }
 
     @Override
     public List<UmsUserDetailsDTO> listUmsUserDetails() {
-        ///TODO 20250815 優化:將方式改成利用Map或者直接利用Mapper SQL聯合查詢
+        /// TODO 20250815 優化:將方式改成利用Map或者直接利用Mapper SQL聯合查詢
 
-        //獲取所有用戶
+        // 獲取所有用戶
         List<UmsUser> umsUserList = listUmsUser();
         log.info("umsUserList:{}", umsUserList);
-        //獲取所有用戶資訊
+        // 獲取所有用戶資訊
 
         List<UmsUserInfo> umsUserInfoList = umsUserInfoService.listUmsUserInfo();
-
 
         List<UmsAuths> umsAuthsList = umsAuthsService.list();
         List<UmsCredentials> umsCredentialsList = umsCredentialsService.list();
 
-
         log.info("umsUserInfoList:{}", umsUserInfoList);
-        //獲取所有權限
+        // 獲取所有權限
         List<UmsRole> umsRoleList = umsRoleService.list();
-        log.info("umsumsRoleList:{}",umsRoleList);
+        log.info("umsumsRoleList:{}", umsRoleList);
         List<UmsUserDetailsDTO> umsUserDetailsDTOList = umsUserList.stream().map(umsUser -> {
-            //將資料封裝進UmsUserDetailsDTO
+            // 將資料封裝進UmsUserDetailsDTO
             UmsUserDetailsDTO umsUserDetailsDTO = new UmsUserDetailsDTO();
 
             BeanUtils.copyProperties(umsUser, umsUserDetailsDTO);
             umsUserDetailsDTO.setRoleId(umsUser.getRoleId());
             umsUserInfoList.stream()
-                    .filter(item-> Objects.equals(item.getUserId(), umsUser.getId()))
-                    .findFirst()//取一個
-                    .ifPresent(item-> {
-                        BeanUtils.copyProperties(item, umsUserDetailsDTO,"id");
+                    .filter(item -> Objects.equals(item.getUserId(), umsUser.getId()))
+                    .findFirst()// 取一個
+                    .ifPresent(item -> {
+                        BeanUtils.copyProperties(item, umsUserDetailsDTO, "id");
                         umsUserDetailsDTO.setUserInfoId(item.getId());
-//                        Integer gender = item.getGender();
-//                        switch (gender) {
-//                            case 1:
-//                                umsUserDetailsDTO.setGender("男");
-//                                break;
-//                            case 2:
-//                                umsUserDetailsDTO.setGender("女");
-//                                break;
-//                            case 3:
-//                                umsUserDetailsDTO.setGender("不願透露");
-//                                break;
-//                            default:
-//                                umsUserDetailsDTO.setGender("出現異常");
-//                                break;
-//                        }
-                    });//若存在則拷貝資料至DTO中
+                        // Integer gender = item.getGender();
+                        // switch (gender) {
+                        // case 1:
+                        // umsUserDetailsDTO.setGender("男");
+                        // break;
+                        // case 2:
+                        // umsUserDetailsDTO.setGender("女");
+                        // break;
+                        // case 3:
+                        // umsUserDetailsDTO.setGender("不願透露");
+                        // break;
+                        // default:
+                        // umsUserDetailsDTO.setGender("出現異常");
+                        // break;
+                        // }
+                    });// 若存在則拷貝資料至DTO中
 
-//            if (umsUserInfo != null) {
-//                BeanUtils.copyProperties(umsUserInfo, umsUserDetailsDTO);
-//            }
+            // if (umsUserInfo != null) {
+            // BeanUtils.copyProperties(umsUserInfo, umsUserDetailsDTO);
+            // }
 
             umsRoleList.stream().filter(item -> Objects.equals(item.getId(), umsUser.getRoleId()))
-                    .findFirst()//取一個
-                    .ifPresent(item->BeanUtils.copyProperties(item,umsUserDetailsDTO,"id"));//若存在則拷貝資料至DTO中
+                    .findFirst()// 取一個
+                    .ifPresent(item -> BeanUtils.copyProperties(item, umsUserDetailsDTO, "id"));// 若存在則拷貝資料至DTO中
 
-//            if (umsRole != null) {
-//                BeanUtils.copyProperties(umsRole, umsUserDetailsDTO);
-//
-            umsAuthsList.stream().filter(item ->Objects.equals(item.getUserId(),umsUser.getId())).findFirst().ifPresent(item->BeanUtils.copyProperties(item,umsUserDetailsDTO,"id"));
-            umsCredentialsList.stream().filter(item ->Objects.equals(item.getUserId(),umsUser.getId())).findFirst().ifPresent(item->BeanUtils.copyProperties(item,umsUserDetailsDTO,"id"));
+            // if (umsRole != null) {
+            // BeanUtils.copyProperties(umsRole, umsUserDetailsDTO);
+            //
+            umsAuthsList.stream().filter(item -> Objects.equals(item.getUserId(), umsUser.getId())).findFirst()
+                    .ifPresent(item -> BeanUtils.copyProperties(item, umsUserDetailsDTO, "id"));
+            umsCredentialsList.stream().filter(item -> Objects.equals(item.getUserId(), umsUser.getId())).findFirst()
+                    .ifPresent(item -> BeanUtils.copyProperties(item, umsUserDetailsDTO, "id"));
             umsUserDetailsDTO.setAvatar(AvatarUrlHelper.toPublicUrl(umsUserDetailsDTO.getAvatar(), minioDomain));
             log.info("umsUserDetailsDTO:{}", umsUserDetailsDTO);
             return umsUserDetailsDTO;
         }).toList();
 
-        log.info("umsUserDetailsDTOList:{}", umsUserDetailsDTOList );
+        log.info("umsUserDetailsDTOList:{}", umsUserDetailsDTOList);
 
-        //敏感資料脫敏處理
+        // 敏感資料脫敏處理
         umsUserDetailsDTOList.forEach(dto -> {
-            //清除密碼
+            // 清除密碼
             dto.setPassword(null);
-            //清除地址
+            // 清除地址
             dto.setAddress(null);
-            //手機號碼遮罩(中間5碼)
+            // 手機號碼遮罩(中間5碼)
             String phone = dto.getPhoneNumber();
             if (phone != null && phone.length() >= 7) {
                 String masked = phone.substring(0, 3) + "*****" + phone.substring(phone.length() - 2);
@@ -308,12 +305,10 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         return umsUserDetailsDTOList;
     }
 
-
-
     @Override
     public List<UmsUser> listUmsUser() {
 
-        List<UmsUser> users = this.baseMapper.selectList(new LambdaQueryWrapper<UmsUser>().eq(UmsUser::getDeleted,0));
+        List<UmsUser> users = this.baseMapper.selectList(new LambdaQueryWrapper<UmsUser>().eq(UmsUser::getDeleted, 0));
         users.forEach(user -> user.setAvatar(AvatarUrlHelper.toPublicUrl(user.getAvatar(), minioDomain)));
         return users;
     }
@@ -322,35 +317,38 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
     @Override
     public R deleteUserDetailsByIds(List<Long> userIdList) {
 
-//        List<UmsUser> umsUserList = this.baseMapper.selectBatchIds(userIdList);
-        //利用用戶ID查出用戶資訊ID
+        // List<UmsUser> umsUserList = this.baseMapper.selectBatchIds(userIdList);
+        // 利用用戶ID查出用戶資訊ID
 
+        // List<Long> userinfoIdList =
+        // umsUserList.stream().map(UmsUser::getUserinfoId).toList();
 
-//        List<Long> userinfoIdList = umsUserList.stream().map(UmsUser::getUserinfoId).toList();
-
-        //刪除User資料,將deleted欄位改成1
+        // 刪除User資料,將deleted欄位改成1
         int deleted = this.baseMapper.deleteByIds(userIdList);
-        if(deleted==0){
-//            throw new CustomRuntimeException("500","刪除失敗");
+        if (deleted == 0) {
+            // throw new CustomRuntimeException("500","刪除失敗");
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.USER_INTERNAL_ERROR)
                     .detailMessage("未能獲得用戶基本資料")
-                    .data(Map.of("userIds", ObjectUtils.defaultIfNull(userIdList,"")))
+                    .data(Map.of("userIds", ObjectUtils.defaultIfNull(userIdList, "")))
                     .build();
         }
         // 刪除UserInfo資料
-//        umsUserInfoService.removeByIds(userinfoIdList);
+        // umsUserInfoService.removeByIds(userinfoIdList);
         // 刪除Auths資料
-//        umsAuthsService.remove(new LambdaQueryWrapper<UmsAuths>().in(UmsAuths::getUserId, userIdList));
+        // umsAuthsService.remove(new
+        // LambdaQueryWrapper<UmsAuths>().in(UmsAuths::getUserId, userIdList));
         // 刪除Credentials資料
-//        umsCredentialsService.remove(new LambdaQueryWrapper<UmsCredentials>().in(UmsCredentials::getUserId, userIdList));
+        // umsCredentialsService.remove(new
+        // LambdaQueryWrapper<UmsCredentials>().in(UmsCredentials::getUserId,
+        // userIdList));
 
         return R.ok();
     }
 
     @Override
     public void updateUmsUserDetails(UmsUpdateUserDetailsVO updateUserDetailsVO, Long userId) {
-        if(!updateUserDetailsVO.isEmpty()){//若有需要修改的屬性
+        if (!updateUserDetailsVO.isEmpty()) {// 若有需要修改的屬性
             updateUserDetailsVO.setAvatar(AvatarUrlHelper.toStoragePath(updateUserDetailsVO.getAvatar(), minioDomain));
             UmsUser user = new UmsUser();
             UmsUserInfo userInfo = new UmsUserInfo();
@@ -359,83 +357,85 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             BeanUtils.copyProperties(updateUserDetailsVO, userInfo);
             BeanUtils.copyProperties(updateUserDetailsVO, umsCredentials);
 
-            if(!user.isEmpty()){//若user中有需要修改屬性
+            if (!user.isEmpty()) {// 若user中有需要修改屬性
                 user.setId(userId);
                 user.setUpdateAt(LocalDateTime.now());
                 this.baseMapper.updateById(user);
             }
-            if(!userInfo.isEmpty()){//若user中有需要修改屬性
+            if (!userInfo.isEmpty()) {// 若user中有需要修改屬性
                 userInfo.setId(userId);
                 userInfo.setUpdateAt(LocalDateTime.now());
-//                umsUserInfoService.updateById(userInfo);
-                umsUserInfoService.update(userInfo,new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getUserId, userId));
+                // umsUserInfoService.updateById(userInfo);
+                umsUserInfoService.update(userInfo,
+                        new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getUserId, userId));
             }
 
-            if(!umsCredentials.isEmpty()){//若userInfo中有需要修改屬性
+            if (!umsCredentials.isEmpty()) {// 若userInfo中有需要修改屬性
                 umsCredentials.setUserId(userId);
                 umsCredentials.setUpdateAt(LocalDateTime.now());
-                umsCredentialsService.update(umsCredentials,new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getUserId, userId));
+                umsCredentialsService.update(umsCredentials,
+                        new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getUserId, userId));
             }
-
 
         } else {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.PARAM_MISSING)
                     .detailMessage("未接受到任何需要修改的數據")
                     .data(Map.of(
-                            "userId", Objects.requireNonNullElse(userId, -1L)
-                    ))
+                            "userId", Objects.requireNonNullElse(userId, -1L)))
                     .build();
         }
 
-//        Field[] userInfoFields = userInfo.getClass().getDeclaredFields();
-//        ArrayList<Object> userInfoValues = new ArrayList<>();
-//
-//        for (Field userInfoField : userInfoFields) {
-//            userInfoField.setAccessible(true);  // 設置可訪問私有屬性
-//
-//            Object userInfoValue = null;  // 獲取屬性的值
-//            try {
-//                userInfoValue = userInfoField.get(userInfo);
-//
-//            } catch (IllegalAccessException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            if (userInfoValue == null) {
-//                System.out.println(userInfoField.getName() + " is null");
-//            } else {
-//                System.out.println(userInfoField.getName() + " is not null, value: " + userInfoValue);
-//                userInfoValues.add(userInfoValue);
-//            }
-//
-//        }
-//
-//        ArrayList<Object> userValues = new ArrayList<>();
-//        Field[] userFields = umsUser.getClass().getDeclaredFields();
-//        for (Field userField : userFields) {
-//            userField.setAccessible(true);  // 設置可訪問私有屬性
-//
-//            Object userValue = null;  // 獲取屬性的值
-//            try {
-//
-//                userValue = userField.get(umsUser);
-//            } catch (IllegalAccessException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            if (userValue == null) {
-//                System.out.println(userField.getName() + " is null");
-//            } else {
-//                System.out.println(userField.getName() + " is not null, value: " + userValue);
-//                userValues.add(userValue);
-//            }
-//        }
-//
-////        log.info("fields:{}", fields);
-//        log.info("userInfoValues:{}", userInfoValues);
-//        log.info("userValues:{}", userValues);
-//        System.out.println();
+        // Field[] userInfoFields = userInfo.getClass().getDeclaredFields();
+        // ArrayList<Object> userInfoValues = new ArrayList<>();
+        //
+        // for (Field userInfoField : userInfoFields) {
+        // userInfoField.setAccessible(true); // 設置可訪問私有屬性
+        //
+        // Object userInfoValue = null; // 獲取屬性的值
+        // try {
+        // userInfoValue = userInfoField.get(userInfo);
+        //
+        // } catch (IllegalAccessException e) {
+        // throw new RuntimeException(e);
+        // }
+        //
+        // if (userInfoValue == null) {
+        // System.out.println(userInfoField.getName() + " is null");
+        // } else {
+        // System.out.println(userInfoField.getName() + " is not null, value: " +
+        // userInfoValue);
+        // userInfoValues.add(userInfoValue);
+        // }
+        //
+        // }
+        //
+        // ArrayList<Object> userValues = new ArrayList<>();
+        // Field[] userFields = umsUser.getClass().getDeclaredFields();
+        // for (Field userField : userFields) {
+        // userField.setAccessible(true); // 設置可訪問私有屬性
+        //
+        // Object userValue = null; // 獲取屬性的值
+        // try {
+        //
+        // userValue = userField.get(umsUser);
+        // } catch (IllegalAccessException e) {
+        // throw new RuntimeException(e);
+        // }
+        //
+        // if (userValue == null) {
+        // System.out.println(userField.getName() + " is null");
+        // } else {
+        // System.out.println(userField.getName() + " is not null, value: " +
+        // userValue);
+        // userValues.add(userValue);
+        // }
+        // }
+        //
+        //// log.info("fields:{}", fields);
+        // log.info("userInfoValues:{}", userInfoValues);
+        // log.info("userValues:{}", userValues);
+        // System.out.println();
 
     }
 
@@ -470,8 +470,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             if (update > 0) {
                 // 使用本地消息表記錄作者資訊更新消息，確保最終一致性
                 String publicAvatar = AvatarUrlHelper.toPublicUrl(storedAvatar, minioDomain);
-                AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, publicAvatar, System.currentTimeMillis());
-
+                AuthorInfoUpdateMessage authorInfoUpdateMessage = new AuthorInfoUpdateMessage(userId, publicAvatar,
+                        System.currentTimeMillis());
 
                 umsLocalMessageService.createPendingMessage(authorInfoUpdateMessage);
                 return R.ok();
@@ -483,7 +483,6 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                 .data(Map.of("userId", ObjectUtils.defaultIfNull(userId, "")))
                 .build();
     }
-
 
     @Override
     public void updateNickname(Long userId, String nickName) {
@@ -511,8 +510,27 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         umsUserInfoService.update(updateWrapper);
     }
 
+    @Override
+    public void updateBirthday(Long userId, LocalDate birthday) {
+        checkPermission(userId);
+        LambdaUpdateWrapper<UmsUserInfo> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(UmsUserInfo::getUserId, userId)
+                .set(UmsUserInfo::getBirthday, birthday);
+        umsUserInfoService.update(updateWrapper);
+    }
+
+    @Override
+    public void updateAddress(Long userId, String address) {
+        checkPermission(userId);
+        LambdaUpdateWrapper<UmsUserInfo> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(UmsUserInfo::getUserId, userId)
+                .set(UmsUserInfo::getAddress, address);
+        umsUserInfoService.update(updateWrapper);
+    }
+
     /**
      * 用戶註冊接口
+     * 
      * @param umsUserRegisterDTO
      * @return
      */
@@ -529,26 +547,23 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         BeanUtils.copyProperties(umsUserRegisterDTO, umsUser);
         BeanUtils.copyProperties(umsUserRegisterDTO, umsUserInfo);
 
-        //獲取user與userInfo主鍵
+        // 獲取user與userInfo主鍵
         long user_id = IdWorker.getId(umsUser);
         long userInfo_id = IdWorker.getId(umsUserInfo);
 
-
-        //設置user資料
+        // 設置user資料
         umsUser.setId(user_id);
         umsUser.setUserinfoId(userInfo_id);
-        umsUser.setRoleId(Role.NORMALUSER);//設置角色為普通用戶
-        umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));//設置默認頭像
-        //設置userInfo資料
+        umsUser.setRoleId(Role.NORMALUSER);// 設置角色為普通用戶
+        umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));// 設置默認頭像
+        // 設置userInfo資料
         umsUserInfo.setId(userInfo_id);
         umsUserInfo.setUserId(user_id);
         umsUserInfo.setNotifyEnabled((byte) 1);
 
-
-
-        //獲得用戶輸入的驗證碼
+        // 獲得用戶輸入的驗證碼
         String vaildCode = umsUserRegisterDTO.getEmailValidCode();
-        //獲得用戶的信箱
+        // 獲得用戶的信箱
         String email = umsUserRegisterDTO.getEmail();
 
         // 設置預設帳號名稱 (Email 前綺)
@@ -559,7 +574,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         }
 
         // 再次判斷帳號/信箱是否已被占用（避免繞過寄送驗證碼流程）
-        long emailIsExists = umsCredentialsService.count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
+        long emailIsExists = umsCredentialsService
+                .count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
         if (emailIsExists > 0) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.USER_EMAIL_ALREADY_EXIST)
@@ -568,7 +584,8 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         }
 
         String accountName = umsUserInfo.getAccountName();
-        long accountNameIsExists = umsUserInfoService.count(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName, accountName));
+        long accountNameIsExists = umsUserInfoService
+                .count(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName, accountName));
         if (accountNameIsExists > 0) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.USER_ACCOUNT_ALREADY_EXIST)
@@ -579,42 +596,40 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         // 從 Redis 取得驗證碼並校驗（Key 統一由 RedisCacheKey 管理）
         String bucket = RedisCacheKey.USER_EMAIL_VALID_CODE.format(email);
         String validCodeFromRedis = (String) redissonClient.getBucket(bucket).get();
-        //判斷驗證碼是否正確
-        if(vaildCode.equals(validCodeFromRedis)){
+        // 判斷驗證碼是否正確
+        if (vaildCode.equals(validCodeFromRedis)) {
 
-            //將用戶資料插入資料庫
+            // 將用戶資料插入資料庫
             baseMapper.insert(umsUser);
             umsUserInfoService.saveUmsUserInfo(umsUserInfo);
             UmsAuths umsAuths = new UmsAuths();
             umsAuths.setUserId(user_id);
             umsAuths.setPassword(umsUserRegisterDTO.getPassword());
-            log.info("umsAuths:{}",umsAuths);
+            log.info("umsAuths:{}", umsAuths);
             umsAuthsService.save(umsAuths);
 
             UmsCredentials umsCredentials = new UmsCredentials();
             umsCredentials.setUserId(user_id);
             umsCredentials.setEmail(umsUserRegisterDTO.getEmail());
-            log.info("umsCredentials:{}",umsCredentials);
+            log.info("umsCredentials:{}", umsCredentials);
             umsCredentialsService.save(umsCredentials);
 
-            //將Redis中保存的驗證碼刪除
+            // 將Redis中保存的驗證碼刪除
             redissonClient.getBucket(bucket).deleteAsync();
             return R.ok();
-        }else {
-            //回傳驗證碼錯誤
+        } else {
+            // 回傳驗證碼錯誤
             return new R(HttpCodeEnum.CAPTCHA_ERR.getCode(), HttpCodeEnum.CAPTCHA_ERR.getDescription());
         }
 
     }
 
-
     @Override
     public R sendVerificationCode(UmsUserEmailVerifyDTO umsUserEmailVerifyDTO) {
 
-        //根據IP判斷進行限流,短時間內嘗試過多次則暫時禁止
+        // 根據IP判斷進行限流,短時間內嘗試過多次則暫時禁止
         String remoteAddr = httpServletRequest.getRemoteAddr();
-//        log.info("remoteAddr：{}",remoteAddr);
-
+        // log.info("remoteAddr：{}",remoteAddr);
 
         /*
          * Redis限流
@@ -622,11 +637,11 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         // Redis 中 IP 嘗試計數的 Key（寄送驗證碼限流）
         String rateLimitBucket = RedisCacheKey.USER_EMAIL_VALID_CODE_RATE_LIMIT_IP.format(remoteAddr);
 
-
-        ///TODO 調整驗證碼嘗試限流時間，目前30秒3次
-//        RRateLimiter rateLimiter = redissonClient.getRateLimiter(rateLimitBucket);
-//        rateLimiter.trySetRate(RateType.OVERALL,3,30, RateIntervalUnit.SECONDS);
-        RRateLimiter rateLimiter = redisRateLimiterUtils.setRedisRateLimiter(rateLimitBucket, RateType.PER_CLIENT, 3, 30, RateIntervalUnit.SECONDS);
+        /// TODO 調整驗證碼嘗試限流時間，目前30秒3次
+        // RRateLimiter rateLimiter = redissonClient.getRateLimiter(rateLimitBucket);
+        // rateLimiter.trySetRate(RateType.OVERALL,3,30, RateIntervalUnit.SECONDS);
+        RRateLimiter rateLimiter = redisRateLimiterUtils.setRedisRateLimiter(rateLimitBucket, RateType.PER_CLIENT, 3,
+                30, RateIntervalUnit.SECONDS);
 
         String email = umsUserEmailVerifyDTO.getEmail();
         String accountName = StringUtils.trimToNull(umsUserEmailVerifyDTO.getAccountName());
@@ -634,16 +649,18 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
             accountName = email.split("@")[0];
         }
 
-        long emailIsExists = umsCredentialsService.count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
-        if(emailIsExists>0){
+        long emailIsExists = umsCredentialsService
+                .count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
+        if (emailIsExists > 0) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.USER_EMAIL_ALREADY_EXIST)
-                    .data(Map.of("email", StringUtils.defaultString(email,"")))
+                    .data(Map.of("email", StringUtils.defaultString(email, "")))
                     .build();
         }
 
         if (StringUtils.isNotBlank(accountName)) {
-            long accountNameIsExists = umsUserInfoService.count(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName, accountName));
+            long accountNameIsExists = umsUserInfoService
+                    .count(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName, accountName));
             if (accountNameIsExists > 0) {
                 throw BusinessRuntimeException.builder()
                         .iErrorCode(ResultCode.USER_ACCOUNT_ALREADY_EXIST)
@@ -655,7 +672,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         // 嘗試獲取許可
         if (redisRateLimiterUtils.tryAcquire(rateLimiter)) {
             /*
-              成功獲取許可，執行業務邏輯
+             * 成功獲取許可，執行業務邏輯
              */
 
             // 1. 校驗圖形驗證碼
@@ -670,8 +687,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                         .detailMessage("圖形驗證碼校驗失敗")
                         .data(Map.of(
                                 "captchaKey", StringUtils.defaultString(captchaKey, ""),
-                                "captchaExists", StringUtils.isNotBlank(captchaInRedis)
-                        ))
+                                "captchaExists", StringUtils.isNotBlank(captchaInRedis)))
                         .build();
             }
 
@@ -680,12 +696,12 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
             Random random = new Random();
             String VaildCodeString = String.format("%06d", random.nextInt(90000) + 10000);
-//            log.debug("驗證碼：{}", VaildCodeString);
+            // log.debug("驗證碼：{}", VaildCodeString);
 
             // 將驗證碼保存在 Redis 中，設置過期時間為 15 分鐘（Key 統一由 RedisCacheKey 管理）
             String bucket = RedisCacheKey.USER_EMAIL_VALID_CODE.format(email);
-            //Redis快取中儲存新的驗證碼
-            redissonClient.getBucket(bucket).set(VaildCodeString, Duration.of(15,ChronoUnit.MINUTES));
+            // Redis快取中儲存新的驗證碼
+            redissonClient.getBucket(bucket).set(VaildCodeString, Duration.of(15, ChronoUnit.MINUTES));
 
             // 發送驗證碼到用戶的信箱中
             try {
@@ -707,8 +723,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                     .detailMessage("寄送信箱驗證碼觸發限流")
                     .data(Map.of(
                             "ip", StringUtils.defaultString(remoteAddr, ""),
-                            "email", StringUtils.defaultString(email, "")
-                    ))
+                            "email", StringUtils.defaultString(email, "")))
                     .build();
         }
     }
@@ -719,34 +734,35 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         userBasicDTOS.forEach(dto -> dto.setAvatar(AvatarUrlHelper.toPublicUrl(dto.getAvatar(), minioDomain)));
         return userBasicDTOS;
     }
+
     @Transactional(rollbackFor = Exception.class)
     @Override
     public R deleteUserDetailsById(Long userId) {
-        //將user的deleted欄位設置為1(邏輯刪除)
+        // 將user的deleted欄位設置為1(邏輯刪除)
         int deleted = this.baseMapper.deleteById(userId);
-        if(deleted == 0){
-//            throw new CustomRuntimeException("500","刪除失敗");
+        if (deleted == 0) {
+            // throw new CustomRuntimeException("500","刪除失敗");
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.DELETE_FAILED)
                     .detailMessage("刪除用戶失敗")
-                    .data(Map.of("userId", ObjectUtils.defaultIfNull(userId,"")))
+                    .data(Map.of("userId", ObjectUtils.defaultIfNull(userId, "")))
                     .build();
         }
-//        // 刪除使用者資訊
-//        if (!umsUserInfoService.remove(new LambdaQueryWrapper<UmsUserInfo>()
-//                .eq(UmsUserInfo::getUserId, userId))) {
-//            throw new CustomRuntimeException("500", "刪除使用者資訊失敗", HttpStatus.BAD_REQUEST);
-//        }
-//        // 刪除授權資料
-//        if (!umsAuthsService.remove(new LambdaQueryWrapper<UmsAuths>()
-//                .eq(UmsAuths::getUserId, userId))) {
-//            throw new CustomRuntimeException("500", "刪除授權資訊失敗", HttpStatus.BAD_REQUEST);
-//        }
-//        // 刪除憑證資料
-//        if (!umsCredentialsService.remove(new LambdaQueryWrapper<UmsCredentials>()
-//                .eq(UmsCredentials::getUserId, userId))) {
-//            throw new CustomRuntimeException("500", "刪除憑證資料失敗", HttpStatus.BAD_REQUEST);
-//        }
+        // // 刪除使用者資訊
+        // if (!umsUserInfoService.remove(new LambdaQueryWrapper<UmsUserInfo>()
+        // .eq(UmsUserInfo::getUserId, userId))) {
+        // throw new CustomRuntimeException("500", "刪除使用者資訊失敗", HttpStatus.BAD_REQUEST);
+        // }
+        // // 刪除授權資料
+        // if (!umsAuthsService.remove(new LambdaQueryWrapper<UmsAuths>()
+        // .eq(UmsAuths::getUserId, userId))) {
+        // throw new CustomRuntimeException("500", "刪除授權資訊失敗", HttpStatus.BAD_REQUEST);
+        // }
+        // // 刪除憑證資料
+        // if (!umsCredentialsService.remove(new LambdaQueryWrapper<UmsCredentials>()
+        // .eq(UmsCredentials::getUserId, userId))) {
+        // throw new CustomRuntimeException("500", "刪除憑證資料失敗", HttpStatus.BAD_REQUEST);
+        // }
         return R.ok();
 
     }
@@ -797,8 +813,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         // 根據 userId 查詢用戶的認證資訊
         UmsAuths umsAuths = umsAuthsService.getOne(
-                new LambdaQueryWrapper<UmsAuths>().eq(UmsAuths::getUserId, userId)
-        );
+                new LambdaQueryWrapper<UmsAuths>().eq(UmsAuths::getUserId, userId));
 
         if (umsAuths == null) {
             throw BusinessRuntimeException.builder()
@@ -834,15 +849,13 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         String remoteAddr = httpServletRequest.getRemoteAddr();
         String rateLimitBucket = RedisCacheKey.USER_FORGOT_PASSWORD_RATE_LIMIT_IP.format(remoteAddr);
         RRateLimiter rateLimiter = redisRateLimiterUtils.setRedisRateLimiter(
-                rateLimitBucket, RateType.PER_CLIENT, 3, 60, RateIntervalUnit.SECONDS
-        );
+                rateLimitBucket, RateType.PER_CLIENT, 3, 60, RateIntervalUnit.SECONDS);
         // 設置過期時間, 避免永久存在導致占用Redis
         rateLimiter.expire(Duration.of(5, ChronoUnit.MINUTES));
 
         // 檢查 Email 是否存在
         UmsCredentials credentials = umsCredentialsService.getOne(
-                new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email)
-        );
+                new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
 
         if (credentials == null) {
             throw BusinessRuntimeException.builder()
@@ -932,8 +945,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         // 更新密碼
         UmsAuths umsAuths = umsAuthsService.getOne(
-                new LambdaQueryWrapper<UmsAuths>().eq(UmsAuths::getUserId, userId)
-        );
+                new LambdaQueryWrapper<UmsAuths>().eq(UmsAuths::getUserId, userId));
 
         if (umsAuths == null) {
             throw BusinessRuntimeException.builder()
@@ -964,16 +976,14 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                     .detailMessage("notifyEnabled 僅允許為 0 或 1")
                     .data(Map.of(
                             "userId", ObjectUtils.defaultIfNull(userId, ""),
-                            "notifyEnabled", ObjectUtils.defaultIfNull(notifyEnabled, "")
-                    ))
+                            "notifyEnabled", ObjectUtils.defaultIfNull(notifyEnabled, "")))
                     .build();
         }
 
         boolean updated = umsUserInfoService.update(new LambdaUpdateWrapper<UmsUserInfo>()
                 .eq(UmsUserInfo::getUserId, userId)
                 .set(UmsUserInfo::getNotifyEnabled, notifyEnabled)
-                .set(UmsUserInfo::getUpdateAt, LocalDateTime.now())
-        );
+                .set(UmsUserInfo::getUpdateAt, LocalDateTime.now()));
 
         if (!updated) {
             throw BusinessRuntimeException.builder()
@@ -981,8 +991,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
                     .detailMessage("更新通知總開關失敗")
                     .data(Map.of(
                             "userId", ObjectUtils.defaultIfNull(userId, ""),
-                            "notifyEnabled", ObjectUtils.defaultIfNull(notifyEnabled, "")
-                    ))
+                            "notifyEnabled", ObjectUtils.defaultIfNull(notifyEnabled, "")))
                     .build();
         }
 
