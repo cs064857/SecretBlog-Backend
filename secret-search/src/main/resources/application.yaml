@@ -5,9 +5,9 @@ spring:
   application:
     name: secret-search
   elasticsearch:
-    username: ${ELASTICSEARCH_USERNAME:elastic}
-    password: ${ELASTICSEARCH_PASSWORD:password}
-    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${ELASTICSEARCH_USERNAME}
+    password: ${ELASTICSEARCH_PASSWORD}
+    uris: ${ELASTICSEARCH_URIS}
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
