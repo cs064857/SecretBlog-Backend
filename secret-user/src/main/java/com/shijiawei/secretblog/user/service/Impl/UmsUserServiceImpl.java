@@ -290,6 +290,21 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         }).toList();
 
         log.info("umsUserDetailsDTOList:{}", umsUserDetailsDTOList );
+
+        //敏感資料脫敏處理
+        umsUserDetailsDTOList.forEach(dto -> {
+            //清除密碼
+            dto.setPassword(null);
+            //清除地址
+            dto.setAddress(null);
+            //手機號碼遮罩(中間5碼)
+            String phone = dto.getPhoneNumber();
+            if (phone != null && phone.length() >= 7) {
+                String masked = phone.substring(0, 3) + "*****" + phone.substring(phone.length() - 2);
+                dto.setPhoneNumber(masked);
+            }
+        });
+
         return umsUserDetailsDTOList;
     }
 
