@@ -24,6 +24,15 @@ public class CommonmarkUtils {
         return sanitizeHtml(html);
     }
 
+    private static final Safelist HTML_SAFELIST = Safelist.relaxed()
+            //允許code/pre的class，避免語法高亮被清掉(若前端有用到)
+            .addAttributes("code", "class")
+            .addAttributes("pre", "class");
+
+    private static final Document.OutputSettings HTML_OUTPUT_SETTINGS = new Document.OutputSettings()
+            //避免重新排版造成多餘空白或格式差異
+            .prettyPrint(false);
+
     /**
      * HTML白名單清洗(防止XSS)
      * @param html
@@ -33,17 +42,7 @@ public class CommonmarkUtils {
         if (html == null) {
             return null;
         }
-
-        Safelist safelist = Safelist.relaxed()
-                //允許code/pre 的 class，避免語法高亮被清掉(若前端有用到)
-                .addAttributes("code", "class")
-                .addAttributes("pre", "class");
-
-        Document.OutputSettings outputSettings = new Document.OutputSettings()
-                //避免重新排版造成多餘空白或格式差異
-                .prettyPrint(false);
-
-        return Jsoup.clean(html, "", safelist, outputSettings);
+        return Jsoup.clean(html, "", HTML_SAFELIST, HTML_OUTPUT_SETTINGS);
     }
 
 }
