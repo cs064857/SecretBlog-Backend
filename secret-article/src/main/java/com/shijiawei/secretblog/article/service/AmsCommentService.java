@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.entity.AmsComment;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
+import com.shijiawei.secretblog.article.vo.AmsCommentEditVo;
 import com.shijiawei.secretblog.article.vo.AmsUserCommentVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
@@ -42,4 +43,12 @@ public interface AmsCommentService extends IService<AmsComment> {
     R<Void> deleteComment(Long articleId, Long commentId);
 
     R<Void> editComment(Long articleId, AmsCommentEditDTO amsCommentEditDTO);
+
+    /**
+     * 取得留言編輯資料(回傳原始 Markdown)
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return
+     */
+    AmsCommentEditVo getAmsCommentEditVo(Long articleId, Long commentId);
 }

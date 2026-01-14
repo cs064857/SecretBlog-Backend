@@ -39,11 +39,18 @@ public class AmsArticle implements Serializable {
     private String title;
 
     /**
-     * 原始文章內容(不可為空)
+     * 文章內容(HTML，顯示用)
      */
     @NotBlank(message = "新增時文章內容不可為空",groups = {Insert.class})
     @TableField(value = "content")
     private String content;
+
+    /**
+     * 原始文章內容(Markdown，編輯用)
+     */
+    @NotBlank(message = "新增時原始文章內容不可為空",groups = {Insert.class})
+    @TableField(value = "original_content")
+    private String originalContent;
 
 //    /**
 //     * Markdown格式文章內容(不可為空)

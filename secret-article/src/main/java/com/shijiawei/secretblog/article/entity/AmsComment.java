@@ -37,9 +37,20 @@ public class AmsComment {
     @TableField(value = "comment_info_id")
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long commentInfoId;
+
+    /**
+     * 留言內容(HTML，顯示用)
+     */
     @NotNull(message = "留言內容不可為空",groups = {Insert.class,Update.class})
     @TableField(value = "comment_content")
     private String commentContent;
+
+    /**
+     * 原始留言內容(Markdown，編輯用)
+     */
+    @NotNull(message = "原始留言內容不可為空",groups = {Insert.class,Update.class})
+    @TableField(value = "original_content")
+    private String originalContent;
 
 
 

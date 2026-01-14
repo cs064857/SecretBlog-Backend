@@ -5,6 +5,7 @@ import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.service.AmsArtinfoService;
+import com.shijiawei.secretblog.article.vo.AmsArticleEditVo;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
@@ -146,6 +147,18 @@ public class AmsArticleController {
         R<AmsArticleVo> ok = R.ok(article);
 //        log.info("ok:{}",ok);
         return ok;
+    }
+
+    /**
+     * 取得文章編輯資料(回傳原始 Markdown)
+     * @param articleId 文章ID
+     * @return
+     */
+    @Validated
+    @GetMapping("articles/{articleId}/edit")
+    public R<AmsArticleEditVo> getAmsArticleEditVo(@Positive @NotNull @PathVariable Long articleId) {
+        AmsArticleEditVo article = amsArticleService.getAmsArticleEditVo(articleId);
+        return R.ok(article);
     }
 //
 

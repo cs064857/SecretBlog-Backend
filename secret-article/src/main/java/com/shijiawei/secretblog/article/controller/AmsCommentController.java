@@ -3,6 +3,7 @@ package com.shijiawei.secretblog.article.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shijiawei.secretblog.article.service.AmsCommentService;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
+import com.shijiawei.secretblog.article.vo.AmsCommentEditVo;
 import com.shijiawei.secretblog.article.vo.AmsUserCommentVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
@@ -146,6 +147,21 @@ public class AmsCommentController {
     {
         log.debug("deleteComment - articleId:{}, commentId:{}", articleId, commentId);
         return amsCommentService.deleteComment(articleId, commentId);
+    }
+
+    /**
+     * 取得留言編輯資料，回傳原始 Markdown
+     * @param articleId 文章ID
+     * @param commentId 留言ID
+     * @return
+     */
+    @Operation(summary = "取得留言編輯資料", description = "回傳留言原始 Markdown 內容，供前端編輯器使用")
+    @ApiResponse(responseCode = "200", description = "成功取得留言編輯資料")
+    @GetMapping("/{articleId}/comments/{commentId}/edit")
+    public R<AmsCommentEditVo> getCommentEditVo(@NotNull @PathVariable(value = "articleId") Long articleId,
+                                                @NotNull @PathVariable(value = "commentId") Long commentId) {
+        AmsCommentEditVo vo = amsCommentService.getAmsCommentEditVo(articleId, commentId);
+        return R.ok(vo);
     }
 
     /**

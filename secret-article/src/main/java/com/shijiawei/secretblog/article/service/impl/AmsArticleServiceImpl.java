@@ -136,7 +136,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //                long ttl = Math.max(expiredTime - now, 1000L); // 至少1秒，避免0或負數
 //                try {
 //                    tokenBlacklistService.blacklist(currentUser.getSessionId(), ttl);
-//                    log.info("SessionId {} 已加入黑名單, TTL={}ms", currentUser.getSessionId(), ttl);
+//                    log.info("SessionId {} 已加入黑名單,TTL={}ms", currentUser.getSessionId(), ttl);
 //                } catch (Exception e) {
 //                    log.warn("加入黑名單失敗: {}", e.getMessage(), e);
 //                }
@@ -198,14 +198,16 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
             amsArticle.setTitle(amsSaveArticleVo.getTitle());
 
-            /// TODO保存原始文章內容用於安全方面, 避免從原始文章內容從Markdown格式轉換HTML時遺漏某些字等(編輯文章時要更新兩者、讀取時只讀取轉換後的文章)
+            // 保存原始Markdown內容(編輯用)
+            amsArticle.setOriginalContent(amsSaveArticleVo.getContent());
+
             log.debug("即將轉換Markdown文章內容,原始文章內容長度:{}", amsSaveArticleVo.getContent() != null ? amsSaveArticleVo.getContent().length() : 0);
 
             // 將原始文章內容從Markdown轉為HTML格式
             String html = CommonmarkUtils.parseMdToHTML(amsSaveArticleVo.getContent());
 
             log.debug("Markdown格式的文章內容轉換完成,HTML內容長度:{}", html != null ? html.length() : 0);
-            //將Markdown格式的文章保存至資料庫中
+            // 將HTML格式的文章內容保存至資料庫中
             amsArticle.setContent(html);
 
             this.baseMapper.insert(amsArticle);
@@ -654,6 +656,89 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        amsArticleVo.setAmsArtTagsVoList(amsArtTagsVo);
         return amsArticleVo;
     }
+
+    /**
+     * 取得文章編輯資料(回傳原始 Markdown 內容)
+     * @param articleId 文章ID
+     * @return 文章編輯用 VO
+     */
+    @Override
+    public AmsArticleEditVo getAmsArticleEditVo(Long articleId) {
+        log.info("取得文章編輯資料，articleId={}", articleId);
+
+        isArticleNotExists(articleId);
+
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，拒絕取得文章編輯資料")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        Long userId = UserContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶ID為空，拒絕取得文章編輯資料")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        // 判斷該用戶是否為文章作者；若不是作者則需要管理員權限
+        int isArtOwner = amsArtinfoService.isArticleOwner(articleId, userId);
+        if (isArtOwner == 0 && !UserContextHolder.isCurrentUserAdmin()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("用戶權限不足，無權編輯該文章")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "articleId", ObjectUtils.defaultIfNull(articleId, "")
+                    ))
+                    .build();
+        }
+
+        AmsArticle amsArticle = this.getById(articleId);
+        if (amsArticle == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("文章不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        AmsArtinfo amsArtinfo = amsArtinfoService.getOne(
+                Wrappers.lambdaQuery(AmsArtinfo.class).eq(AmsArtinfo::getArticleId, articleId)
+        );
+        if (amsArtinfo == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("文章附加資訊不存在")
+                    .data(Map.of("articleId", ObjectUtils.defaultIfNull(articleId, "")))
+                    .build();
+        }
+
+        List<Long> tagsId = amsArtTagService.list(
+                        Wrappers.lambdaQuery(AmsArtTag.class).eq(AmsArtTag::getArticleId, articleId)
+                ).stream()
+                .map(AmsArtTag::getTagsId)
+                .toList();
+
+        // 兼容舊資料：若尚未寫入 original_content，則回退使用既有 HTML content
+        String originalContent = amsArticle.getOriginalContent();
+        if (StringUtils.isBlank(originalContent)) {
+            log.warn("文章缺少 original_content，將以既有 HTML content 作為編輯回填，articleId={}", articleId);
+            originalContent = amsArticle.getContent();
+        }
+
+        AmsArticleEditVo vo = new AmsArticleEditVo();
+        vo.setId(amsArticle.getId());
+        vo.setTitle(amsArticle.getTitle());
+        vo.setContent(originalContent);
+        vo.setCategoryId(amsArtinfo.getCategoryId());
+        vo.setTagsId(tagsId);
+        return vo;
+    }
 //
 //
 //
@@ -714,7 +799,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
         if (newViews == 1) {
-            viewCounter.clearExpire(); // 移除任何可能存在的 TTL
+            viewCounter.clearExpire(); // 移除任何可能存在的TTL
             log.debug("文章ID:{} 產生第一次瀏覽，已確保快取為持久化", articleId);
         }
 
@@ -827,6 +912,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     ))
                     .build();
         }
+
+        // 刷新 RedisTTL，避免因冷啟動/首次寫入導致鍵無TTL而永久存在
+        refreshRedisTtlIfConfigured(userLikeKey, RedisCacheKey.ARTICLE_LIKED_USERS.getTtl());
+        refreshRedisTtlIfConfigured(articleStatusKey, RedisCacheKey.ARTICLE_STATUS.getTtl());
 
 //        /**
 //         *  透過 RabbitMQ 訊息佇列異步更新使用者對該文章的點讚狀態至 AmsArtAction
@@ -981,6 +1070,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     ))
                     .build();
         }
+
+        // 刷新 RedisTTL，避免因冷啟動/首次寫入導致鍵無TTL而永久存在
+        refreshRedisTtlIfConfigured(userLikeKey, RedisCacheKey.ARTICLE_LIKED_USERS.getTtl());
+        refreshRedisTtlIfConfigured(articleStatusKey, RedisCacheKey.ARTICLE_STATUS.getTtl());
 
 
 //        /**
@@ -1154,6 +1247,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     .build();
         }
 
+        // 刷新 RedisTTL，避免因冷啟動/首次寫入導致鍵無TTL而永久存在
+        refreshRedisTtlIfConfigured(userBookMarksKey, RedisCacheKey.ARTICLE_MARKED_USERS.getTtl());
+        refreshRedisTtlIfConfigured(articleStatusKey, RedisCacheKey.ARTICLE_STATUS.getTtl());
+
 
 
         log.info("文章加入用戶的書籤完成, 用戶ID:{}, 文章ID:{}, 新的文章書籤數:{}",userId, articleId, result);
@@ -1263,6 +1360,10 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     .build();
         }
 
+        // 刷新 RedisTTL，避免因冷啟動/首次寫入導致鍵無TTL而永久存在
+        refreshRedisTtlIfConfigured(userBookMarksKey, RedisCacheKey.ARTICLE_MARKED_USERS.getTtl());
+        refreshRedisTtlIfConfigured(articleStatusKey, RedisCacheKey.ARTICLE_STATUS.getTtl());
+
         log.info("文章移除用戶的書籤完成, 用戶ID:{}, 文章ID:{}, 新的文章書籤數:{}", userId, articleId, result);
         return result;
     }
@@ -1305,7 +1406,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        long newLikes = likesCounter.incrementAndGet();
 //
 //        if (newLikes == 1) {
-//            likesCounter.clearExpire(); // 移除任何可能存在的 TTL
+//            likesCounter.clearExpire(); // 移除任何可能存在的TTL
 //            log.info("文章 {} 產生第一次瀏覽，已確保 Key 為持久化", articleId);
 //        }
 //
@@ -1467,6 +1568,17 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         } catch (NumberFormatException e) {
             // 如果 Redis 裡存了非數字的髒數據，保險起見也返回 -1 或 0
             return -1;
+        }
+    }
+
+    private void refreshRedisTtlIfConfigured(String redisKey, Duration ttl) {
+        if (ttl == null || ttl.isZero() || ttl.isNegative()) {
+            return;
+        }
+        try {
+            redissonClient.getBucket(redisKey).expire(ttl);
+        } catch (Exception e) {
+            log.warn("刷新RedisTTL失敗（忽略） - redisKey: {}, ttl: {}, error: {}", redisKey, ttl, e.getMessage());
         }
     }
 
@@ -1688,10 +1800,13 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         articleUpdateWrapper.eq(AmsArticle::getId, articleId);
         articleUpdateWrapper.set(AmsArticle::getTitle,amsArticleUpdateDTO.getTitle());
 
-        // 將原始文章內容從Markdown轉為HTML格式
-        String articleMd = CommonmarkUtils.parseMdToHTML(amsArticleUpdateDTO.getContent());
+        // 保存原始 Markdown 內容（編輯用）
+        articleUpdateWrapper.set(AmsArticle::getOriginalContent, amsArticleUpdateDTO.getContent());
 
-        articleUpdateWrapper.set(AmsArticle::getContent,articleMd);
+        // 將原始文章內容從 Markdown 轉為 HTML 格式（顯示用）
+        String html = CommonmarkUtils.parseMdToHTML(amsArticleUpdateDTO.getContent());
+
+        articleUpdateWrapper.set(AmsArticle::getContent, html);
         int articleContentUpdate = this.baseMapper.update(articleUpdateWrapper);
         if(articleContentUpdate == 0){
             throw BusinessRuntimeException.builder()

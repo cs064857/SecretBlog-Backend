@@ -18,9 +18,11 @@ import com.shijiawei.secretblog.article.entity.AmsCommentStatistics;
 import com.shijiawei.secretblog.article.feign.UserFeignClient;
 import com.shijiawei.secretblog.article.mapper.AmsCommentMapper;
 import com.shijiawei.secretblog.article.service.*;
+import com.shijiawei.secretblog.article.utils.CommonmarkUtils;
 
 import com.shijiawei.secretblog.article.vo.AmsArtCommentStaticVo;
 import com.shijiawei.secretblog.article.vo.AmsArtCommentsVo;
+import com.shijiawei.secretblog.article.vo.AmsCommentEditVo;
 import com.shijiawei.secretblog.article.vo.AmsUserCommentVo;
 import com.shijiawei.secretblog.article.dto.AmsCommentCreateDTO;
 import com.shijiawei.secretblog.article.dto.AmsCommentEditDTO;
@@ -268,7 +270,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
 //                long ttl = Math.max(expiredTime - now, 1000L); // 至少1秒，避免0或負數
 //                try {
 //                    tokenBlacklistService.blacklist(currentUser.getSessionId(), ttl);
-//                    log.info("SessionId {} 已加入黑名單, TTL={}ms", currentUser.getSessionId(), ttl);
+//                    log.info("SessionId {} 已加入黑名單,TTL={}ms", currentUser.getSessionId(), ttl);
 //                } catch (Exception e) {
 //                    log.warn("加入黑名單失敗: {}", e.getMessage(), e);
 //                }
@@ -341,7 +343,10 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             AmsComment amsComment = AmsComment.builder()
                     .id(commentId)
                     .commentInfoId(commentInfoId)
-                    .commentContent(amsCommentCreateDTO.getCommentContent())
+                    // 保存原始 Markdown（編輯用）
+                    .originalContent(amsCommentCreateDTO.getCommentContent())
+                    // Markdown → HTML（顯示用）
+                    .commentContent(CommonmarkUtils.parseMdToHTML(amsCommentCreateDTO.getCommentContent()))
                     .build();
 
             this.baseMapper.insert(amsComment);
@@ -409,8 +414,20 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             final String commentRepliesKey = String.format(RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getPattern(), articleId);
             Map<Long, Integer> initStatistics = Map.of(commentId, 0);
 
-            redisBloomFilterUtils.saveMapToRMapAfterCommit(commentLikesKey, initStatistics, Long.class, Integer.class);
-            redisBloomFilterUtils.saveMapToRMapAfterCommit(commentRepliesKey, initStatistics, Long.class, Integer.class);
+            redisBloomFilterUtils.saveMapToRMapAfterCommit(
+                    commentLikesKey,
+                    initStatistics,
+                    Long.class,
+                    Integer.class,
+                    RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getTtl()
+            );
+            redisBloomFilterUtils.saveMapToRMapAfterCommit(
+                    commentRepliesKey,
+                    initStatistics,
+                    Long.class,
+                    Integer.class,
+                    RedisCacheKey.ARTICLE_COMMENT_REPLIES_COUNT_HASH.getTtl()
+            );
 
 
             // 新增：在事務提交後將 commentInfoId 放入布隆過濾器
@@ -419,7 +436,10 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     RedisBloomFilterKey.COMMENT_BLOOM_FILTER.getKey()
             );
             //在事務提交後將 將Redis快取中的文章留言數量++
-            redisIncrementUtils.afterCommitIncrement(RedisCacheKey.ARTICLE_COMMENTS.format(articleId));
+            redisIncrementUtils.afterCommitIncrement(
+                    RedisCacheKey.ARTICLE_COMMENTS.format(articleId),
+                    RedisCacheKey.ARTICLE_COMMENTS.getTtl()
+            );
 
             // 回覆 Email 通知，實際寄信
             sendReplyEmailNotifyAfterCommit(
@@ -1114,6 +1134,21 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                         .build();
                 rabbitMessageProducer.send(actionMessage);
 
+                // 刷新RedisTTL，避免因冷啟動/首次寫入導致鍵無TTL而永久存在
+                try {
+                    Duration likedUsersTtl = RedisCacheKey.COMMENT_LIKED_USERS.getTtl();
+                    if (likedUsersTtl != null) {
+                        redissonClient.getBucket(userLikedSetKey).expire(likedUsersTtl);
+                    }
+                    Duration likesHashTtl = RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getTtl();
+                    if (likesHashTtl != null) {
+                        redissonClient.getBucket(commentLikesHashKey).expire(likesHashTtl);
+                    }
+                } catch (Exception e) {
+                    log.warn("刷新留言點讚快取TTL 失敗（忽略） - articleId: {}, commentId: {}, error: {}",
+                            articleId, commentId, e.getMessage());
+                }
+
                 // 返回新的按讚數
                 return Math.toIntExact(luaResult);
             } else if (luaResult == -1) {
@@ -1316,6 +1351,21 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                         .build();
                 rabbitMessageProducer.send(actionMessage);
 
+                // 刷新 RedisTTL，避免因冷啟動/首次寫入導致鍵無TTL 而永久存在
+                try {
+                    Duration likedUsersTtl = RedisCacheKey.COMMENT_LIKED_USERS.getTtl();
+                    if (likedUsersTtl != null) {
+                        redissonClient.getBucket(userLikedSetKey).expire(likedUsersTtl);
+                    }
+                    Duration likesHashTtl = RedisCacheKey.ARTICLE_COMMENT_LIKES_COUNT_HASH.getTtl();
+                    if (likesHashTtl != null) {
+                        redissonClient.getBucket(commentLikesHashKey).expire(likesHashTtl);
+                    }
+                } catch (Exception e) {
+                    log.warn("刷新留言點讚快取TTL 失敗（忽略） - articleId: {}, commentId: {}, error: {}",
+                            articleId, commentId, e.getMessage());
+                }
+
                 // 返回新的按讚數
                 return Math.toIntExact(luaResult);
             } else if (luaResult == -1) {
@@ -1448,7 +1498,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             /*
             假設未成功從資料庫中取得該文章所有留言的指標，則寫入空快取，避免快取穿透，並設置TTL為3分鐘
              */
-            log.warn("資料庫無留言資料,寫入空快取標記防止快取穿透 - articleId: {}, TTL: 3分鐘", articleId);
+            log.warn("資料庫無留言資料,寫入空快取標記防止快取穿透 - articleId: {},TTL: 3分鐘", articleId);
             //創建批次
             RBatch putBatch = redissonClient.createBatch();
 
@@ -1761,7 +1811,8 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
             // 11. 更新 Redis 中的文章留言總數
             redisIncrementUtils.afterCommitDecrement(
                     RedisCacheKey.ARTICLE_COMMENTS.format(articleId),
-                    totalDeleteCount
+                    totalDeleteCount,
+                    RedisCacheKey.ARTICLE_COMMENTS.getTtl()
             );
 
         } catch (RedisException e) {
@@ -1775,6 +1826,126 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         log.info("留言邏輯刪除成功 - articleId: {}, commentId: {}, 影響留言數: {}", articleId, commentId, totalDeleteCount);
 
         return R.ok();
+    }
+    
+    @Override
+    public AmsCommentEditVo getAmsCommentEditVo(Long articleId, Long commentId) {
+        log.info("取得留言編輯資料 - articleId: {}, commentId: {}", articleId, commentId);
+
+        // 驗證文章是否存在
+        redisBloomFilterUtils.requireExists(RedisBloomFilterKey.ARTICLE_BLOOM_FILTER.getKey(), articleId, "文章不存在");
+
+        // 驗證留言是否存在
+        if (this.isCommentNotExists(commentId)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言不存在")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+                    ))
+                    .build();
+        }
+
+        // 檢查用戶是否登入
+        if (!UserContextHolder.isCurrentUserLoggedIn()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.UNAUTHORIZED)
+                    .detailMessage("用戶未登入，無法取得留言編輯資料")
+                    .build();
+        }
+        Long userId = UserContextHolder.getCurrentUserId();
+        boolean isAdmin = UserContextHolder.isCurrentUserAdmin();
+
+        // 獲取留言信息
+        AmsCommentInfo commentInfo = amsCommentInfoService.getOne(
+                new LambdaQueryWrapper<AmsCommentInfo>()
+                        .eq(AmsCommentInfo::getCommentId, commentId)
+        );
+
+        if (commentInfo == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言信息不存在")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        // 確保留言屬於該文章
+        if (!Objects.equals(commentInfo.getArticleId(), articleId)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言不存在")
+                    .data(Map.of(
+                            "articleId", ObjectUtils.defaultIfNull(articleId, ""),
+                            "commentId", ObjectUtils.defaultIfNull(commentId, "")
+                    ))
+                    .build();
+        }
+
+        // 檢查留言是否已被刪除
+        if (commentInfo.getDeleted() != null && commentInfo.getDeleted() == 1) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.EDIT_FAILED)
+                    .detailMessage("已刪除的留言無法編輯")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        // 驗證用戶權限：只有留言作者可以編輯
+        if (!commentInfo.getUserId().equals(userId)) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("無權限編輯他人留言")
+                    .data(Map.of(
+                            "userId", ObjectUtils.defaultIfNull(userId, ""),
+                            "commentOwnerId", ObjectUtils.defaultIfNull(commentInfo.getUserId(), "")
+                    ))
+                    .build();
+        }
+
+        // 檢查時間窗限制(管理員可繞過)
+        if (!isAdmin) {
+            LocalDateTime createAt = commentInfo.getCreateAt();
+            LocalDateTime now = LocalDateTime.now();
+            long minutesElapsed = Duration.between(createAt, now).toMinutes();
+
+            if (minutesElapsed > editWindowMinutes) {
+                throw BusinessRuntimeException.builder()
+                        .iErrorCode(ResultCode.EDIT_TIME_EXPIRED)
+                        .detailMessage("留言編輯時間已過期，僅可在建立後 " + editWindowMinutes + " 分鐘內編輯")
+                        .data(Map.of(
+                                "commentId", ObjectUtils.defaultIfNull(commentId, ""),
+                                "createAt", ObjectUtils.defaultIfNull(createAt, ""),
+                                "minutesElapsed", minutesElapsed,
+                                "editWindowMinutes", editWindowMinutes
+                        ))
+                        .build();
+            }
+        }
+
+        AmsComment comment = this.getById(commentId);
+        if (comment == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("留言不存在")
+                    .data(Map.of("commentId", ObjectUtils.defaultIfNull(commentId, "")))
+                    .build();
+        }
+
+        // 若尚未寫入 original_content，則回退使用既有 comment_content(可能為舊的純文字或 HTML)
+        String originalContent = comment.getOriginalContent();
+        if (originalContent == null || originalContent.isBlank()) {
+            log.warn("留言缺少 original_content，將以既有 comment_content 作為編輯回填，commentId={}", commentId);
+            originalContent = comment.getCommentContent();
+        }
+
+        AmsCommentEditVo vo = new AmsCommentEditVo();
+        vo.setArticleId(articleId);
+        vo.setCommentId(commentId);
+        vo.setCommentContent(originalContent);
+        vo.setParentCommentId(commentInfo.getParentCommentId());
+        return vo;
     }
 
     /**
@@ -1885,10 +2056,14 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         }
 
         //更新留言內容
+        String html = CommonmarkUtils.parseMdToHTML(newContent);
         boolean updateSuccess = this.update(
                 new LambdaUpdateWrapper<AmsComment>()
                         .eq(AmsComment::getId, commentId)
-                        .set(AmsComment::getCommentContent, newContent)
+                        //保存原始Markdown(編輯用)
+                        .set(AmsComment::getOriginalContent, newContent)
+                        //Markdown→HTML(顯示用)
+                        .set(AmsComment::getCommentContent, html)
         );
 
         if (!updateSuccess) {

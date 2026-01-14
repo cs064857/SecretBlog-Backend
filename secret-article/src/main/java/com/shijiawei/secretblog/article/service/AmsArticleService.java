@@ -5,6 +5,7 @@ import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
 import com.shijiawei.secretblog.article.entity.AmsArticle;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.shijiawei.secretblog.article.vo.AmsArticleEditVo;
 import com.shijiawei.secretblog.article.vo.AmsArticlePreviewVo;
 import com.shijiawei.secretblog.article.vo.AmsArticleVo;
 import com.shijiawei.secretblog.article.vo.AmsSaveArticleVo;
@@ -32,6 +33,13 @@ public interface AmsArticleService extends IService<AmsArticle> {
     AmsArticleVo getAmsArticleVo(Long articleId);
 
     AmsArticleVo getAmsArticleVoWithStatus(Long articleId);
+
+    /**
+     * 取得文章編輯資料(回傳原始 Markdown 內容)
+     * @param articleId 文章ID
+     * @return 文章編輯用 VO
+     */
+    AmsArticleEditVo getAmsArticleEditVo(Long articleId);
 
     Long incrementArticleLikes(Long articleId);
 

@@ -160,7 +160,17 @@ public class RedisBloomFilterUtils {
         );
     }
 
+    /**
+     * 在事務提交後將Map資料同步至Redis RMap(無TTL)
+     */
     public <T,R> void saveMapToRMapAfterCommit(String rMapKey , Map<T, R> value , Class<T> keyClass , Class<R> valueClass){
+        saveMapToRMapAfterCommit(rMapKey, value, keyClass, valueClass, null);
+    }
+
+    /**
+     * 在事務提交後將Map資料同步至Redis RMap，並可選設置TTL
+     */
+    public <T,R> void saveMapToRMapAfterCommit(String rMapKey , Map<T, R> value , Class<T> keyClass , Class<R> valueClass, java.time.Duration ttl){
 
         if(value.isEmpty()){
             log.error("事務提交後將值添加至Redis失敗, rMapKey:{}",rMapKey);
@@ -170,7 +180,7 @@ public class RedisBloomFilterUtils {
             log.warn("當前不在事務中，直接執行布隆過濾器操作: rMapKey={}, mapSize={}", rMapKey, value.size());
             try {
                 RMap<T, R> rMap = redissonClient.getMap(rMapKey, new TypedJsonJacksonCodec(keyClass, valueClass));
-                updateRedisMap(value, rMap);
+                updateRedisMap(value, rMap, ttl);
             } catch (Exception e) {
                 log.error("事務提交後同步 Redis 失敗 (DB已提交). rMapKey: {}, MapSize: {}, Error: {}",
                         rMapKey, value.size(), e.getMessage(), e);
@@ -185,7 +195,7 @@ public class RedisBloomFilterUtils {
                 try {
                     RMap<T, R> rMap = redissonClient.getMap(rMapKey, new TypedJsonJacksonCodec(keyClass, valueClass));
 
-                    updateRedisMap(value, rMap);
+                    updateRedisMap(value, rMap, ttl);
                 } catch (Exception e) {
                     log.error("事務提交後同步 Redis 失敗 (DB已提交). rMapKey: {}, MapSize: {}, Error: {}",
                             rMapKey, value, e.getMessage(), e);
@@ -196,14 +206,23 @@ public class RedisBloomFilterUtils {
 
     }
 
-    private <T,R> void updateRedisMap(Map<T, R> map, RMap<T, R> rMap) {
-
+    /**
+     * 更新Redis Map資料並可選設置TTL
+     */
+    private <T,R> void updateRedisMap(Map<T, R> map, RMap<T, R> rMap, java.time.Duration ttl) {
 
         if(!rMap.isExists()){
             log.debug("Redis 鍵尚未存在，將自動建立 (冷啟動場景). rMapName: {}, MapSize: {}",
                     rMap.getName(), map.size());
         }
         rMap.putAll(map);
+        
+        //設置TTL(若有指定)
+        if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
+            rMap.expire(ttl);
+            log.debug("成功設置 Redis Map 過期時間: rMapName={}, ttl={}", rMap.getName(), ttl);
+        }
+        
         log.debug("成功將 Map 資料同步至 Redis: rMapName={}, mapSize={}", rMap.getName(), map.size());
     }
 }

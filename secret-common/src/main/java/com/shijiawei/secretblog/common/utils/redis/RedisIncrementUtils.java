@@ -23,17 +23,32 @@ public class RedisIncrementUtils {
     }
 
     /**
-     * 在事務提交後執行Redis數值遞增操作
+     * 在事務提交後執行Redis數值遞增操作(無)
      * @param key Redis鍵
      */
     public void afterCommitIncrement(String key){
+        afterCommitIncrement(key, null);
+    }
+
+    /**
+     * 在事務提交後執行Redis數值遞增操作，並可選設置TTL
+     * @param key Redis鍵
+     * @param ttl 過期時間，若為 ull則不設置過期
+     */
+    public void afterCommitIncrement(String key, java.time.Duration ttl){
         //先判斷是否在事務中
         boolean synchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
         if(!synchronizationActive){
             log.warn("當前不在事務中，直接執行數值遞增操作: key={}",key);
             try {
                 //不在事務中, 直接增加值
-                redissonClient.getAtomicLong(key).incrementAndGet();
+                var atomicLong = redissonClient.getAtomicLong(key);
+                atomicLong.incrementAndGet();
+                // 設置（若有指定）
+                if (ttl !=null&& !ttl.isZero() && !ttl.isNegative()) {
+                    atomicLong.expire(ttl);
+                    log.debug("成功設置 Redis Key 過期時間: key={}, ttl={}", key, ttl);
+                }
             } catch (Exception e) {
                 log.error("數值遞增操作失敗: key={}", key ,e);
             }
@@ -44,7 +59,13 @@ public class RedisIncrementUtils {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                redissonClient.getAtomicLong(key).incrementAndGet();
+                var atomicLong = redissonClient.getAtomicLong(key);
+                atomicLong.incrementAndGet();
+                // 設置TTL(若有指定)
+                if (ttl !=null&& !ttl.isZero() && !ttl.isNegative()) {
+                    atomicLong.expire(ttl);
+                    log.debug("成功設置 Redis Key 過期時間: key={}, ttl={}", key, ttl);
+                }
             }
         });
 
@@ -55,7 +76,7 @@ public class RedisIncrementUtils {
      * @param key Redis鍵
      */
     public void afterCommitDecrement(String key){
-        afterCommitDecrement(key, 1);
+        afterCommitDecrement(key, 1, null);
     }
 
     /**
@@ -64,13 +85,29 @@ public class RedisIncrementUtils {
      * @param delta 遞減的數量
      */
     public void afterCommitDecrement(String key, long delta){
+        afterCommitDecrement(key, delta, null);
+    }
+
+    /**
+     * 在事務提交後執行Redis數值遞減操作，並可選設置
+     * @param key Redis鍵
+     * @param delta 遞減的數量
+     * @param ttl 過期時間，若為null則不設置過期
+     */
+    public void afterCommitDecrement(String key, long delta, java.time.Duration ttl){
         //先判斷是否在事務中
         boolean synchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
         if(!synchronizationActive){
             log.warn("當前不在事務中，直接執行數值遞減操作: key={}, delta={}",key, delta);
             try {
                 //不在事務中, 直接減少值
-                redissonClient.getAtomicLong(key).addAndGet(-delta);
+                var atomicLong = redissonClient.getAtomicLong(key);
+                atomicLong.addAndGet(-delta);
+                // 設置(若有指定)
+                if (ttl !=null&& !ttl.isZero() && !ttl.isNegative()) {
+                    atomicLong.expire(ttl);
+                    log.debug("成功設置 Redis Key 過期時間: key={}, ttl={}", key, ttl);
+                }
             } catch (Exception e) {
                 log.error("數值遞減操作失敗: key={}, delta={}", key, delta, e);
             }
@@ -81,7 +118,13 @@ public class RedisIncrementUtils {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                redissonClient.getAtomicLong(key).addAndGet(-delta);
+                var atomicLong = redissonClient.getAtomicLong(key);
+                atomicLong.addAndGet(-delta);
+                // 設置(若有指定)
+                if (ttl !=null&& !ttl.isZero() && !ttl.isNegative()) {
+                    atomicLong.expire(ttl);
+                    log.debug("成功設置 Redis Key 過期時間: key={}, ttl={}", key, ttl);
+                }
             }
         });
     }
