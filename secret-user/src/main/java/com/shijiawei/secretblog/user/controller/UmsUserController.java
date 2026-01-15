@@ -22,6 +22,7 @@ import com.shijiawei.secretblog.user.vo.UmsUpdateUserDetailsVO;
 import com.shijiawei.secretblog.user.converter.UserConverter;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.shijiawei.secretblog.common.enumValue.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.redisson.api.RedissonClient;
@@ -173,6 +174,19 @@ public class UmsUserController {
     }
 
     /**
+     * 更新用戶帳號狀態(封禁/解禁)
+     * 
+     * @param userId 目標用戶 ID
+     * @param status 目標狀態(Normal或Ban)
+     * @return 結果
+     */
+    @PutMapping("/{userId}/status")
+    public R<Void> updateUserStatus(@PathVariable Long userId, @RequestParam Status status) {
+        umsUserService.updateUserStatus(userId, status);
+        return R.ok();
+    }
+
+    /**
      * 獲取用戶的通知總開關狀態
      * 
      * @param userId 用戶ID
@@ -212,7 +226,6 @@ public class UmsUserController {
     @GetMapping("/userDetails")
     public R<List<UmsUserDetailsDTO>> userDetails() {
         List<UmsUserDetailsDTO> umsUserDetailsDTOList = umsUserService.listUmsUserDetails();
-        /// TODO 不要返回密碼
         return R.ok(umsUserDetailsDTOList);
     }
 

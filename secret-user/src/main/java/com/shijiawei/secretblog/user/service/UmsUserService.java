@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.shijiawei.secretblog.common.dto.UserBasicDTO;
+import com.shijiawei.secretblog.common.enumValue.Status;
 import com.shijiawei.secretblog.common.feign.dto.UmsUserAvatarUpdateDTO;
 import com.shijiawei.secretblog.common.utils.R;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
@@ -209,5 +210,13 @@ public interface UmsUserService extends IService<UmsUser> {
     void updateNotifyEnabled(Long userId, Byte notifyEnabled);
 
     R createCaptcha();
+
+    /**
+     * 更新用戶帳號狀態(封禁/解禁)
+     * 
+     * @param userId 目標用戶 ID
+     * @param status 目標狀態(NORMAL 或 BAN)
+     */
+    void updateUserStatus(Long userId, Status status);
 
 }

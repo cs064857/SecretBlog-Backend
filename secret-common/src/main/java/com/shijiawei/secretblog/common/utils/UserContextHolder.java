@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.common.utils;
 
+import com.shijiawei.secretblog.common.enumValue.Role;
 import com.shijiawei.secretblog.common.security.JwtUserInfo;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -62,7 +63,8 @@ public class UserContextHolder {
      * 檢查當前用戶是否為管理員
      */
     public static boolean isCurrentUserAdmin() {
-        return "ADMIN".equals(getCurrentUserRole());
+        JwtUserInfo userInfo = getCurrentUserInfoFromSecurityContext();
+        return userInfo != null && Role.ADMIN.equals(userInfo.getRoleId());
     }
 
     /**

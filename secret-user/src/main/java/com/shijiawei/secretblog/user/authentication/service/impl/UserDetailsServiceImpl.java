@@ -124,6 +124,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         dto.setAccountName(userInfo.getAccountName());
         dto.setPassword(auths.getPassword());
         dto.setRoleId(user.getRoleId());
+        dto.setStatus(user.getStatus());
         dto.setDeleted(user.getDeleted());
         dto.setAvatar(AvatarUrlHelper.toPublicUrl(user.getAvatar(), minioDomain));
 

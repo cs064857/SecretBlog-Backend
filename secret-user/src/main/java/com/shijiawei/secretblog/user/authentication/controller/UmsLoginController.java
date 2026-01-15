@@ -41,53 +41,53 @@ public class UmsLoginController {
         return loginService.login(umsUserLoginDTO, response);
 
     }
-    /**
-     * 用於測試權限 - 任一級別權限
-     * @return
-     */
-    @GetMapping("/test-any-verityToken")
-    @PreAuthorize("isAuthenticated()")//該端點權限要求為普通用戶等級
-    public R testAnyLogin() {
-        //測試是否成功登入
-        System.out.println("成功驗證Token並登入任一權限...");
-        return R.ok();
-    }
+//    /**
+//     * 用於測試權限 - 任一級別權限
+//     * @return
+//     */
+//    @GetMapping("/test-any-verityToken")
+//    @PreAuthorize("isAuthenticated()")//該端點權限要求為普通用戶等級
+//    public R testAnyLogin() {
+//        //測試是否成功登入
+//        System.out.println("成功驗證Token並登入任一權限...");
+//        return R.ok();
+//    }
+//
+//    /**
+//     * 用於測試權限 - 使用者級別權限
+//     * @return
+//     */
+//    @GetMapping("/test-user-verityToken")
+//    @PreAuthorize("hasAuthority('ROLE_USER')")//該端點權限要求為普通用戶等級
+//    public R testLogin() {
+//        //測試是否成功登入
+//        System.out.println("成功驗證Token並登入使用者權限...");
+//        return R.ok();
+//    }
 
-    /**
-     * 用於測試權限 - 使用者級別權限
-     * @return
-     */
-    @GetMapping("/test-user-verityToken")
-    @PreAuthorize("hasAuthority('ROLE_USER')")//該端點權限要求為普通用戶等級
-    public R testLogin() {
-        //測試是否成功登入
-        System.out.println("成功驗證Token並登入使用者權限...");
-        return R.ok();
-    }
-
-    /**
-     * 用於測試權限 - 永遠不存在，只會失敗
-     *
-     * @return
-     */
-    @GetMapping("/test-unknow-verityToken")
-    @PreAuthorize("hasAuthority('ROLE_1155611')")//該端點權限要求永遠不會成功
-    public R testUnknowLogin() {
-        //測試是否成功登入
-        System.out.println("成功驗證Token並登入unknow權限...");
-        return R.ok();
-    }
-    /**
-     * 用於測試權限 - Admin權限
-     * @return
-     */
-    @GetMapping("/test-admin-verityToken")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")//該端點權限要求為普通用戶等級
-    public R testAdminLogin() {
-        //測試是否成功登入
-        System.out.println("成功驗證Token並登入管理員權限...");
-        return R.ok();
-    }
+//    /**
+//     * 用於測試權限 - 永遠不存在，只會失敗
+//     *
+//     * @return
+//     */
+//    @GetMapping("/test-unknow-verityToken")
+//    @PreAuthorize("hasAuthority('ROLE_1155611')")//該端點權限要求永遠不會成功
+//    public R testUnknowLogin() {
+//        //測試是否成功登入
+//        System.out.println("成功驗證Token並登入unknow權限...");
+//        return R.ok();
+//    }
+//    /**
+//     * 用於測試權限 - Admin權限
+//     * @return
+//     */
+//    @GetMapping("/test-admin-verityToken")
+//    @PreAuthorize("hasAuthority('ROLE_ADMIN')")//該端點權限要求為普通用戶等級
+//    public R testAdminLogin() {
+//        //測試是否成功登入
+//        System.out.println("成功驗證Token並登入管理員權限...");
+//        return R.ok();
+//    }
 
     /**
      * 判斷是否已登入
@@ -106,7 +106,7 @@ public class UmsLoginController {
 
     /**
      * 登出入口。
-     * JWT 為無狀態；登出時將 sessionId 寫入黑名單（TTL = Token 剩餘有效期），達成「登出即失效」。
+     * JWT為無狀態，登出時將 sessionId 寫入黑名單(TTL=Token剩餘有效期)
      */
     @PreAuthorize("isAuthenticated()")//該端點權限要求為已登入
     @PostMapping("/logout")

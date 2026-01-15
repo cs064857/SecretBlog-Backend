@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.user.authentication.entity;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
+import com.shijiawei.secretblog.common.enumValue.Status;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -74,6 +75,6 @@ public class LoginUser implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return umsUserLoginDTO.getStatus() == Status.NORMAL;
     }
 }

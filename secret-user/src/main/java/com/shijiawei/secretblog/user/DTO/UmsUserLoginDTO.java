@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.user.DTO;
 
 import com.shijiawei.secretblog.common.enumValue.Role;
+import com.shijiawei.secretblog.common.enumValue.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -19,6 +20,9 @@ public class UmsUserLoginDTO {
 
     @Schema(description = "使用者組Id")
     private Role roleId;
+
+    @Schema(description = "帳號狀態(0正常,1封禁中)")
+    private Status status;
 
     @Schema(description = "邏輯刪除(0未刪除,1被刪除)")
     private Byte deleted;

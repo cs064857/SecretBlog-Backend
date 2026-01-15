@@ -53,6 +53,7 @@ import com.shijiawei.secretblog.user.DTO.UmsUserRegisterDTO;
 import com.shijiawei.secretblog.user.DTO.UmsUserSummaryDTO;
 import com.shijiawei.secretblog.common.enumValue.Role;
 import com.shijiawei.secretblog.user.mapper.UmsUserMapper;
+import com.shijiawei.secretblog.common.enumValue.Status;
 import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -221,7 +222,6 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     @Override
     public List<UmsUserDetailsDTO> listUmsUserDetails() {
-        /// TODO 20250815 優化:將方式改成利用Map或者直接利用Mapper SQL聯合查詢
 
         // 獲取所有用戶
         List<UmsUser> umsUserList = listUmsUser();
@@ -1035,6 +1035,32 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         } catch (Exception e) {
             log.warn("同步通知總開關快取失敗，將依快取 TTL 自然過期或下次查詢回填，userId={}", userId, e);
         }
+    }
+
+    @Override
+    public void updateUserStatus(Long userId, Status status) {
+        //僅限管理員可執行此操作
+        if (!UserContextHolder.isCurrentUserAdmin()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("僅限管理員可封禁或解禁用戶")
+                    .build();
+        }
+
+        UmsUser user = this.baseMapper.selectById(userId);
+        if (user == null) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.NOT_FOUND)
+                    .detailMessage("用戶不存在")
+                    .data(Map.of("userId", ObjectUtils.defaultIfNull(userId, "")))
+                    .build();
+        }
+
+        user.setStatus(status);
+        user.setUpdateAt(LocalDateTime.now());
+        this.baseMapper.updateById(user);
+
+        log.info("用戶狀態已更新: userId={}, status={}", userId, status);
     }
 
 }
