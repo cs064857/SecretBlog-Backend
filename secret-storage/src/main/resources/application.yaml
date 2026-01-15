@@ -32,8 +32,9 @@ spring:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
       config:
         timeout: 300000
-  config:
-    import: optional:nacos:secretblog_storage_application.yaml
+#  config:
+#    import: optional:nacos:secretblog_storage_application.yaml
+
 #  data:
 #    redis:
 #      port: 56379

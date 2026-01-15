@@ -17,8 +17,8 @@ spring:
       username: ${REDIS_USERNAME:default}
       ssl:
         enabled: ${REDIS_SSL_ENABLED:false}
-  config:
-    import: optional:nacos:secretblog_gateway_application.yml
+#  config:
+#    import: optional:nacos:secretblog_gateway_application.yaml
   application:
     name: secret-gateway
   cloud:

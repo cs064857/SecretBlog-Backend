@@ -40,8 +40,8 @@ spring:
     openfeign:
       oauth2:
         enabled: true
-  config:
-    import: optional:nacos:secretblog_article_application.yml
+#  config:
+#    import: optional:nacos:secretblog_article_application.yaml
   data:
     redis:
       port: ${REDIS_PORT:6379}
@@ -104,7 +104,7 @@ springdoc:
 bloom-filter:
   article:
     expected-insertions: 10000  # 預期1萬篇文章
-    false-probability: 0.01       # 1% 誤判率
+    false-probability: 0.01       # 1% 誤判率yaml
 comment:
   edit-window-minutes: 15  # 留言編輯時間窗（分鐘）
 
