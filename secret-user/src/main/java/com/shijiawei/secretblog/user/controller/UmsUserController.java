@@ -123,12 +123,12 @@ public class UmsUserController {
 
     /**
      * 管理員新增帳號
-     * 
+     *
      * @param umsSaveUserVo
      * @return
      */
     @PostMapping
-    public R saveUmsUser(@RequestBody UmsSaveUserVo umsSaveUserVo) {
+    public R saveUmsUser(@Validated @RequestBody UmsSaveUserVo umsSaveUserVo) {
         log.info("umsSaveUserVo:{}", umsSaveUserVo);
         umsUserService.saveUmsUser(umsSaveUserVo);
         return R.ok();

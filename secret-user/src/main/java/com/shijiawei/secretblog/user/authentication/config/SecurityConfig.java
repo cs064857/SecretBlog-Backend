@@ -98,11 +98,13 @@ public class SecurityConfig {
                                 "/ums/role/**",
                                 "/ums/status/**",
                                 "/ums/auths/**",
-                                "/ums/credentials/**",
-                                "/ums/user/delete/**",
-                                "/ums/user/*/status", //封禁/解禁用戶端點需要ADMIN權限
+                                "/ums/credentials/**",//
+                                "/ums/user/delete/**",//刪除使用者
+                                "/ums/user/*/status", //封禁或解禁使用者端點需要ADMIN權限
                                 "/ums/user/userDetails/**" //使用者管理介面更新用戶資訊端點需要ADMIN權限
                         ).hasRole("ADMIN")
+                        //管理員新增使用者端點需要ADMIN權限
+                        .requestMatchers(HttpMethod.POST, "/ums/user").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 // 開啟跨域訪問

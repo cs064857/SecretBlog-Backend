@@ -159,62 +159,110 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
     /**
      * 管理員新增用戶接口
+     * 僅限管理員權限可使用
+     * 參考 UmsUserRegister 邏輯實作
      * 
      * @param umsSaveUserVo
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void saveUmsUser(UmsSaveUserVo umsSaveUserVo) {
-        // 加密密碼
+        //檢查是否為管理員
+        if (!UserContextHolder.isCurrentUserAdmin()) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.FORBIDDEN)
+                    .detailMessage("僅限管理員可新增用戶")
+                    .build();
+        }
+
+        //驗證密碼與確認密碼是否一致
+        if (!umsSaveUserVo.getPassword().equals(umsSaveUserVo.getCheckPassword())) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.PARAM_ERROR)
+                    .detailMessage("密碼與確認密碼不一致")
+                    .build();
+        }
+
+        //檢查帳號是否已存在
+        String accountName = umsSaveUserVo.getAccountName();
+        long accountNameIsExists = umsUserInfoService
+                .count(new LambdaQueryWrapper<UmsUserInfo>().eq(UmsUserInfo::getAccountName, accountName));
+        if (accountNameIsExists > 0) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_ACCOUNT_ALREADY_EXIST)
+                    .data(Map.of("accountName", StringUtils.defaultString(accountName, "")))
+                    .build();
+        }
+
+        //檢查信箱是否已存在
+        String email = umsSaveUserVo.getEmail();
+        long emailIsExists = umsCredentialsService
+                .count(new LambdaQueryWrapper<UmsCredentials>().eq(UmsCredentials::getEmail, email));
+        if (emailIsExists > 0) {
+            throw BusinessRuntimeException.builder()
+                    .iErrorCode(ResultCode.USER_EMAIL_ALREADY_EXIST)
+                    .data(Map.of("email", StringUtils.defaultString(email, "")))
+                    .build();
+        }
+
+        //加密密碼
         String encode = passwordEncoder.encode(umsSaveUserVo.getPassword());
         umsSaveUserVo.setPassword(encode);
         log.info("加密過後密碼:{}", encode);
 
-        // Role roleId = umsSaveUserVo.getRoleId();
-        // log.info("roleId:{}",roleId);
-
-        UmsUser umsUser = new UmsUser();// 缺少avatar
+        UmsUser umsUser = new UmsUser();
         UmsUserInfo userInfo = new UmsUserInfo();
 
-        // 獲取user與userInfo主鍵
+        //獲取user與userInfo主鍵
         long user_id = IdWorker.getId(umsUser);
         long userInfo_id = IdWorker.getId(userInfo);
         log.info("user_id:{}", user_id);
         log.info("userInfo_id:{}", userInfo_id);
 
-        // 設置user資料
-        /// TODO 缺少Avatar屬性
+        //設置user資料
         umsUser.setId(user_id);
         umsUser.setUserinfoId(userInfo_id);
-        /// TODO 判斷是否有權限設定RoleId
-        umsUser.setRoleId(umsSaveUserVo.getRoleId());// RoleName經過mybatisPlus枚舉轉換器映射成資料庫中roleId需要的類型
-        BeanUtils.copyProperties(umsSaveUserVo, umsUser, "roleId");
-        umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));
+        umsUser.setRoleId(Role.NORMALUSER);//固定角色為普通用戶
+        umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));//設置默認頭像
+        
+        //設置使用者暱稱(若未提供則使用\"User\"+user_id最後五位數字)
+        if (StringUtils.isBlank(umsSaveUserVo.getNickName())) {
+            String userIdStr = String.valueOf(user_id);
+            String lastFiveDigits = userIdStr.substring(Math.max(0, userIdStr.length() - 5));
+            String defaultNickName = "User" + lastFiveDigits;
+            umsUser.setNickName(defaultNickName);
+            log.debug("為新用戶設置默認暱稱: {}", defaultNickName);
+        } else {
+            umsUser.setNickName(umsSaveUserVo.getNickName());
+        }
 
-        // 設置userInfo資料
+        //設置userInfo資料
         userInfo.setId(userInfo_id);
         userInfo.setUserId(user_id);
+        userInfo.setAccountName(umsSaveUserVo.getAccountName());
         userInfo.setNotifyEnabled((byte) 1);
-
         userInfo.setGender(umsSaveUserVo.getGender());
+        userInfo.setBirthday(umsSaveUserVo.getBirthday());
+        userInfo.setAddress(umsSaveUserVo.getAddress());
 
-        BeanUtils.copyProperties(umsSaveUserVo, userInfo, "gender");
         log.info("umsUserInfo:{}", userInfo);
         umsUserInfoService.saveUmsUserInfo(userInfo);
 
         log.info("umsUser:{}", umsUser);
         this.baseMapper.insert(umsUser);
 
+        //儲存用戶憑證(信箱、手機號碼)
         UmsCredentials umsCredentials = new UmsCredentials();
-        BeanUtils.copyProperties(umsSaveUserVo, umsCredentials);
         umsCredentials.setUserId(user_id);
+        umsCredentials.setEmail(umsSaveUserVo.getEmail());
+        umsCredentials.setPhoneNumber(umsSaveUserVo.getPhoneNumber());
         log.info("umsCredentials:{}", umsCredentials);
         umsCredentialsService.save(umsCredentials);
 
+        //儲存用戶認證(密碼)
         UmsAuths umsAuths = new UmsAuths();
         umsAuths.setPassword(umsSaveUserVo.getPassword());
         umsAuths.setUserId(user_id);
-
         log.info("umsAuths:{}", umsAuths);
         umsAuthsService.save(umsAuths);
 
