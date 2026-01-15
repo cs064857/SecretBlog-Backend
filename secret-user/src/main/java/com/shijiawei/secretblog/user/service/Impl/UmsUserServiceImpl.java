@@ -556,6 +556,19 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         umsUser.setUserinfoId(userInfo_id);
         umsUser.setRoleId(Role.NORMALUSER);// 設置角色為普通用戶
         umsUser.setAvatar(AvatarUrlHelper.toStoragePath(defaultAvatar, minioDomain));// 設置默認頭像
+
+        //設置使用者默認暱稱(使用"User"+user_id最後五位數字)
+        if (StringUtils.isBlank(umsUser.getNickName())) {
+            String userIdStr = String.valueOf(user_id);
+            String lastFiveDigits = userIdStr.substring(Math.max(0, userIdStr.length() - 5));
+            String defaultNickName = "User" + lastFiveDigits;
+            umsUser.setNickName(defaultNickName);
+            log.debug("為新用戶設置默認暱稱: {}", defaultNickName);
+        }
+
+        //獲得使用者的信箱
+        String email = umsUserRegisterDTO.getEmail();
+
         // 設置userInfo資料
         umsUserInfo.setId(userInfo_id);
         umsUserInfo.setUserId(user_id);
@@ -563,8 +576,6 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
 
         // 獲得用戶輸入的驗證碼
         String vaildCode = umsUserRegisterDTO.getEmailValidCode();
-        // 獲得用戶的信箱
-        String email = umsUserRegisterDTO.getEmail();
 
         // 設置預設帳號名稱 (Email 前綺)
         if (StringUtils.isBlank(umsUserInfo.getAccountName())) {
