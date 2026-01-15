@@ -5,6 +5,7 @@ import feign.RequestTemplate;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -15,22 +16,38 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Configuration
 public class FeignInterceptorConfig {
 
+    @Value("${custom.internal.apikey}")
+    private String expectedApiKey;
     /**
      * feign 攔截器
      * @return RequestInterceptor 實例
      */
     @Bean
     public RequestInterceptor requestInterceptor() {
-        return new MyRequestInterceptor();
+        return new MyRequestInterceptor(expectedApiKey);
     }
 
     /**
      * 實現攔截器RequestInterceptor
      */
     static class MyRequestInterceptor implements RequestInterceptor {
+        private final String apiKey;
+
+        //通過構造函數接收
+        public MyRequestInterceptor(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
         @Override
         public void apply(RequestTemplate template) {
-            ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            //對/internal/路徑都添加APIKey
+            if (template.url().contains("/internal/")) {
+                template.header("X-Internal-Api-Key", apiKey);
+                log.debug("請求頭中為內部調用添加Key，URL: {}", template.url());
+            }
+
+            ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder
+                    .getRequestAttributes();
             if (servletRequestAttributes != null) {
                 HttpServletRequest request = servletRequestAttributes.getRequest();
 

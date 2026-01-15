@@ -1,6 +1,7 @@
 custom:
   minio-domain: ${MINIO_ENDPOINT:}
-
+  internal:
+    apikey: qwaszx123321
 spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
