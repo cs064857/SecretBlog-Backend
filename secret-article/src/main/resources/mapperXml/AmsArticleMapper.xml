@@ -58,18 +58,20 @@
         <!--        ams_art_status.likes_count AS likesCount,-->
         <!--        ams_art_status.bookmarks_count AS bookmarksCount,-->
         ams_category.id AS categoryId,
-        ams_category.category_name AS categoryName,
-        (
-        SELECT COUNT(1)
-        FROM ams_comment_info
-        WHERE ams_comment_info.article_id = ams_article.id
-        )   AS commentsCount
+        ams_category.category_name AS categoryName
         FROM ams_article
         INNER JOIN ams_artInfo ON ams_article.id = ams_artInfo.article_id
         <!--        INNER JOIN ams_art_status ON ams_art_status.article_id = ams_article.id-->
         INNER JOIN ams_category ON ams_category.id = ams_artInfo.category_id
         WHERE ams_article.id=#{articleId}
         AND ams_artInfo.deleted =0 AND ams_category.deleted = 0
+    </select>
+
+    <!--查詢指定文章的留言數量-->
+    <select id="countCommentsByArticleId" resultType="int" parameterType="Long">
+        SELECT COUNT(1)
+        FROM ams_comment_info
+        WHERE article_id = #{articleId}
     </select>
 
     <select id="getArticleTagVoList" parameterType="map" resultMap="ArticleTagVoResultMap">

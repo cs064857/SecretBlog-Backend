@@ -23,3 +23,7 @@ local:
   jwt:
     private-key: ${LOCAL_JWT_PRIVATE_KEY}
     public-key: ${LOCAL_JWT_PUBLIC_KEY}
+
+app:
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:51733}

@@ -21,6 +21,7 @@ public interface AmsArticleMapper extends BaseMapper<AmsArticle> {
 
     AmsArtTagsVo getArticleTagVoList(@Param("articleId") Long articleId);
     AmsArticleVo getArticleVo(@Param("articleId") Long articleId);
+    int countCommentsByArticleId(@Param("articleId") Long articleId);
 //    List<AmsArticlePreviewVo> getArticlesByCategoryIdAndPage(@Param("categoryId") Long categoryId);
 
 //    IPage<AmsArticlePreviewVo> getArticlePreviewListByCategoryId(

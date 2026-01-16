@@ -87,6 +87,7 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       LOGIN_JWT_PRIVATE_KEY: ${LOCAL_JWT_PRIVATE_KEY}
       LOCAL_JWT_PUBLIC_KEY: ${LOCAL_JWT_PUBLIC_KEY}
+      CORS_ALLOWED_ORIGIN: ${FRONT_ENDPOINT:-http://localhost:51733}
     ports:
       - "88:88"
     restart: always

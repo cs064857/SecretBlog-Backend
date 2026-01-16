@@ -564,7 +564,11 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
                     .build();
         }
 
-        // 優先通過用戶服務獲取最新用戶暱稱；失敗時保留DB中的備援 userName
+        //獨立查詢留言數量後包裝至VO
+        int commentsCount = this.baseMapper.countCommentsByArticleId(articleId);
+        amsArticleVo.setCommentsCount(commentsCount);
+
+        //優先透過用戶服務獲取最新用戶暱稱；失敗時保留DB中的備援 userName
         /// TODO透過Openfeign獲取用戶資料
 //        try {
 //            Long uid = amsArticleVo.getUserId();
@@ -1253,7 +1257,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 
 
 
-        log.info("文章加入用戶的書籤完成, 用戶ID:{}, 文章ID:{}, 新的文章書籤數:{}",userId, articleId, result);
+        log.info("文章加入用戶的書籤完成, 用戶ID:{}, 文章ID:{}, 新的文章書籤數:{}", userId, articleId, result);
         return result;
     }
 
@@ -1305,7 +1309,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         }
 
         /**
-         * 透過 RabbitMQ 訊息佇列異步更新使用者對該文章的書籤狀態至 AmsArtAction
+         * 透過 RabbitMQ 訊息佇列異步更新使用者對該文章的書籾狀態至 AmsArtAction
          */
         UpdateArticleBookmarkActionMessage actionMessage = UpdateArticleBookmarkActionMessage.builder()
                 .articleId(articleId)
@@ -1327,7 +1331,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
          * Redis操作：從書籤集合移除用戶並減少書籤數
          */
         final String articleStatusKey = RedisCacheKey.ARTICLE_STATUS.format(articleId);
-        log.debug("用戶書籤快取鍵:{}, 文章指標快取鍵:{}", userBookMarksKey, articleStatusKey);
+        log.debug("用戶書籾快取鍵:{}, 文章指標快取鍵:{}", userBookMarksKey, articleStatusKey);
 
         // Lua 腳本保證原子性
         String luaScript =
@@ -1420,8 +1424,8 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //        return newLikes;
 //    }
     ////        // 同時更新資料庫（省略...）
-    ////        return newLikes;
-    ////    }
+//        return newLikes;
+//    }
 
 //    public Long getArticleLikes(long articleId) {
 //        final String redisKey = RedisCacheKey.ARTICLE_LIKES.format(articleId);
@@ -1741,7 +1745,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UNAUTHORIZED)
-                    .detailMessage("用戶未登入，拒絕對文章加入書籤")
+                    .detailMessage("用戶未登入，拒絕編輯文章")
                     .build();
         }
 
@@ -2035,7 +2039,7 @@ public class AmsArticleServiceImpl extends ServiceImpl<AmsArticleMapper, AmsArti
 //                log.warn("該文章ID:{}不存在或已被刪除",articleId);
 //                return true;
 //            }
-////                bloomFilter.add(articleId);
+//                bloomFilter.add(articleId);
 //            return false;
 //
 //        }
