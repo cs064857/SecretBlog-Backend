@@ -30,10 +30,15 @@ public class SseClient {
     public SseEmitter createSse() {
         Long userId = UserContextHolder.getCurrentUserId();
         if (userId == null) {
-            throw BusinessRuntimeException.builder()
-                    .iErrorCode(ResultCode.UNAUTHORIZED)
-                    .detailMessage("用戶未登入，無法建立 SSE 連線")
-                    .build();
+            SseEmitter emitter = new SseEmitter(0L);
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data("{\"code\":4003,\"message\":\"請重新登入\"}"));
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+            }
+            return emitter;
         }
 
         String userKey = String.valueOf(userId);
@@ -80,12 +85,11 @@ public class SseClient {
     }
 
 
-
     /**
      * 對指定使用者推送 SSE 訊息。
      *
      * @param eventName 事件名稱(可為空，空則預設為 message)
-     * @param userId 使用者識別
+     * @param userId    使用者識別
      * @param messageId 訊息 ID
      * @param message   訊息內容
      */
@@ -138,6 +142,7 @@ public class SseClient {
 
     /**
      * 關閉指定使用者的 SSE 連線。
+     *
      * @param userId 使用者識別
      */
     public void closeSse(String userId) {
