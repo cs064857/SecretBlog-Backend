@@ -66,3 +66,4 @@ local:
 custom:
   minio-domain: ${MINIO_ENDPOINT}
   front-domain: ${FRONT_ENDPOINT}
+  domain: ${ENDPOINT}

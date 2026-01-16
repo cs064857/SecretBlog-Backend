@@ -51,6 +51,9 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
     @Value("${custom.minio-domain}")
     private String minioDomain;
 
+    @Value("${custom.domain:}")
+    private String domain;
+
     private final UmsUserMapper umsUserMapper;
 
     private final UmsUserInfoMapper umsUserInfoMapper;
@@ -181,33 +184,38 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
 
         int maxAgeSeconds = (int) TimeUnit.DAYS.toSeconds(30);
 
-        ResponseCookie jwtCookie = ResponseCookie.from("jwtToken", token)
+        ResponseCookie.ResponseCookieBuilder jwtCookieBuilder = ResponseCookie.from("jwtToken", token)
                 .path("/")
                 .maxAge(maxAgeSeconds)
                 .httpOnly(true)
                 .secure(true)
-                .sameSite("Lax")
-                .build();
+                .sameSite("Lax");
 
-        ResponseCookie userIdCookie = ResponseCookie.from("userId", String.valueOf(user.getId()))
+        ResponseCookie.ResponseCookieBuilder userIdCookieBuilder = ResponseCookie.from("userId", String.valueOf(user.getId()))
                 .path("/")
                 .maxAge(maxAgeSeconds)
                 .httpOnly(false)
                 .secure(true)
-                .sameSite("Lax")
-                .build();
+                .sameSite("Lax");
 
-        ResponseCookie avatarCookie = ResponseCookie.from("avatar", StringUtils.defaultString(avatarUrl, ""))
+
+        ResponseCookie.ResponseCookieBuilder avatarCookieBuilder = ResponseCookie.from("avatar", StringUtils.defaultString(avatarUrl, ""))
                 .path("/")
                 .maxAge(maxAgeSeconds)
                 .httpOnly(false)
                 .secure(true)
-                .sameSite("Lax")
-                .build();
+                .sameSite("Lax");
 
-        response.addHeader("Set-Cookie", jwtCookie.toString());
-        response.addHeader("Set-Cookie", userIdCookie.toString());
-        response.addHeader("Set-Cookie", avatarCookie.toString());
+        if(org.springframework.util.StringUtils.hasText(domain)){
+            avatarCookieBuilder.domain(domain);
+            userIdCookieBuilder.domain(domain);
+            jwtCookieBuilder.domain(domain);
+        }
+
+
+        response.addHeader("Set-Cookie", jwtCookieBuilder.build().toString());
+        response.addHeader("Set-Cookie", userIdCookieBuilder.build().toString());
+        response.addHeader("Set-Cookie", avatarCookieBuilder.build().toString());
     }
 
     private UserBundle autoRegisterByGoogle(String email, String name, String pictureUrl) {
