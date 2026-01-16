@@ -1,0 +1,34 @@
+# Docker環境配置
+
+# 內部APIKey(服務間調用驗證)，必須與secret-article相同
+custom:
+  internal:
+    apikey: ${CUSTOM_INTERNAL_APIKEY}
+
+spring:
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR}
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED}
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS}
+    username: ${ELASTICSEARCH_USERNAME}
+    password: ${ELASTICSEARCH_PASSWORD}
+  config:
+    import: optional:nacos:secretblog_search_application.yaml
+#JwtToken相關
+local:
+  jwt:
+    private-key: ${LOCAL_JWT_PRIVATE_KEY}
+    public-key: ${LOCAL_JWT_PUBLIC_KEY}

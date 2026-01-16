@@ -1,0 +1,41 @@
+# Docker環境配置
+
+# 內部APIKey(服務間調用驗證)，必須與secret-search相同
+custom:
+  internal:
+    apikey: ${CUSTOM_INTERNAL_APIKEY}
+
+spring:
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR}
+  datasource:
+    url: ${MYSQL_URL_AMS:jdbc:mysql://secretblog-passerby064857-7179.f.aivencloud.com:15228/secretblog_ams?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      database: ${REDIS_DATABASE}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED}
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED}
+  config:
+    import: optional:nacos:secretblog_article_application.yaml
+#JwtToken相關
+local:
+  jwt:
+    private-key: ${LOCAL_JWT_PRIVATE_KEY}
+    public-key: ${LOCAL_JWT_PUBLIC_KEY}

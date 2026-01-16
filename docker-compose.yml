@@ -1,0 +1,93 @@
+version: "3.9"
+
+services:
+  secret-user:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: secret-user
+        SERVICE_PORT: 22000
+    image: secretblog/secret-user:prod
+    container_name: secret-user
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      LOGIN_JWT_PRIVATE_KEY: ${LOCAL_JWT_PRIVATE_KEY}
+      LOCAL_JWT_PUBLIC_KEY: ${LOCAL_JWT_PUBLIC_KEY}
+    ports:
+      - "22000:22000"
+    restart: always
+
+  secret-article:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: secret-article
+        SERVICE_PORT: 21000
+    image: secretblog/secret-article:prod
+    container_name: secret-article
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      LOGIN_JWT_PRIVATE_KEY: ${LOCAL_JWT_PRIVATE_KEY}
+      LOCAL_JWT_PUBLIC_KEY: ${LOCAL_JWT_PUBLIC_KEY}
+    ports:
+      - "21000:21000"
+    restart: always
+
+  secret-storage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: secret-storage
+        SERVICE_PORT: 23000
+    image: secretblog/secret-storage:prod
+    container_name: secret-storage
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      LOGIN_JWT_PRIVATE_KEY: ${LOCAL_JWT_PRIVATE_KEY}
+      LOCAL_JWT_PUBLIC_KEY: ${LOCAL_JWT_PUBLIC_KEY}
+    ports:
+      - "23000:23000"
+    restart: always
+
+  secret-search:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: secret-search
+        SERVICE_PORT: 24000
+    image: secretblog/secret-search:prod
+    container_name: secret-search
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      LOGIN_JWT_PRIVATE_KEY: ${LOCAL_JWT_PRIVATE_KEY}
+      LOCAL_JWT_PUBLIC_KEY: ${LOCAL_JWT_PUBLIC_KEY}
+    ports:
+      - "24000:24000"
+    restart: always
+
+  secret-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: secret-gateway
+        SERVICE_PORT: 88
+    image: secretblog/secret-gateway:prod
+    container_name: secret-gateway
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      LOGIN_JWT_PRIVATE_KEY: ${LOCAL_JWT_PRIVATE_KEY}
+      LOCAL_JWT_PUBLIC_KEY: ${LOCAL_JWT_PUBLIC_KEY}
+    ports:
+      - "88:88"
+    restart: always
+

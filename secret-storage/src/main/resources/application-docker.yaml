@@ -1,0 +1,23 @@
+# Docker環境配置
+spring:
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR}
+  config:
+    import: optional:nacos:secretblog_storage_application.yaml
+var:
+  endPoint: ${VAR_ENDPOINT}
+  secretblog:
+    bucket:
+      pub:
+        bucketName: ${MINIO_BUCKET_NAME}
+        accessKey: ${MINIO_ACCESS_KEY}
+        secretKey: ${MINIO_SECRET_KEY}
+
+#JwtToken相關
+local:
+  jwt:
+    private-key: ${LOCAL_JWT_PRIVATE_KEY}
+    public-key: ${LOCAL_JWT_PUBLIC_KEY}

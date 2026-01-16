@@ -1,0 +1,68 @@
+# Docker環境配置
+spring:
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR}
+
+  datasource:
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      database: ${REDIS_DATABASE}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED}
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED}
+  #郵箱相關
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: false
+            required: false
+          ssl:
+            enable: true
+          socketFactory:
+            port: ${MAIL_PORT}
+            class: javax.net.ssl.SSLSocketFactory
+            fallback: false
+        debug: ${MAIL_DEBUG}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: openid,profile,email
+  config:
+    import: optional:nacos:secretblog_user_application.yaml
+#JwtToken相關
+local:
+  jwt:
+    private-key: ${LOCAL_JWT_PRIVATE_KEY}
+    public-key: ${LOCAL_JWT_PUBLIC_KEY}
+
+custom:
+  minio-domain: ${MINIO_ENDPOINT}
+  front-domain: ${FRONT_ENDPOINT}
