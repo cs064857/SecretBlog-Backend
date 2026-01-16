@@ -6,6 +6,7 @@ import com.shijiawei.secretblog.common.utils.TimeTool;
 import com.shijiawei.secretblog.user.DTO.UmsUserLoginDTO;
 import com.shijiawei.secretblog.user.authentication.service.LoginService;
 import com.shijiawei.secretblog.user.authentication.service.TokenBlacklistService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,6 +119,15 @@ public class UmsLoginController {
                 && userInfo.getExpiredTime() != null) {
             long ttlMillis = Math.max(userInfo.getExpiredTime() - TimeTool.nowMilli(), 1000L);
             tokenBlacklistService.blacklist(userInfo.getSessionId(), ttlMillis);
+        }
+
+        //清除前端可能使用的Cookie
+        String[] cookiesToClear = {"jwtToken", "userId", "avatar"};
+        for (String cookieName : cookiesToClear) {
+            Cookie cookie = new Cookie(cookieName, null);
+            cookie.setPath("/");
+            cookie.setMaxAge(0);
+            response.addCookie(cookie);
         }
 
         SecurityContextHolder.clearContext();
