@@ -27,6 +27,8 @@ public class WebConfig{
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);   // 允許cookies跨域
         config.addAllowedOrigin(allowedOrigin);       // #允許向該服務器提交請求的URI，*表示全部允許
+        config.addAllowedOrigin("http://localhost:5173");
+        config.addAllowedOrigin("http://localhost:51733");
         config.addAllowedHeader("*");       // #允許訪問的頭信息,*表示全部
         config.addAllowedMethod("*");       // 允許提交請求的方法類型，*表示全部允許
         config.setMaxAge(18000L);           // 預檢請求的緩存時間（秒），即在這個時間段裡，對於相同的跨域請求不會再預檢了
