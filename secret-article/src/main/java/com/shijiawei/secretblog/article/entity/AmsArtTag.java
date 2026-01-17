@@ -1,9 +1,6 @@
 package com.shijiawei.secretblog.article.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.shijiawei.secretblog.common.vaildation.ValidationGroups;
 import jakarta.validation.constraints.NotNull;
@@ -23,7 +20,7 @@ import java.util.List;
 public class AmsArtTag {
 
     @NotNull(message = "主鍵ID不可為空",groups = {ValidationGroups.Delete.class,ValidationGroups.Update.class})
-    @TableId
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @TableField(value = "id")
     private Long id;

@@ -1,5 +1,6 @@
 package com.shijiawei.secretblog.article.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -20,7 +21,7 @@ import lombok.Data;
 public class AmsArtStatus {
 
     @TableField(value = "id")
-    @TableId
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long id;
 

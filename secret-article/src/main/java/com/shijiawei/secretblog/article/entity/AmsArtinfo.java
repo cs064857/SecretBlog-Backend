@@ -22,7 +22,7 @@ public class AmsArtinfo implements Serializable {
      * id(雪花算法,不可為空)
      */
     @JsonFormat(shape = JsonFormat.Shape.STRING)
-    @TableId(value = "id")
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
     @TableField(value = "nick_name")

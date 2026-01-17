@@ -25,9 +25,8 @@ public class AmsArticle implements Serializable {
      * 主鍵(雪花算法)
      */
     @NotNull(message = "修改資料主鍵不可為空",groups = {Update.class})
-    @TableId
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonFormat(shape= JsonFormat.Shape.STRING)
-    @TableField(value = "id")
     private Long id;
 
     /**

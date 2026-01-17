@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 public class AmsTags {
 
     @NotNull(message = "主鍵ID不可為空",groups = {ValidationGroups.Delete.class,ValidationGroups.Update.class})
-    @TableId
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @TableField(value = "id")
     private Long id;
