@@ -31,8 +31,8 @@ public class ElasticsearchConfig {
 
         //設置超時時間
         builder.setRequestConfigCallback(requestConfigBuilder -> {
-            requestConfigBuilder.setConnectTimeout(5000);
-            requestConfigBuilder.setSocketTimeout(30000);
+            requestConfigBuilder.setConnectTimeout(8000);
+            requestConfigBuilder.setSocketTimeout(35000);
             return requestConfigBuilder;
         });
 

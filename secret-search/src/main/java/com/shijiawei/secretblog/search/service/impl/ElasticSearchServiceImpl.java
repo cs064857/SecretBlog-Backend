@@ -120,6 +120,9 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     public void createArticlePreviewAllListDoc() {
         log.info("開始批量建立所有文章預覽 ES 文檔");
 
+        //在建立之前，先刪除舊的所有文檔(防 ES中殘留無效、已刪除的文章文檔數)
+        articlePreviewDocumentRepository.deleteAll();
+
         // 確保索引存在（若不存在則創建並設定映射）
 //        ensureIndexExists();
 
@@ -311,7 +314,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
             log.debug("資料庫文章總數量: {}", dbArticleCount);
 
             // 比較數量，判斷索引是否完整
-            boolean isComplete = esDocCount >= dbArticleCount;
+            boolean isComplete = esDocCount == dbArticleCount;
             log.info("ArticlePreview 索引完整性檢查結果: {} (ES文檔數: {}, 資料庫文章數: {})",
                     isComplete ? "完整" : "不完整", esDocCount, dbArticleCount);
 
