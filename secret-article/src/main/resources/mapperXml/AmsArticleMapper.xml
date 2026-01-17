@@ -236,8 +236,8 @@
         FROM ams_artInfo AS ai
         INNER JOIN ams_article AS a ON a.id = ai.article_id
         INNER JOIN ams_category AS ac ON ac.id = ai.category_id
-        INNER JOIN ams_art_status AS aas ON ai.article_id = aas.article_id
-        INNER JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id
+        LEFT JOIN ams_art_status AS aas ON ai.article_id = aas.article_id
+        LEFT JOIN ams_art_tag AS tag ON tag.article_id = ai.article_id
 
         WHERE ai.deleted = 0
         <if test="categoryId != null">

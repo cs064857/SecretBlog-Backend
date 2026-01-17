@@ -45,6 +45,14 @@ public class AmsTagsServiceImpl extends ServiceImpl<AmsTagsMapper, AmsTags> impl
     @Override
     public void createArtTag(String name) {
         log.info("進行新增文章標籤 - name: {}", name);
+
+        //檢查標籤是否已存在
+        AmsTags existingTag = this.baseMapper.selectOne(new QueryWrapper<AmsTags>().eq("name", name));
+        if (existingTag != null) {
+            log.info("文章標籤已存在,無需重複新增 - name: {}", name);
+            return;
+        }
+
         AmsTags amsTags = new AmsTags();
         amsTags.setName(name);
         log.info("amsTags:{}", amsTags);
