@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .requestMatchers("/sitemap.xml", "/robots.txt", "/favicon.ico").permitAll()
                         //開放給微服務間調用
                         .requestMatchers("/article/internal/**").permitAll()
+                        //分類管理端點：需管理員權限
+                        .requestMatchers("/article/category/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 //JWT驗證Filter
                 .addFilterBefore(internalApiKeyFilter,UsernamePasswordAuthenticationFilter.class)

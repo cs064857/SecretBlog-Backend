@@ -25,13 +25,13 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@Tag(name = "文章分類管理", description = "文章分類相關的 CRUD 操作")
+@Tag(name = "文章分類管理", description = "文章分類相關的 CRUD 操作(分類樹相關)")
 @RequestMapping("/article/category")
 public class AmsCategoryController {
     @Autowired
     AmsCategoryService amsCategoryService;
 
-    @Operation(summary = "分類樹形組件數據請求")
+    @Operation(summary = "分類樹相關-樹形組件數據請求")
     @GetMapping("/tree/list")
     public R<List<AmsCategoryTreeVo>> getTreeCategoryVos() {
         List<AmsCategoryTreeVo> amsCategoryTreeVos = amsCategoryService.getTreeCategoryVo();
@@ -39,6 +39,7 @@ public class AmsCategoryController {
         return R.ok(amsCategoryTreeVos);
     }
 
+    @Operation(summary = "分類樹相關-新增分類")
     @PostMapping("/save")
     public R saveCategory(@RequestBody AmsCategory amsCategory) {
         log.info("amsCategory: {}", amsCategory);
@@ -46,6 +47,7 @@ public class AmsCategoryController {
         return R.ok();
     }
 
+    @Operation(summary = "分類樹相關-邏輯刪除分類")
     @PostMapping("/delete/{id}")
     public R deleteCategory(@PathVariable Long id) {
         //邏輯刪除
@@ -53,6 +55,7 @@ public class AmsCategoryController {
         return R.ok();
     }
     //before(原數據),afterParentId(原數據應變更ParentId),afterLevel(原數據應變更Level)
+    @Operation(summary = "分類樹相關-調整分類層級與父節點")
     @PostMapping("/update/{beforeId}/{afterParentId}/{afterLevel}")
     public R updateCategory(@PathVariable Long beforeId,@PathVariable Long afterParentId,@PathVariable Integer afterLevel) {
 //        log.info("id: {}", beforeId);
@@ -63,7 +66,7 @@ public class AmsCategoryController {
     }
 
     /**
-     * 修改樹形分類數據
+     * 分類樹相關-修改樹形分類名稱
      * @param id
      * @param categoryName
      * @return
@@ -71,12 +74,14 @@ public class AmsCategoryController {
 
     @PutMapping("/{id}")
     public R updateTreeCategory(@PathVariable Long id,@RequestBody String categoryName) {
-        log.info("id:{}",id);
+        log.info("id:{}", id);
         log.info("categoryName {}", categoryName);
-        String str = JacksonUtils.toObj(categoryName).asText();
+        //從JSON物件中取得categoryName屬性值
+        JsonNode jsonNode = JacksonUtils.toObj(categoryName);
+        String str = jsonNode.get("categoryName").asText();
         log.info("str: {}", str);
 
-        amsCategoryService.updateTreeCategoryName(id,str);
+        amsCategoryService.updateTreeCategoryName(id, str);
         return R.ok();
     }
 
