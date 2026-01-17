@@ -4,6 +4,8 @@ logging:
 server:
   port: 88
 spring:
+  codec:
+    max-in-memory-size: 100MB
   main:
     allow-bean-definition-overriding: true
   profiles:

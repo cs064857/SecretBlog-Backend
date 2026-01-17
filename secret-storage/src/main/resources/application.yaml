@@ -13,6 +13,12 @@ var:
 #    accessKey: p6KMsat29WtFgrWPasyR
 #    secretKey: bNgTw96toBr5LbGrzKFnL4oXIV0g7khBYuPB4Zhs
 spring:
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 100MB
+  codec:
+    max-in-memory-size: 100MB
   #  datasource:
   #    driver-class-name: com.mysql.cj.jdbc.Driver
   #    url: jdbc:mysql://secretblog-passerby064857-7179.f.aivencloud.com:15228/secretblog_sms?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
@@ -53,6 +59,10 @@ logging:
     root: info
 server:
   port: 23000
+  tomcat:
+    max-swallow-size: -1
+    # 避免 Tomcat `maxPostSize` 過小導致上傳在進入 Spring 前就被拒絕
+    max-http-form-post-size: 100MB
 #mybatis-plus:
 #  global-config:
 #    db-config:

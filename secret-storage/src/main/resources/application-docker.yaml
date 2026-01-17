@@ -7,6 +7,18 @@ spring:
         server-addr: ${NACOS_SERVER_ADDR}
   config:
     import: optional:nacos:secretblog_storage_application.yaml
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 100MB
+  codec:
+    max-in-memory-size: 100MB
+server:
+  tomcat:
+    max-swallow-size: 30MB
+    # 避免 Tomcat `maxPostSize` 過小導致上傳在進入 Spring 前就被拒絕
+    max-http-form-post-size: 100MB
+
 var:
   endPoint: ${VAR_ENDPOINT}
   secretblog:

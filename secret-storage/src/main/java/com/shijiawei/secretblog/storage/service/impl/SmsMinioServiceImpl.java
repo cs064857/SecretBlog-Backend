@@ -47,7 +47,7 @@ public class SmsMinioServiceImpl implements SmsMinioService {
     @Value("${var.endPoint}")
     private String endpoint;
 
-    private static final long MAX_IMAGE_SIZE_BYTES = 5L * 1024 * 1024;
+    private static final long MAX_IMAGE_SIZE_BYTES = 30L * 1024 * 1024;
 
 //    /**
 //     * 生成預簽名URL
@@ -203,11 +203,11 @@ public class SmsMinioServiceImpl implements SmsMinioService {
         long fileSize = file.getSize();
         log.info("圖片大小:{}", fileSize);
 
-        // 檢查圖片大小（最大 5MB）
+        // 檢查圖片大小（最大 30MB）
         if (fileSize > MAX_IMAGE_SIZE_BYTES) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UPLOAD_FILE_SIZE_EXCEEDED)
-                    .detailMessage("上傳文件大小不能超過5MB")
+                    .detailMessage("上傳文件大小不能超過30MB")
                     .data(Map.of(
                             "userId", ObjectUtils.defaultIfNull(userId, ""),
                             "contentType", StringUtils.defaultString(fileContentType, ""),
