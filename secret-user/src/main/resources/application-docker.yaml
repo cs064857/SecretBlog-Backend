@@ -55,6 +55,7 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: openid,profile,email
+            redirect-uri: ${custom.backend-domain}
   config:
     import: optional:nacos:secretblog_user_application.yaml
 #JwtToken相關
@@ -67,3 +68,4 @@ custom:
   minio-domain: ${MINIO_ENDPOINT}
   front-domain: ${FRONT_ENDPOINT}
   domain: ${ENDPOINT}
+  backend-domain: ${BACKEND_ENDPOINT}/login/oauth2/code/google
