@@ -34,6 +34,7 @@ public class SecurityConfig {
             // 授權規則（Search 服務預設皆需登入）
             .authorizeHttpRequests(authorize -> authorize
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/search/highlight/**").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
                     .anyRequest().authenticated()
             )

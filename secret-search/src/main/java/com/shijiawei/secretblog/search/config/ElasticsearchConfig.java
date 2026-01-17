@@ -4,10 +4,15 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import org.apache.http.HttpHost;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.time.Duration;
 
 @Configuration
 public class ElasticsearchConfig {
@@ -21,9 +26,18 @@ public class ElasticsearchConfig {
         //使用配置的URI動態建立HttpHost
         HttpHost httpHost = HttpHost.create(uris);
 
-        RestClient build = RestClient.builder(httpHost).build();
+        RestClientBuilder builder = RestClient.builder(httpHost);
 
-        var transport = new RestClientTransport(build, new JacksonJsonpMapper());
+
+        //設置超時時間
+        builder.setRequestConfigCallback(requestConfigBuilder -> {
+            requestConfigBuilder.setConnectTimeout(5000);
+            requestConfigBuilder.setSocketTimeout(30000);
+            return requestConfigBuilder;
+        });
+
+        RestClient restClient = builder.build();
+        var transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
 
         return new ElasticsearchClient(transport);
     }
