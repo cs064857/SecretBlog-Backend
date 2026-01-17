@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 public class ElasticsearchConfig {
@@ -28,7 +29,11 @@ public class ElasticsearchConfig {
 
         RestClientBuilder builder = RestClient.builder(httpHost);
 
-
+        //配置底層HttpClient 以處理閒置連接回收，防止Connection reset
+        builder.setHttpClientConfigCallback(httpClientBuilder -> {
+            httpClientBuilder.setKeepAliveStrategy((response, context) -> Duration.ofMinutes(5).toMillis()); //設置Keep-Alive
+            return httpClientBuilder;
+        });
         //設置超時時間
         builder.setRequestConfigCallback(requestConfigBuilder -> {
             requestConfigBuilder.setConnectTimeout(8000);

@@ -7,8 +7,10 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.retry.annotation.EnableRetry;
 
 
+@EnableRetry //啟用Spring Retry重試機制
 @EnableRabbit
 @EnableFeignClients
 @EnableDiscoveryClient
