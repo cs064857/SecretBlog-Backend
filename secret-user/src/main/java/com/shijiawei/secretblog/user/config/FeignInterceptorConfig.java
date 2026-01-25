@@ -1,0 +1,74 @@
+package com.shijiawei.secretblog.user.config;
+
+import feign.RequestInterceptor;
+import feign.RequestTemplate;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+@Slf4j
+@Configuration
+public class FeignInterceptorConfig {
+
+    @Value("${custom.internal.apikey}")
+    private String expectedApiKey;
+    /**
+     * feign 攔截器
+     * @return RequestInterceptor 實例
+     */
+    @Bean
+    public RequestInterceptor requestInterceptor() {
+        return new MyRequestInterceptor(expectedApiKey);
+    }
+
+    /**
+     * 實現攔截器RequestInterceptor
+     */
+    static class MyRequestInterceptor implements RequestInterceptor {
+        private final String apiKey;
+
+        //通過構造函數接收
+        public MyRequestInterceptor(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        @Override
+        public void apply(RequestTemplate template) {
+            //對/internal/路徑都添加APIKey
+            if (template.url().contains("/internal/")) {
+                template.header("X-Internal-Api-Key", apiKey);
+                log.debug("請求頭中為內部調用添加Key，URL: {}", template.url());
+            }
+
+            ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder
+                    .getRequestAttributes();
+            if (servletRequestAttributes != null) {
+                HttpServletRequest request = servletRequestAttributes.getRequest();
+
+                // 1.優先嘗試從原始請求，則從Cookie中尋找jwtToken
+                Cookie[] cookies = request.getCookies();
+                if (cookies != null) {
+                    for (Cookie cookie : cookies) {
+                        if ("jwtToken".equals(cookie.getName())) {
+                            // 轉換為標準的 Bearer Token 格式透傳給下游服務
+                            template.header("Authorization", "Bearer " + cookie.getValue());
+                            return;
+                        }
+                    }
+                }
+                // 2.嘗試從原始請求的Authorization Header獲取
+                String authorization = request.getHeader("Authorization");
+                if (StringUtils.hasText(authorization)) {
+                    template.header("Authorization", authorization);
+                }
+            }
+        }
+    }
+
+}

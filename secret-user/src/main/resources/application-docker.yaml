@@ -64,7 +64,10 @@ local:
     private-key: ${LOCAL_JWT_PRIVATE_KEY}
     public-key: ${LOCAL_JWT_PUBLIC_KEY}
 
+# 內部APIKey(服務間調用驗證)，必須與secret-articl相同
 custom:
+  internal:
+    apikey: ${CUSTOM_INTERNAL_APIKEY}
   minio-domain: ${MINIO_ENDPOINT}
   front-domain: ${FRONT_ENDPOINT}
   domain: ${ENDPOINT}
