@@ -2,6 +2,7 @@ package com.shijiawei.secretblog.article.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shijiawei.secretblog.article.entity.AmsArtStatus;
+import java.util.Map;
 
 /**
  * ClassName: AmsArtStatusService
@@ -28,5 +29,7 @@ public interface AmsArtStatusService extends IService<AmsArtStatus> {
      * @return 是否更新成功
      */
     boolean updateBookmarksCount(Long articleId, int delta);
+
+    int batchUpdateViewsCount(Map<Long, Integer> viewsCountMap);
 
 }

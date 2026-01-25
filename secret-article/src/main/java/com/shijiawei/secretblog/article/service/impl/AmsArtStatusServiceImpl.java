@@ -8,6 +8,9 @@ import com.shijiawei.secretblog.article.mapper.AmsArtStatusMapper;
 import com.shijiawei.secretblog.article.service.AmsArtStatusService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
 
 /**
  * ClassName: AmsArtStatusServiceImpl
@@ -69,6 +72,43 @@ public class AmsArtStatusServiceImpl extends ServiceImpl<AmsArtStatusMapper, Ams
             log.warn("修改書籤數失敗，文章ID: {}（文章可能不存在）", articleId);
         }
         return result;
+    }
+
+    /**
+     * 批量更新文章瀏覽數(用於定時從Redis同步瀏覽數至 DB)
+     * @param viewsCountMap key=articleId, value=viewsCount
+     * @return 更新成功的筆數
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int batchUpdateViewsCount(Map<Long, Integer> viewsCountMap) {
+        if (viewsCountMap == null || viewsCountMap.isEmpty()) {
+            log.debug("batchUpdateViewsCount: 傳入空 Map，跳過更新");
+            return 0;
+        }
+
+        int successCount = 0;
+        for (Map.Entry<Long, Integer> entry : viewsCountMap.entrySet()) {
+            Long articleId = entry.getKey();
+            Integer viewsCount = entry.getValue();
+            if (articleId == null || viewsCount == null) {
+                continue;
+            }
+
+            LambdaUpdateWrapper<AmsArtStatus> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(AmsArtStatus::getArticleId, articleId)
+                    .set(AmsArtStatus::getViewsCount, viewsCount);
+
+            boolean result = this.update(updateWrapper);
+            if (result) {
+                successCount++;
+            } else {
+                log.warn("更新瀏覽數失敗，articleId={}，可能文章不存在", articleId);
+            }
+        }
+
+        log.info("批量更新瀏覽數完成，總數={}，成功={}",viewsCountMap.size(), successCount);
+        return successCount;
     }
 
 }
