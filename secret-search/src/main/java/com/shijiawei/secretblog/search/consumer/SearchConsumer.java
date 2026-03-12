@@ -2,14 +2,13 @@ package com.shijiawei.secretblog.search.consumer;
 
 import com.shijiawei.secretblog.common.codeEnum.RabbitMqConsts;
 import com.shijiawei.secretblog.common.message.SyncArticleToESMessage;
+import com.shijiawei.secretblog.common.utils.DeadLetterLogHelper;
 import com.shijiawei.secretblog.search.service.ElasticSearchService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * ClassName: SearchConsumer
@@ -58,18 +57,6 @@ public class SearchConsumer {
 
     @RabbitListener(queues = RabbitMqConsts.Search.DEAD_LETTER_QUEUE)
     public void handleSearchDeadLetterMessage(Message message) {
-        if (message == null || message.getMessageProperties() == null) {
-            log.error("收到Search死信隊列空訊息");
-            return;
-        }
-
-        String payload = message.getBody() == null ? null : new String(message.getBody(), StandardCharsets.UTF_8);
-        log.error("收到Search死信訊息，Queue={}，Exchange={}，RoutingKey={}，messageId={}，Headers={}，Payload={}",
-                RabbitMqConsts.Search.DEAD_LETTER_QUEUE,
-                message.getMessageProperties().getReceivedExchange(),
-                message.getMessageProperties().getReceivedRoutingKey(),
-                message.getMessageProperties().getMessageId(),
-                message.getMessageProperties().getHeaders(),
-                payload);
+        DeadLetterLogHelper.log(log, "Search", RabbitMqConsts.Search.DEAD_LETTER_QUEUE, message);
     }
 }
