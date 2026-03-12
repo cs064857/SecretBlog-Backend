@@ -8,9 +8,12 @@ import com.shijiawei.secretblog.article.service.AmsCommentStatisticsService;
 import com.shijiawei.secretblog.article.service.AmsCommentActionService;
 import com.shijiawei.secretblog.common.codeEnum.RabbitMqConsts;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * ClassName: AmsCunsumer
@@ -187,6 +190,25 @@ public class AmsCunsumer {
                       message.getCommentId(), message.getUserId(), message.getIsLiked(), e);
             throw new RuntimeException(e);
         }
+    }
+
+    @RabbitListener(queues = RabbitMqConsts.Ams.DEAD_LETTER_QUEUE)
+    public void handleAmsDeadLetterMessage(Message message) {
+        if (message == null || message.getMessageProperties() == null) {
+            log.error("收到Ams死信隊列空訊息");
+            return;
+        }
+
+
+
+        String payload = message.getBody() == null ? null : new String(message.getBody(), StandardCharsets.UTF_8);
+        log.error("收到Ams死信訊息，Queue={}，Exchange={}，RoutingKey={}，MessageId={}，Headers={}，payload={}",
+                RabbitMqConsts.Ams.DEAD_LETTER_QUEUE,
+                message.getMessageProperties().getReceivedExchange(),
+                message.getMessageProperties().getReceivedRoutingKey(),
+                message.getMessageProperties().getMessageId(),
+                message.getMessageProperties().getHeaders(),
+                payload);
     }
 
 }

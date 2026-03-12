@@ -18,6 +18,25 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitConfig {
 
+    @Bean(value = RabbitMqConsts.Search.DEAD_LETTER_EXCHANGE)
+    public TopicExchange deadLetterExchange() {
+        return new TopicExchange(RabbitMqConsts.Search.DEAD_LETTER_EXCHANGE);
+    }
+
+    @Bean(value = RabbitMqConsts.Search.DEAD_LETTER_QUEUE)
+    public Queue deadLetterQueue() {
+        return QueueBuilder.durable(RabbitMqConsts.Search.DEAD_LETTER_QUEUE).build();
+    }
+
+    @Bean
+    public Binding bindDeadLetterQueueToExchange(
+            @Qualifier(RabbitMqConsts.Search.DEAD_LETTER_QUEUE) Queue deadLetterQueue,
+            @Qualifier(RabbitMqConsts.Search.DEAD_LETTER_EXCHANGE) TopicExchange deadLetterExchange) {
+        return BindingBuilder.bind(deadLetterQueue)
+                .to(deadLetterExchange)
+                .with(RabbitMqConsts.Search.DEAD_LETTER_ROUTING_KEY);
+    }
+
     /**
      * 搜索服務 Topic Exchange
      */
@@ -31,7 +50,10 @@ public class RabbitConfig {
      */
     @Bean(value = RabbitMqConsts.Search.SyncArticleToES.QUEUE)
     public Queue syncArticleToESQueue() {
-        return new Queue(RabbitMqConsts.Search.SyncArticleToES.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.Search.SyncArticleToES.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.Search.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.Search.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     /**

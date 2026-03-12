@@ -9,7 +9,6 @@ package com.shijiawei.secretblog.common.codeEnum;
 public final class RabbitMqConsts {
 
     private RabbitMqConsts() {}
-
     /**
      * 使用者服務（secret-user）相關常數
      */
@@ -22,6 +21,11 @@ public final class RabbitMqConsts {
         public static final String DIRECT_EXCHANGE = PREFIX + ".directExchange";
         public static final String FANOUT_EXCHANGE = PREFIX + ".fanoutExchange";
         public static final String TOPIC_EXCHANGE = PREFIX + ".topicExchange";
+
+        //死信隊列相關常數
+        public static final String DEAD_LETTER_EXCHANGE = PREFIX + ".dlx";
+        public static final String DEAD_LETTER_QUEUE = PREFIX + ".dlq";
+        public static final String DEAD_LETTER_ROUTING_KEY = PREFIX + ".dead";
 
         /**
          * 作者頭像更新（用於同步文章模組作者資訊）
@@ -93,6 +97,11 @@ public final class RabbitMqConsts {
         private static final String PREFIX = "ams";
 
         public static final String TOPIC_EXCHANGE = PREFIX + ".topicExchange";
+
+        //死信隊列相關常數
+        public static final String DEAD_LETTER_EXCHANGE = PREFIX + ".dlx";
+        public static final String DEAD_LETTER_QUEUE = PREFIX + ".dlq";
+        public static final String DEAD_LETTER_ROUTING_KEY = PREFIX + ".dead";
 
         /**
          * 1、用戶對文章互動行為更新（點讚/取消點讚狀態）
@@ -181,6 +190,9 @@ public final class RabbitMqConsts {
         private static final String PREFIX = "search";
 
         public static final String TOPIC_EXCHANGE = PREFIX + ".topicExchange";
+        public static final String DEAD_LETTER_EXCHANGE = PREFIX + ".dlx";
+        public static final String DEAD_LETTER_QUEUE = PREFIX + ".dlq";
+        public static final String DEAD_LETTER_ROUTING_KEY = PREFIX + ".dead";
 
         /**
          * 文章同步至 Elasticsearch

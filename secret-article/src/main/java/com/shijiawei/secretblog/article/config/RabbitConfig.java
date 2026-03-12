@@ -20,7 +20,36 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitConfig {
 
+    /**
+     * 死信隊列相關
+     */
 
+
+    //User服務
+    //用於接收所有死亡的訊息並處理日誌相關的Queue
+    @Bean(value = RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE)
+    public TopicExchange logsDeadLetterExchange(){
+
+        return new TopicExchange(RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE);
+
+
+    }
+    //用於接收所有死亡的訊息並處理日誌相關的Queue
+    @Bean(value = RabbitMqConsts.Ams.DEAD_LETTER_QUEUE)
+    public Queue logsDeadLetterQueue(){
+
+        return QueueBuilder.durable(RabbitMqConsts.Ams.DEAD_LETTER_QUEUE).build();
+
+    }
+
+    @Bean
+    public Binding bindDeadLetterQueueToExchange(
+            @Qualifier(value = RabbitMqConsts.Ams.DEAD_LETTER_QUEUE) Queue deadLetterQueue,
+            @Qualifier(value = RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE) TopicExchange deadLetterExchange) {
+        return BindingBuilder.bind(deadLetterQueue)
+                .to(deadLetterExchange)
+                .with(RabbitMqConsts.Ams.DEAD_LETTER_ROUTING_KEY);
+    }
 
     /**
      * 1、用戶對文章互動行為更新（點讚/取消點讚狀態）
@@ -32,13 +61,19 @@ public class RabbitConfig {
     //文章讚數更新佇列 (點讚/取消點讚狀態同步到 AmsArtStatus)
     @Bean(value = RabbitMqConsts.Ams.UpdateArticleLiked.QUEUE)
     public Queue updateArticleLikedQueue(){
-        return new Queue(RabbitMqConsts.Ams.UpdateArticleLiked.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.Ams.UpdateArticleLiked.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.Ams.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
     //文章互動行為更新佇列 (點讚/取消點讚狀態同步到 AmsArtAction)
 
     @Bean(value = RabbitMqConsts.Ams.UpdateArticleAction.QUEUE)
     public Queue updateArticleActionQueue(){
-        return new Queue(RabbitMqConsts.Ams.UpdateArticleAction.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.Ams.UpdateArticleAction.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.Ams.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
     @Bean
     public Binding amsBinding(@Qualifier(value = RabbitMqConsts.Ams.UpdateArticleLiked.QUEUE) Queue queue,
@@ -86,7 +121,10 @@ public class RabbitConfig {
      */
     @Bean(value = RabbitMqConsts.Ams.UpdateArticleBookmark.QUEUE)
     public Queue updateArticleBookmarkQueue(){
-        return new Queue(RabbitMqConsts.Ams.UpdateArticleBookmark.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.Ams.UpdateArticleBookmark.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.Ams.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean
@@ -100,7 +138,10 @@ public class RabbitConfig {
      */
     @Bean(value = RabbitMqConsts.Ams.UpdateArticleBookmarkAction.QUEUE)
     public Queue updateArticleBookmarkActionQueue(){
-        return new Queue(RabbitMqConsts.Ams.UpdateArticleBookmarkAction.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.Ams.UpdateArticleBookmarkAction.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.Ams.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean
@@ -114,7 +155,10 @@ public class RabbitConfig {
      */
     @Bean(value = RabbitMqConsts.Ams.UpdateCommentLiked.QUEUE)
     public Queue updateCommentLikedQueue(){
-        return new Queue(RabbitMqConsts.Ams.UpdateCommentLiked.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.Ams.UpdateCommentLiked.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.Ams.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean
@@ -128,7 +172,10 @@ public class RabbitConfig {
      */
     @Bean(value = RabbitMqConsts.Ams.UpdateCommentAction.QUEUE)
     public Queue updateCommentActionQueue(){
-        return new Queue(RabbitMqConsts.Ams.UpdateCommentAction.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.Ams.UpdateCommentAction.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.Ams.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.Ams.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean

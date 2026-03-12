@@ -18,34 +18,90 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitConfig {
 
+
+    /**
+     * 死信隊列相關
+     */
+
+    //用於接收所有死亡的訊息並處理日誌相關的Queue
+    @Bean(value = RabbitMqConsts.User.DEAD_LETTER_EXCHANGE)
+    public TopicExchange logsDeadLetterExchange(){
+
+        return new TopicExchange(RabbitMqConsts.User.DEAD_LETTER_EXCHANGE);
+
+
+    }
+
+    //用於接收所有死亡的訊息並處理日誌相關的Queue
+    @Bean(value = RabbitMqConsts.User.DEAD_LETTER_QUEUE)
+    public Queue logsDeadLetterQueue(){
+
+        return QueueBuilder.durable(RabbitMqConsts.User.DEAD_LETTER_QUEUE).build();
+
+    }
+
+    @Bean
+    public Binding bindDeadLetterQueueToExchange(
+            @Qualifier(value = RabbitMqConsts.User.DEAD_LETTER_QUEUE) Queue deadLetterQueue,
+            @Qualifier(value = RabbitMqConsts.User.DEAD_LETTER_EXCHANGE) TopicExchange deadLetterExchange) {
+
+        //將死信隊列綁定到死信交換機，並使用指定的Routing Key
+        return BindingBuilder.bind(deadLetterQueue)
+                .to(deadLetterExchange)
+                .with(RabbitMqConsts.User.DEAD_LETTER_ROUTING_KEY);
+    }
+
+    /**
+     * 業務相關
+     */
+
     @Bean(value = RabbitMqConsts.User.UserAvatarUpdate.QUEUE)
     public Queue userAvatarUpdateQueue() {
-        return new Queue(RabbitMqConsts.User.UserAvatarUpdate.QUEUE);
+//        return new Queue(RabbitMqConsts.User.UserAvatarUpdate.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.User.UserAvatarUpdate.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.User.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.User.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean(value = RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE)
     public Queue articleLikedEmailNotifyQueue() {
-        return new Queue(RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.User.ArticleLikedEmailNotify.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.User.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.User.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean(value = RabbitMqConsts.User.ArticleRepliedNotify.QUEUE)
     public Queue articleRepliedEmailNotifyQueue() {
-        return new Queue(RabbitMqConsts.User.ArticleRepliedNotify.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.User.ArticleRepliedNotify.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.User.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.User.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean(value = RabbitMqConsts.User.ArticleRepliedInboxNotify.QUEUE)
     public Queue articleRepliedInboxNotifyQueue() {
-        return new Queue(RabbitMqConsts.User.ArticleRepliedInboxNotify.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.User.ArticleRepliedInboxNotify.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.User.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.User.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean(value = RabbitMqConsts.User.CommentRepliedEmailNotify.QUEUE)
     public Queue commentRepliedEmailNotifyQueue() {
-        return new Queue(RabbitMqConsts.User.CommentRepliedEmailNotify.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.User.CommentRepliedEmailNotify.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.User.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.User.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean(value = RabbitMqConsts.User.CommentRepliedInboxNotify.QUEUE)
     public Queue commentRepliedInboxNotifyQueue() {
-        return new Queue(RabbitMqConsts.User.CommentRepliedInboxNotify.QUEUE);
+        return QueueBuilder.durable(RabbitMqConsts.User.CommentRepliedInboxNotify.QUEUE)
+                .deadLetterExchange(RabbitMqConsts.User.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(RabbitMqConsts.User.DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean(value = RabbitMqConsts.User.TOPIC_EXCHANGE)

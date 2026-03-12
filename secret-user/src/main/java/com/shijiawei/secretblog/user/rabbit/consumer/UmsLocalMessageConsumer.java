@@ -19,6 +19,7 @@ import com.shijiawei.secretblog.user.service.UmsUserService;
 import com.shijiawei.secretblog.common.utils.AvatarUrlHelper;
 import com.shijiawei.secretblog.user.utils.SseClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RList;
 import org.redisson.api.RedissonClient;
@@ -31,6 +32,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -625,5 +627,22 @@ public class UmsLocalMessageConsumer {
 //                message.getArticleId()
 //        );
 //    }
+
+    @RabbitListener(queues = RabbitMqConsts.User.DEAD_LETTER_QUEUE)
+    public void handleUserDeadLetterMessage(Message message) {
+        if (message == null || message.getMessageProperties() == null) {
+            log.error("收到 user 死信隊列空訊息");
+            return;
+        }
+
+        String payload = message.getBody() == null ? null : new String(message.getBody(), StandardCharsets.UTF_8);
+        log.error("收到User死信訊息，Queue={}，Exchange={}，RoutingKey={}，MessageId={}，Headers={}，payload={}",
+                RabbitMqConsts.User.DEAD_LETTER_QUEUE,
+                message.getMessageProperties().getReceivedExchange(),
+                message.getMessageProperties().getReceivedRoutingKey(),
+                message.getMessageProperties().getMessageId(),
+                message.getMessageProperties().getHeaders(),
+                payload);
+    }
 
 }
