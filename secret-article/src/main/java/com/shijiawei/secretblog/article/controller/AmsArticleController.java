@@ -3,6 +3,8 @@ package com.shijiawei.secretblog.article.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.shijiawei.secretblog.article.dto.AmsArticleUpdateDTO;
 import com.shijiawei.secretblog.article.dto.ArticlePreviewQueryDto;
+import com.shijiawei.secretblog.article.myenum.LanguageCode;
+import com.shijiawei.secretblog.article.service.AmsAiService;
 import com.shijiawei.secretblog.article.service.AmsArticleService;
 import com.shijiawei.secretblog.article.service.AmsArtinfoService;
 import com.shijiawei.secretblog.article.vo.AmsArticleEditVo;
@@ -41,6 +43,9 @@ public class AmsArticleController {
 
     @Autowired
     AmsArtinfoService amsArtinfoService;
+
+    @Autowired
+    AmsAiService amsAiService;
 
     @PostMapping("/save")
     public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication) {
@@ -137,7 +142,7 @@ public class AmsArticleController {
      * @return
      */
     @Validated
-    @GetMapping("articles/{articleId}")
+    @GetMapping("/articles/{articleId}")
     public R<AmsArticleVo> getAmsArticleVo( @Positive @NotNull @PathVariable Long articleId) {
 //        log.info("articleId:{}",articleId);
 //        AmsArticle article = amsArticleService.getById(articleId);
@@ -147,6 +152,13 @@ public class AmsArticleController {
         R<AmsArticleVo> ok = R.ok(article);
 //        log.info("ok:{}",ok);
         return ok;
+    }
+
+    @GetMapping("/articles/{articleId}/translations")
+//    public R getArticleTranslation(@PathVariable Long articleId,@RequestParam(value = "languageCode") String languageCode){
+    public R<String> getArticleTranslation(@PathVariable Long articleId ,@RequestParam(value = "languageCode") LanguageCode languageCode){
+        String context = amsAiService.translateArticleContext(articleId,languageCode);
+        return R.ok(context);
     }
 
     /**

@@ -2,6 +2,11 @@ custom:
   minio-domain: ${MINIO_ENDPOINT:}
   internal:
     apikey: qwaszx123321
+  openai:
+    baseUrl: ${OPENAI_BASEURL}
+    apiKey: ${OPENAI_APIKEY}
+    model: ${OPENAI_MODEL}
+
 spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -60,6 +65,12 @@ spring:
     # 啟用 SSL 支援
     ssl:
       enabled: ${RABBITMQ_SSL_ENABLED:false}
+
+  ai:
+    openai:
+      base-url: ${SPRING.AI.OPENAI.BASE-URL}
+      api-key: ${SPRING.AI.OPENAI.API-KEY}
+
 #  cache:
 #    redis:
 #      #以下配置為配合SpringCache使用時
@@ -116,3 +127,5 @@ login:
   jwt:
     private-key: ${local.jwt.private-key}
     public-key: ${local.jwt.public-key}
+
+
