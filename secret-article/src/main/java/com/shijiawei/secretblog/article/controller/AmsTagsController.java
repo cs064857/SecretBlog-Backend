@@ -30,8 +30,8 @@ import java.util.Map;
  */
 @Slf4j
 @Tag(name = "標籤管理", description = "文章標籤相關的 CRUD 操作")
-@RequestMapping("/article/tags")
 @RestController
+@RequestMapping("/ams")
 public class AmsTagsController {
 
     @Autowired
@@ -50,7 +50,7 @@ public class AmsTagsController {
                     description = "成功新增標籤"
             )
     })
-    @PostMapping("/create")
+    @PostMapping("/tags")
     public R createArtTag(@Validated(value = {ValidationGroups.Insert.class}) @RequestBody AmsTagsCreateArtDTO createArtTagDTO){
 
         amsTagsService.createArtTag(createArtTagDTO.getName());
@@ -71,7 +71,7 @@ public class AmsTagsController {
                     description = "成功取得標籤列表"
             ),
     })
-    @GetMapping("/list")
+    @GetMapping("/tags")
     public R<List<AmsTags>> getArtTags(){
         List<AmsTags> amsTagsList = amsTagsService.getArtTags();
         return R.ok(amsTagsList);
@@ -87,7 +87,7 @@ public class AmsTagsController {
             responseCode = "200",
             description = "成功刪除標籤"
     )
-    @PostMapping("/delete/{id}")
+    @DeleteMapping("/tags/{id}")
     public R deleteArtTag(@Validated(value = {ValidationGroups.Delete.class}) @PathVariable(value = "id") Long id){
 
         boolean removed = amsTagsService.removeById(id);

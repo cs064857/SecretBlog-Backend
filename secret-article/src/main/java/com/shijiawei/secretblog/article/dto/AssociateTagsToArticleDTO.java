@@ -1,6 +1,7 @@
 package com.shijiawei.secretblog.article.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
@@ -15,8 +16,10 @@ import java.util.List;
 public class AssociateTagsToArticleDTO {
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private Long article_id;
+    @JsonProperty("article_id")
+    private Long articleId;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private List<Long> tags_id;
+    @JsonProperty("tags_id")
+    private List<Long> tagsId;
 }

@@ -19,27 +19,46 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/article/tag")
+@RequestMapping("/ams")
 public class AmsArtTagController {
 
     @Autowired
     private AmsArtTagService amsArtTagService;
 
-    @PostMapping("/associate")
-    public R associateTagsToArticle(@RequestBody AssociateTagsToArticleDTO associateTagsToArticleDTO){
 
+    /**
+     * 為文章建立標籤關聯
+     * @param articleId
+     * @param associateTagsToArticleDTO
+     * @return
+     */
+    @PostMapping("/articles/{articleId}/tags")
+    public R associateTagsToArticle(@PathVariable Long articleId, @RequestBody AssociateTagsToArticleDTO associateTagsToArticleDTO){
+        associateTagsToArticleDTO.setArticleId(articleId);
         amsArtTagService.associateTagsToArticle(associateTagsToArticleDTO);
         return R.ok();
     }
-    @PostMapping("/unassociate")
-    public R unassociateTagsToArticle(@RequestBody AssociateTagsToArticleDTO associateTagsToArticleDTO){
 
+    /**
+     * 解除文章與標籤的關聯
+     * @param articleId
+     * @param associateTagsToArticleDTO
+     * @return
+     */
+    @DeleteMapping("/articles/{articleId}/tags")
+    public R unAssociateTagsToArticle(@PathVariable Long articleId, @RequestBody AssociateTagsToArticleDTO associateTagsToArticleDTO){
+        associateTagsToArticleDTO.setArticleId(articleId);
         amsArtTagService.unassociateTagsToArticle(associateTagsToArticleDTO);
         return R.ok();
     }
-    @GetMapping("/associations/{article_id}")
-    public R<List<AmsArtTag>> getassociations(@PathVariable("article_id") Long articleId){
 
+    /**
+     * 取得文章關聯的標籤
+     * @param articleId
+     * @return
+     */
+    @GetMapping("/articles/{articleId}/tags")
+    public R<List<AmsArtTag>> getAssociations(@PathVariable("articleId") Long articleId){
         List<AmsArtTag> amsArtTagList =  amsArtTagService.getAssociationsById(articleId);
         return R.ok(amsArtTagList);
     }

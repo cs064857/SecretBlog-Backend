@@ -32,10 +32,10 @@ public class AmsArtTagServiceImpl extends ServiceImpl<AmsArtTagMapper, AmsArtTag
     public void unassociateTagsToArticle(AssociateTagsToArticleDTO associateTagsToArticleDTO) {
 
         this.baseMapper.deleteById(new LambdaQueryWrapper<AmsArtTag>()
-                .eq(AmsArtTag::getArticleId,associateTagsToArticleDTO.getArticle_id())
-                .in(AmsArtTag::getId,associateTagsToArticleDTO.getTags_id()));
+                .eq(AmsArtTag::getArticleId,associateTagsToArticleDTO.getArticleId())
+                .in(AmsArtTag::getId,associateTagsToArticleDTO.getTagsId()));
 
-        System.out.println("為文章 " + associateTagsToArticleDTO.getArticle_id() + " 解除了 " + associateTagsToArticleDTO.getTags_id().size() + " 個標籤關聯。");
+        System.out.println("為文章 " + associateTagsToArticleDTO.getArticleId() + " 解除了 " + associateTagsToArticleDTO.getTagsId().size() + " 個標籤關聯。");
     }
 
     @Override

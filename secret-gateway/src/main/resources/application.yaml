@@ -43,7 +43,7 @@ spring:
         - id: article_route
           uri: lb://secret-article
           predicates:
-            - Path=/api/article/**
+            - Path=/api/ams/**
           filters:
             - RewritePath=/api/(?<segment>.*), /${segment}
         - id: user_route

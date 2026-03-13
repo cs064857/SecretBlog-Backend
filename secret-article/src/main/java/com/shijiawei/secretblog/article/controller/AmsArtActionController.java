@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
  */
 
 @Slf4j
-@RequestMapping("/article")
 @RestController
+@RequestMapping("/ams")
 public class AmsArtActionController {
 
     @Autowired
@@ -30,7 +30,7 @@ public class AmsArtActionController {
 
      * @return 文章操作記錄
      */
-    @GetMapping("/{articleId}/action-status")
+    @GetMapping("/articles/{articleId}/action-status")
     public R<AmsArtActionVo> getArtAction(@PathVariable(value = "articleId") Long articleId) {
         AmsArtActionVo amsArtActionVo = amsArtActionService.getArticleActionStatusVo(articleId);
         return R.ok(amsArtActionVo);
@@ -42,7 +42,7 @@ public class AmsArtActionController {
      * @param routePage 頁碼（從 1 開始）
      * @return 喜歡（點讚）文章列表分頁
      */
-    @GetMapping("/user/{userId}/liked-articles")
+    @GetMapping("/articles/users/{userId}/liked-articles")
     public R<IPage<UserLikedArticleVo>> getLikedArticlesByUserId(
             @PathVariable("userId") Long userId,
             @RequestParam(value = "routePage", required = true) Integer routePage
@@ -57,7 +57,7 @@ public class AmsArtActionController {
      * @param routePage 頁碼（從 1 開始）
      * @return 書籤文章列表分頁
      */
-    @GetMapping("/user/{userId}/bookmarked-articles")
+    @GetMapping("/articles/users/{userId}/bookmarked-articles")
     public R<IPage<UserLikedArticleVo>> getBookmarkedArticlesByUserId(
             @PathVariable("userId") Long userId,
             @RequestParam(value = "routePage", required = true) Integer routePage

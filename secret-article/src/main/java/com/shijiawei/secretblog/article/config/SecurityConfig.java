@@ -45,9 +45,13 @@ public class SecurityConfig {
                         //SEO：由Gatewa 轉發到article的root路徑
                         .requestMatchers("/sitemap.xml", "/robots.txt", "/favicon.ico").permitAll()
                         //開放給微服務間調用
-                        .requestMatchers("/article/internal/**").permitAll()
+                        .requestMatchers("/ams/internal/articles/**", "/ams/internal/users/**").permitAll()
+                        //公開的 GET 端點
+                        .requestMatchers(HttpMethod.GET, "/ams/articles", "/ams/articles/*", "/ams/articles/*/action-status", "/ams/articles/*/comments", "/ams/articles/*/comments/action-status", "/ams/articles/*/translations", "/ams/categories/tree", "/ams/categories/*/articles", "/ams/tags", "/ams/articles/*/tags", "/ams/users/*/comments").permitAll()
+                        //已認證用戶可存取的端點（PUT編輯文章、編輯留言）
+                        .requestMatchers(HttpMethod.PUT, "/ams/articles/*", "/ams/comments/*").authenticated()
                         //分類管理端點：需管理員權限
-                        .requestMatchers("/article/category/**").hasRole("ADMIN")
+                        .requestMatchers("/ams/categories/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 //JWT驗證Filter
                 .addFilterBefore(internalApiKeyFilter,UsernamePasswordAuthenticationFilter.class)

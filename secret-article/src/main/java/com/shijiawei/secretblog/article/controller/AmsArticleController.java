@@ -36,7 +36,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/article")
+@RequestMapping("/ams")
 public class AmsArticleController {
     @Autowired
     AmsArticleService amsArticleService;
@@ -47,7 +47,7 @@ public class AmsArticleController {
     @Autowired
     AmsAiService amsAiService;
 
-    @PostMapping("/save")
+    @PostMapping("/articles")
     public R saveArticle(@Validated(value = {Insert.class}) @RequestBody AmsSaveArticleVo amsSaveArticleVo, HttpServletRequest httpServletRequest, Authentication authentication) {
         log.debug("amsSaveArticleVo:{}",amsSaveArticleVo);
         long articleId = amsArticleService.saveArticles(amsSaveArticleVo, httpServletRequest,authentication);
@@ -62,7 +62,7 @@ public class AmsArticleController {
      * @return
      *
      */
-    @PutMapping("/update/{articleId}")
+    @PutMapping("/articles/{articleId}")
     public R updateArticle(@PathVariable(value = "articleId",required = true) Long articleId,@RequestBody AmsArticleUpdateDTO amsArticleUpdateDTO){
 
         amsArticleService.updateArticle(articleId,amsArticleUpdateDTO);
@@ -103,7 +103,7 @@ public class AmsArticleController {
     /**
      * 文章點讚數+1
      */
-    @GetMapping("/articles/{articleId}/like")
+    @PostMapping("/articles/{articleId}/likes")
     public R <Long> incrementArticleLikes(@PathVariable Long articleId) {
         Long likes = amsArticleService.incrementArticleLikes(articleId);
         return R.ok(likes);
@@ -112,7 +112,7 @@ public class AmsArticleController {
     /**
      * 移除文章點讚
      */
-    @PostMapping("/articles/{articleId}/unlike")
+    @DeleteMapping("/articles/{articleId}/likes")
     public R <Long> decrementArticleLikes(@PathVariable Long articleId) {
         Long likes = amsArticleService.decrementArticleLikes(articleId);
         return R.ok(likes);
@@ -121,7 +121,7 @@ public class AmsArticleController {
     /**
      * 加入文章書籤
      */
-    @GetMapping("/articles/{articleId}/bookmark")
+    @PostMapping("/articles/{articleId}/bookmarks")
     public R<Long> incrementArticleBookmark(@PathVariable Long articleId) {
         Long bookmarks = amsArticleService.incrementArticleBooksMarket(articleId);
         return R.ok(bookmarks);
@@ -130,7 +130,7 @@ public class AmsArticleController {
     /**
      * 移除文章書籤
      */
-    @PostMapping("/articles/{articleId}/unbookmark")
+    @DeleteMapping("/articles/{articleId}/bookmarks")
     public R<Long> decrementArticleBookmark(@PathVariable Long articleId) {
         Long bookmarks = amsArticleService.decrementArticleBooksMarket(articleId);
         return R.ok(bookmarks);
@@ -167,7 +167,7 @@ public class AmsArticleController {
      * @return
      */
     @Validated
-    @GetMapping("articles/{articleId}/edit")
+    @GetMapping("/articles/{articleId}/edit")
     public R<AmsArticleEditVo> getAmsArticleEditVo(@Positive @NotNull @PathVariable Long articleId) {
         AmsArticleEditVo article = amsArticleService.getAmsArticleEditVo(articleId);
         return R.ok(article);
@@ -199,7 +199,7 @@ public class AmsArticleController {
      * @return
      */
 
-    @GetMapping("/categories/articles")
+    @GetMapping("/articles")
     public R<IPage<AmsArticlePreviewVo>> getArticlesByCategoryIdAndPage(
             @RequestParam(value = "routePage" , required = true) Integer routePage,
             @RequestParam(value = "categoryId", required = false) Long categoryId
@@ -213,7 +213,7 @@ public class AmsArticleController {
      * @param articleId 文章ID
      * @return 文章預覽 DTO
      */
-    @GetMapping("/internal/preview/{articleId}")
+    @GetMapping("/internal/articles/{articleId}/preview")
     public R<ArticlePreviewDTO> getArticlePreviewForSearch(@PathVariable Long articleId) {
         ArticlePreviewDTO preview = amsArticleService.getArticlePreviewDTO(articleId);
         return R.ok(preview);
@@ -224,7 +224,7 @@ public class AmsArticleController {
      * @param articleIds 文章 ID 列表
      * @return 文章預覽 DTO 列表
      */
-    @PostMapping("/internal/preview/batch")
+    @PostMapping("/internal/articles/preview/batch")
     public R<List<ArticlePreviewDTO>> getBatchArticlePreviewsForSearch(@RequestBody List<Long> articleIds) {
         List<ArticlePreviewDTO> previews = amsArticleService.getBatchArticlePreviewDTOs(articleIds);
         return R.ok(previews);
@@ -234,7 +234,7 @@ public class AmsArticleController {
      * 內部 Feign 專用：獲取所有文章 ID（
      * @return 所有文章 ID 列表
      */
-    @GetMapping("/internal/article-ids")
+    @GetMapping("/internal/articles/ids")
     public R<List<Long>> getAllDistinctArticleIds() {
         List<Long> articleIds = amsArticleService.getAllDistinctArticleIds()
                 .stream()
@@ -248,7 +248,7 @@ public class AmsArticleController {
      * 基於 AmsArtinfo 表統計未刪除的文章數量
      * @return 文章總數量
      */
-    @GetMapping("/internal/article-count")
+    @GetMapping("/internal/articles/count")
     public R<Long> getTotalArticleCount() {
         long count = amsArtinfoService.getTotalArticleCount();
         return R.ok(count);

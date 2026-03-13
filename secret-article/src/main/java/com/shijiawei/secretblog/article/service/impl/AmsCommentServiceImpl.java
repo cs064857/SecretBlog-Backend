@@ -957,6 +957,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      * @return 按讚數
      */
     @Transactional(rollbackFor = Exception.class)
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX, key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY)
     @Override
     public Integer likeComment(Long articleId, Long commentId) {
         /// TODO同步點讚數從Redis到資料庫中
@@ -1199,6 +1200,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
      * @return 新的點讚數
      */
     @Transactional(rollbackFor = Exception.class)
+    @DelayDoubleDelete(prefix = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_PREFIX, key = RedisOpenCacheKey.ArticleComments.COMMENT_DETAILS_KEY)
     @Override
     public Integer unlikeComment(Long articleId, Long commentId) {
         log.info("開始取消留言點讚，文章ID={}，留言ID={}", articleId, commentId);
@@ -1221,7 +1223,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         if (!UserContextHolder.isCurrentUserLoggedIn()) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.UNAUTHORIZED)
-                    .detailMessage("用戶未登入，拒絕取消留言按讚")
+                    .detailMessage("用戶未登入，無法取消留言按讚")
                     .build();
         }
         Long userId = UserContextHolder.getCurrentUserId();
@@ -1229,7 +1231,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
         if (userId == null) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.NOT_FOUND)
-                    .detailMessage("用戶不存在，拒絕取消留言按讚")
+                    .detailMessage("用戶不存在，無法取消留言按讚")
                     .data(Map.of(
                             "articleId", ObjectUtils.defaultIfNull(articleId, ""),
                             "commentId", ObjectUtils.defaultIfNull(commentId, "")
@@ -1883,7 +1885,7 @@ public class AmsCommentServiceImpl extends ServiceImpl<AmsCommentMapper, AmsComm
                     .build();
         }
 
-        // 檢查留言是否已被刪除
+        // 檢查留言是否已被刪除(必須為未刪除狀態)
         if (commentInfo.getDeleted() != null && commentInfo.getDeleted() == 1) {
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.EDIT_FAILED)

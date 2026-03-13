@@ -29,11 +29,12 @@ import java.util.List;
 @Slf4j
 @RestController
 @Tag(name = "文章留言管理", description = "文章留言相關的 CRUD 操作")
-@RequestMapping("/article")
+@RequestMapping("/ams")
 public class AmsCommentController {
 
     @Autowired
     AmsCommentService amsCommentService;
+
     /**
      * 創建留言
      * @param articleId 文章ID
@@ -43,10 +44,9 @@ public class AmsCommentController {
 //    @PostMapping("/comment/create")
     @Operation(summary = "創建留言", description = "根據文章ID創建留言")
     @ApiResponse(responseCode = "200", description = "成功創建留言")
-    @PostMapping("/{articleId}/comments")
+    @PostMapping("/articles/{articleId}/comments")
     public R createComment (@PathVariable("articleId") Long articleId,@Validated(value = Insert.class) @RequestBody AmsCommentCreateDTO amsCommentCreateDTO){
         R r = amsCommentService.createComment(articleId,amsCommentCreateDTO);
-
         return r;
     }
 
@@ -71,14 +71,11 @@ public class AmsCommentController {
      */
     @Operation(summary = "取得文章中的所有留言", description = "根據文章ID取得所有留言")
     @ApiResponse(responseCode = "200", description = "成功取得文章中的所有留言")
-    @GetMapping("/{articleId}/comments")
-//    @GetMapping("/{articleId}/comments")
+    @GetMapping("/articles/{articleId}/comments")
     public R<List<AmsArtCommentsVo>> getArtComments(@PathVariable Long articleId){
-
         log.debug("articleId:{}",articleId);
         List<AmsArtCommentsVo> amsArtCommentsVo = amsCommentService.getArtComments(articleId);
         return R.ok(amsArtCommentsVo);
-
     }
 
     /**
@@ -89,16 +86,14 @@ public class AmsCommentController {
      */
     @Operation(summary = "獲取用戶的留言列表（分頁）", description = "根據用戶ID查詢該用戶的留言紀錄（分頁回傳）")
     @ApiResponse(responseCode = "200", description = "成功取得用戶留言列表")
-    @GetMapping("/user/{userId}/comments")
+    @GetMapping("/users/{userId}/comments")
     public R<IPage<AmsUserCommentVo>> getUserComments(
             @PathVariable("userId") Long userId,
             @RequestParam(value = "routePage", required = true) Integer routePage
     ){
-
         log.debug("查詢用戶留言列表 - userId:{} , routePage:{}",userId, routePage);
         IPage<AmsUserCommentVo> userComments = amsCommentService.getUserCommentsByUserId(userId, routePage);
         return R.ok(userComments);
-
     }
     /**
      * 點讚留言
@@ -108,11 +103,11 @@ public class AmsCommentController {
      */
     @Operation(summary = "點讚留言", description = "根據文章ID和留言ID點讚")
     @ApiResponse(responseCode = "200", description = "成功點讚留言")
-    @PostMapping("/{articleId}/comments/{commentId}/likes")
-    public R<Integer> likeComment(@NotNull @PathVariable(value = "articleId")  Long articleId,@NotNull @PathVariable(value = "commentId") Long commentId){
+    @PostMapping("/articles/{articleId}/comments/{commentId}/likes")
+    public R<Integer> likeComment(@NotNull @PathVariable(value = "articleId") Long articleId,
+                                  @NotNull @PathVariable(value = "commentId") Long commentId){
         log.debug("likeComment - articleId:{}, commentId:{}", articleId, commentId);
-        Integer newLikes = amsCommentService.likeComment(articleId,commentId);
-
+        Integer newLikes = amsCommentService.likeComment(articleId, commentId);
         return R.ok(newLikes);
     }
 
@@ -124,24 +119,23 @@ public class AmsCommentController {
      */
     @Operation(summary = "取消點讚留言", description = "根據文章ID和留言ID取消點讚")
     @ApiResponse(responseCode = "200", description = "成功取消點讚留言")
-    @PostMapping("/{articleId}/comments/{commentId}/unlikes")
-    public R<Integer> unlikeComment(@NotNull @PathVariable(value = "articleId")  Long articleId,@NotNull @PathVariable(value = "commentId") Long commentId){
+    @DeleteMapping("/articles/{articleId}/comments/{commentId}/likes")
+    public R<Integer> unlikeComment(@NotNull @PathVariable(value = "articleId") Long articleId,
+                                    @NotNull @PathVariable(value = "commentId") Long commentId){
         log.debug("unlikeComment - articleId:{}, commentId:{}", articleId, commentId);
         Integer newLikes = amsCommentService.unlikeComment(articleId, commentId);
-
         return R.ok(newLikes);
     }
 
     /**
      * 刪除留言
-     * @param articleId 文章ID
      * @param commentId 留言ID
      * @return 刪除結果
      */
 
     @Operation(summary = "刪除留言", description = "根據文章ID和留言ID刪除留言")
     @ApiResponse(responseCode = "200", description = "成功刪除留言")
-    @PostMapping("/{articleId}/comments/{commentId}")
+    @DeleteMapping("/articles/{articleId}/comments/{commentId}")
     public R<Void> deleteComment(@NotNull @PathVariable(value = "articleId") Long articleId,
                           @NotNull @PathVariable(value = "commentId") Long commentId)
     {
@@ -157,7 +151,7 @@ public class AmsCommentController {
      */
     @Operation(summary = "取得留言編輯資料", description = "回傳留言原始 Markdown 內容，供前端編輯器使用")
     @ApiResponse(responseCode = "200", description = "成功取得留言編輯資料")
-    @GetMapping("/{articleId}/comments/{commentId}/edit")
+    @GetMapping("/articles/{articleId}/comments/{commentId}/edit")
     public R<AmsCommentEditVo> getCommentEditVo(@NotNull @PathVariable(value = "articleId") Long articleId,
                                                 @NotNull @PathVariable(value = "commentId") Long commentId) {
         AmsCommentEditVo vo = amsCommentService.getAmsCommentEditVo(articleId, commentId);
@@ -166,17 +160,17 @@ public class AmsCommentController {
 
     /**
      * 編輯留言
-     * @param articleId 文章ID
      * @param amsCommentEditDTO 編輯留言DTO
      * @return 編輯結果
      */
     @Operation(summary = "編輯留言", description = "根據文章ID和留言ID編輯留言內容")
     @ApiResponse(responseCode = "200", description = "成功編輯留言")
-    @PutMapping("/{articleId}/comments")
-    public R<Void> editComment(@NotNull @PathVariable(value = "articleId") Long articleId,
+    @PutMapping("/comments/{commentId}")
+    public R<Void> editComment(@NotNull @PathVariable(value = "commentId") Long commentId,
                         @Validated @RequestBody AmsCommentEditDTO amsCommentEditDTO)
     {
-        log.debug("editComment - articleId:{}, commentId:{}", articleId, amsCommentEditDTO.getCommentId());
-        return amsCommentService.editComment(articleId, amsCommentEditDTO);
+        amsCommentEditDTO.setCommentId(commentId);
+        log.debug("editComment - commentId:{}", commentId);
+        return amsCommentService.editComment(null, amsCommentEditDTO);
     }
 }

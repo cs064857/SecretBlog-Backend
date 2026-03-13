@@ -106,7 +106,7 @@ public class UmsLocalMessageConsumer {
 
             //收件匣頭像欄位只保存路徑；對外輸出以完整 URL 傳遞
             fromAvatar = storedAvatar;
-            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, fromNickName, publicAvatar));
+            articleFeignClient.updateAuthorInfo(userId, new ArticleFeignClient.AmsAuthorUpdateDTO(userId, fromNickName, publicAvatar));
 
             log.info("已成功同步文章模組作者資訊，userId={}", userId);
         } catch (Exception e) {

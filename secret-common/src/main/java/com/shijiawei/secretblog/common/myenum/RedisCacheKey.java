@@ -6,6 +6,7 @@ import lombok.Getter;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -120,11 +121,12 @@ public enum RedisCacheKey {
     public String format(Object... args) {
         // null 檢查 / 長度檢查
         if(Arrays.stream(args).anyMatch(Objects::isNull)){
-//            throw new CustomRuntimeException(ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING.getCode(), ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING.getMessage());
+            String argsStr = Arrays.toString(args);
             throw BusinessRuntimeException.builder()
                     .iErrorCode(ResultCode.REDIS_KEY_FORMAT_PARAM_MISSING)
+                    .detailMessage("Redis key 格式化參數缺失或為 null, pattern: " + pattern + ", args: " + argsStr)
+                    .data(Map.of("pattern", pattern, "args", argsStr))
                     .build();
-
         }
         return String.format(pattern, args);
     }

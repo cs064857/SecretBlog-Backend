@@ -17,8 +17,8 @@ import java.util.List;
  */
 
 @Slf4j
-@RequestMapping("/article")
 @RestController
+@RequestMapping("/ams")
 public class AmsCommentActionController {
 
     @Autowired
@@ -42,7 +42,7 @@ public class AmsCommentActionController {
      * @param articleId 文章ID
      * @return 留言互動狀態列表
      */
-    @GetMapping("/comments/{articleId}/action-status")
+    @GetMapping("/articles/{articleId}/comments/action-status")
     public R<List<AmsCommentActionVo>> getCommentActionStatusVos(@PathVariable(value = "articleId") Long articleId) {
         List<AmsCommentActionVo> amsCommentActionVoList = amsCommentActionService.getCommentActionStatusVos(articleId);
         return R.ok(amsCommentActionVoList);

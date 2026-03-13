@@ -15,7 +15,7 @@ import java.util.List;
  * 文章微服務遠程調用客戶端
  * 用於 secret-search 調用 secret-article 獲取文章預覽資料
  */
-@FeignClient(name = "secret-article", path = "/article", configuration = FeignInterceptorConfig.class)
+@FeignClient(name = "secret-article", configuration = FeignInterceptorConfig.class)
 public interface ArticleFeignClient {
 
     /**
@@ -23,7 +23,7 @@ public interface ArticleFeignClient {
      * @param articleId 文章ID
      * @return 文章預覽 DTO
      */
-    @GetMapping("/internal/preview/{articleId}")
+    @GetMapping("/ams/internal/articles/{articleId}/preview")
     R<ArticlePreviewDTO> getArticlePreviewForSearch(@PathVariable("articleId") Long articleId);
 
     /**
@@ -31,20 +31,20 @@ public interface ArticleFeignClient {
      * @param articleIds 文章 ID 列表
      * @return 文章預覽 DTO 列表
      */
-    @PostMapping("/internal/preview/batch")
+    @PostMapping("/ams/internal/articles/preview/batch")
     R<List<ArticlePreviewDTO>> getBatchArticlePreviewsForSearch(@RequestBody List<Long> articleIds);
 
     /**
      * 獲取所有文章 ID
      * @return 所有文章 ID 列表
      */
-    @GetMapping("/internal/article-ids")
+    @GetMapping("/ams/internal/articles/ids")
     R<List<Long>> getAllDistinctArticleIds();
 
     /**
      * 獲取文章總數量
      * @return 文章總數量
      */
-    @GetMapping("/internal/article-count")
+    @GetMapping("/ams/internal/articles/count")
     R<Long> getTotalArticleCount();
 }

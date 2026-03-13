@@ -21,7 +21,7 @@ import java.util.List;
  * @Create 2025/8/3 上午2:37
  */
 @Slf4j
-@RequestMapping("/article/artstatus")
+@RequestMapping("/ams/article-statuses")
 @Tag(name = "文章指標管理", description = "文章指標相關的 CRUD 操作")
 @RestController
 @RequiredArgsConstructor

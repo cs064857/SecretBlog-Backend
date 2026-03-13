@@ -543,7 +543,7 @@ public class UmsUserServiceImpl extends ServiceImpl<UmsUserMapper, UmsUser> impl
         // 同步更新文章模組的作者資訊
         /// TODO: 使用 RabbitMQ 異步處理
         try {
-            articleFeignClient.updateAuthorInfo(new ArticleFeignClient.AmsAuthorUpdateDTO(userId, nickName, null));
+            articleFeignClient.updateAuthorInfo(userId, new ArticleFeignClient.AmsAuthorUpdateDTO(userId, nickName, null));
         } catch (Exception e) {
             log.error("Failed to sync nickname to article service", e);
         }
