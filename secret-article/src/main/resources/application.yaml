@@ -68,8 +68,8 @@ spring:
 
   ai:
     openai:
-      base-url: ${SPRING.AI.OPENAI.BASE-URL}
-      api-key: ${SPRING.AI.OPENAI.API-KEY}
+      base-url: ${SPRING_AI_OPENAI_BASE_URL}
+      api-key: ${SPRING_AI_OPENAI_API_KEY}
 
 #  cache:
 #    redis:

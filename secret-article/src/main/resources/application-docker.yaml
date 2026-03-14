@@ -4,7 +4,10 @@
 custom:
   internal:
     apikey: ${CUSTOM_INTERNAL_APIKEY}
-
+  openai:
+    baseUrl: ${OPENAI_BASEURL}
+    apiKey: ${OPENAI_APIKEY}
+    model: ${OPENAI_MODEL}
 spring:
   cloud:
     nacos:
@@ -34,6 +37,10 @@ spring:
       enabled: ${RABBITMQ_SSL_ENABLED}
   config:
     import: optional:nacos:secretblog_article_application.yaml
+  ai:
+    openai:
+      base-url: ${SPRING_AI_OPENAI_BASE_URL}
+      api-key: ${SPRING_AI_OPENAI_API_KEY}
 #JwtToken相關
 local:
   jwt:

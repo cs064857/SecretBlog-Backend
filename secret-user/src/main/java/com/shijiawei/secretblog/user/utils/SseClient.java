@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.util.Map;
@@ -158,5 +159,30 @@ public class SseClient {
 
         sseEmitter.complete();
         log.info("使用者 {} SSE 連線已關閉", userId);
+    }
+
+    /**
+     * 定時發送 Ping 事件，維持 SSE 連線，避免 Cloudflare 或 Gateway 因閒置而切斷連線 (502/504)
+     */
+    @Scheduled(fixedRate = 30000)
+    public void sendPingHeartbeat() {
+        if (sseEmitterMap.isEmpty()) {
+            return;
+        }
+        sseEmitterMap.forEach((userId, sseEmitter) -> {
+            try {
+                // 發送 ping 事件保持連線活躍
+                sseEmitter.send(SseEmitter.event()
+                        .name("ping")
+                        .data("ping"));
+            } catch (Exception e) {
+                log.info("SSE 心跳傳送失敗，使用者 {} 連線可能已斷開: {}", userId, e.getMessage());
+                sseEmitterMap.remove(userId);
+                try {
+                    sseEmitter.complete();
+                } catch (Exception ignored) {
+                }
+            }
+        });
     }
 }
